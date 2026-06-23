@@ -32,7 +32,7 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden p-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-4">
 
       {/* ── Page Header ── shrink-0: never steals table height */}
       <div className="flex flex-col gap-4 shrink-0">
@@ -116,7 +116,7 @@ export default function ProductsPage() {
       </div>
 
       {/* ── Table: flex-1 min-h-0 — gets exactly the leftover height ───────── */}
-      <div className="flex-1 min-h-0">
+      <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
         <ProductTable
           products={products}
           total={total}

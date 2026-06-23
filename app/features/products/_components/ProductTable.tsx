@@ -236,15 +236,15 @@ export function ProductTable({
   const isEmpty = !loading && products.length === 0
 
   return (
-    <div className="flex flex-col gap-3 w-full h-full">
+    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
 
       {/* ── Table card ────────────────────────────────────────────────────── */}
-      <div className="rounded-lg border bg-card flex flex-col flex-1 min-h-0 [overflow:clip]">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card">
 
         {/* ── Toolbar: search left, category pills right ─────────────────── */}
-        <div className="flex items-center gap-3 px-4 py-2.5 border-b shrink-0">
+        <div className="flex shrink-0 flex-col gap-3 border-b px-4 py-2.5 sm:flex-row sm:items-center">
           {/* Search */}
-          <div className="relative w-[420px] shrink-0">
+          <div className="relative min-w-0 shrink-0 sm:w-[min(420px,45vw)]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground/50 pointer-events-none" />
             <input
               value={filters.search}
@@ -260,10 +260,10 @@ export function ProductTable({
           </div>
 
           {/* Divider */}
-          <div className="w-px h-5 bg-border/60 shrink-0" />
+          <div className="hidden h-5 w-px shrink-0 bg-border/60 sm:block" />
 
           {/* Category pills — scrollable, faded both sides */}
-          <div className="flex-1 min-w-0 overflow-hidden">
+          <div className="min-w-0 flex-1 overflow-hidden">
             <CategoryPills
               categories={categories}
               selected={filters.category}
@@ -274,14 +274,14 @@ export function ProductTable({
 
         {/* ── Table body ─────────────────────────────────────────────────── */}
         {isEmpty ? (
-          <div className="flex flex-col items-center justify-center flex-1 gap-2 text-center text-muted-foreground">
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 text-center text-muted-foreground">
             <Package className="size-8 opacity-20" />
             <p className="text-sm font-medium text-foreground">No products found</p>
             <p className="text-xs">Try adjusting your search or filters.</p>
           </div>
         ) : (
-          <div className="overflow-y-auto overflow-x-auto flex-1 min-h-0 [scrollbar-width:thin]">
-            <table className="w-full caption-bottom text-sm border-separate border-spacing-0">
+          <div className="min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain [scrollbar-width:thin]">
+            <table className="w-full min-w-[900px] caption-bottom border-separate border-spacing-0 text-sm">
               <TableBody>
                 {loading ? (
                   <TableSkeleton />
@@ -398,28 +398,28 @@ export function ProductTable({
             </table>
           </div>
         )}
-      </div>
 
-      {/* ── Pagination ────────────────────────────────────────────────────── */}
-      {total > 0 && (
-        <div className="flex items-center justify-between text-sm text-muted-foreground px-1 shrink-0">
-          <span>
-            <strong className="text-foreground font-medium">{from}–{to}</strong> of{' '}
-            <strong className="text-foreground font-medium">{total}</strong> products
-          </span>
-          <div className="flex items-center gap-1.5">
-            <Button variant="outline" size="sm" className="h-7 px-2.5 text-xs"
-              disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
-              Previous
-            </Button>
-            <span className="px-1.5 text-xs font-medium tabular-nums">{page} / {totalPages}</span>
-            <Button variant="outline" size="sm" className="h-7 px-2.5 text-xs"
-              disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
-              Next
-            </Button>
+        {/* ── Pagination ──────────────────────────────────────────────────── */}
+        {total > 0 && (
+          <div className="flex shrink-0 flex-col gap-2 border-t px-4 py-2.5 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              <strong className="font-medium text-foreground">{from}–{to}</strong> of{' '}
+              <strong className="font-medium text-foreground">{total}</strong> products
+            </span>
+            <div className="flex items-center gap-1.5">
+              <Button variant="outline" size="sm" className="h-7 px-2.5 text-xs"
+                disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+                Previous
+              </Button>
+              <span className="px-1.5 text-xs font-medium tabular-nums">{page} / {totalPages}</span>
+              <Button variant="outline" size="sm" className="h-7 px-2.5 text-xs"
+                disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
+                Next
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       <DeleteDialog
         product={deleteTarget}
