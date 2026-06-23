@@ -3,9 +3,9 @@
 import { useState } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useSuppliers } from './_components/useSuppliers'
-import { SupplierList }   from './_components/SupplierList'
+import { SupplierList } from './_components/SupplierList'
 import { SupplierDetail } from './_components/SupplierDetail'
-import { SupplierForm }   from './_components/SupplierForm'
+import { SupplierForm } from './_components/SupplierForm'
 import type { SupplierFormValues } from './_components/types'
 
 const rupee = (n: number) =>
@@ -20,11 +20,11 @@ export default function SuppliersPage() {
     addSupplier, updateSupplier, deleteSupplier,
   } = useSuppliers()
 
-  const [formOpen,  setFormOpen]  = useState(false)
-  const [editMode,  setEditMode]  = useState(false)
+  const [formOpen, setFormOpen] = useState(false)
+  const [editMode, setEditMode] = useState(false)
 
-  function openAdd()  { setEditMode(false); setFormOpen(true) }
-  function openEdit() { setEditMode(true);  setFormOpen(true) }
+  function openAdd() { setEditMode(false); setFormOpen(true) }
+  function openEdit() { setEditMode(true); setFormOpen(true) }
 
   async function handleSubmit(values: SupplierFormValues) {
     if (editMode && selectedSupplier) return updateSupplier(selectedSupplier.id, values)
@@ -45,9 +45,9 @@ export default function SuppliersPage() {
       {/* ── KPI strip ───────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-3 gap-0 border-b border-border/60 shrink-0 divide-x divide-border/60">
         {[
-          { label: 'Total Suppliers',  value: kpiLoading ? null : kpi.total_count,     format: (n: number) => String(n) },
-          { label: 'Total Purchases',  value: kpiLoading ? null : kpi.total_purchased, format: rupee },
-          { label: 'Amount Owed',      value: kpiLoading ? null : kpi.amount_owed,     format: rupee },
+          { label: 'Total Suppliers', value: kpiLoading ? null : kpi.total_count, format: (n: number) => String(n) },
+          { label: 'Total Purchases', value: kpiLoading ? null : kpi.total_purchased, format: rupee },
+          { label: 'Amount Owed', value: kpiLoading ? null : kpi.amount_owed, format: rupee },
         ].map(({ label, value, format }) => (
           <div key={label} className="px-6 py-3 flex flex-col gap-0.5">
             <p className="text-xs text-muted-foreground font-medium">{label}</p>
