@@ -40,7 +40,7 @@ export async function updateSession(request: NextRequest) {
 
   // Protect routes that require authentication.
   // Add additional protected path prefixes here as the app grows.
-  const protectedPaths = ['/dashboard']
+  const protectedPaths = ['/features']
   const isProtected = protectedPaths.some((path) =>
     request.nextUrl.pathname.startsWith(path)
   )
