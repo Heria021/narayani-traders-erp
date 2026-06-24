@@ -1,13 +1,16 @@
 'use client'
 
+import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import {
+  Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
+} from '@/components/ui/table'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
   Phone, Mail, MapPin, Building2,
@@ -28,14 +31,15 @@ interface Props {
   loading:          boolean
   onEdit:           () => void
   onDelete:         () => void
+  onViewPurchase:   (purchaseId: string) => void
 }
 
-export function SupplierDetail({ supplier, purchases, supplierProducts, loading, onEdit, onDelete }: Props) {
+export function SupplierDetail({ supplier, purchases, supplierProducts, loading, onEdit, onDelete, onViewPurchase }: Props) {
+  const [activeTab, setActiveTab] = useState<'purchases' | 'products'>('purchases')
 
-  // ── empty state ──────────────────────────────────────────────────────────────
   if (!supplier) {
     return (
-      <div className="flex h-full flex-col items-center justify-center text-center gap-3 text-muted-foreground">
+      <div className="flex h-full flex-col items-center justify-center text-center gap-3 text-muted-foreground p-16">
         <Building2 className="size-10 opacity-20" />
         <p className="text-sm font-medium">Select a supplier to view details</p>
       </div>
@@ -43,51 +47,56 @@ export function SupplierDetail({ supplier, purchases, supplierProducts, loading,
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
-
-      {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div className="shrink-0 px-6 py-4 border-b border-border/60">
-        {/* Name + actions */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <h2 className="text-xl font-bold text-black dark:text-white truncate">{supplier.name}</h2>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 mt-1">
+    <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden px-4 pt-6 bg-background">
+      
+      {/* ── Page Header (Sticky) ── */}
+      <div className="flex flex-col gap-5 shrink-0">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold tracking-tight flex items-center flex-wrap gap-2 text-neutral-900 dark:text-white">
+              {supplier.name}
+            </h1>
+            
+            {/* Contact details row */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
               {supplier.phone && (
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Phone className="size-3" /> {supplier.phone}
-                </div>
+                <span className="flex items-center gap-1">
+                  <Phone className="size-3.5 text-muted-foreground/50" />
+                  {supplier.phone}
+                </span>
               )}
               {supplier.email && (
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Mail className="size-3" /> {supplier.email}
-                </div>
+                <span className="flex items-center gap-1">
+                  <Mail className="size-3.5 text-muted-foreground/50" />
+                  {supplier.email}
+                </span>
               )}
               {(supplier.city || supplier.state) && (
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <MapPin className="size-3" />
+                <span className="flex items-center gap-1">
+                  <MapPin className="size-3.5 text-muted-foreground/50" />
                   {[supplier.city, supplier.state, supplier.postal_code].filter(Boolean).join(', ')}
-                </div>
+                </span>
               )}
               {supplier.gstin && (
-                <div className="text-xs font-mono text-muted-foreground bg-muted/60 px-2 py-0.5 rounded">
+                <span className="rounded bg-muted px-2 py-0.5 font-mono text-[10px] text-foreground font-medium">
                   GSTIN: {supplier.gstin}
-                </div>
+                </span>
               )}
             </div>
           </div>
 
+          {/* Actions */}
           <div className="flex items-center gap-2 shrink-0">
-            <Button variant="outline" size="sm" onClick={onEdit} className="h-8 rounded-lg text-xs">
-              <Pencil className="size-3 mr-1" /> Edit
+            <Button variant="outline" size="sm" onClick={onEdit} className="h-9 px-4 text-sm font-medium">
+              <Pencil className="size-4 mr-2" /> Edit Profile
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger render={
-                <Button variant="ghost" size="icon-sm" className="size-8 rounded-lg">
-                  <MoreHorizontal className="size-4" />
+                <Button variant="outline" size="icon" className="size-9 rounded-lg">
+                  <MoreHorizontal className="size-4 text-muted-foreground" />
                 </Button>
               } />
-              <DropdownMenuContent align="end" className="rounded-xl">
-                <DropdownMenuSeparator />
+              <DropdownMenuContent className="w-[200px]" align="end">
                 <DropdownMenuItem variant="destructive" onClick={onDelete}>
                   <Trash2 className="size-4 mr-2" /> Delete Supplier
                 </DropdownMenuItem>
@@ -95,123 +104,76 @@ export function SupplierDetail({ supplier, purchases, supplierProducts, loading,
             </DropdownMenu>
           </div>
         </div>
-
-        {/* Summary strip */}
-        <div className="mt-4 grid grid-cols-3 gap-3">
-          {[
-            { label: 'Opening Balance', value: supplier.opening_balance, cls: '' },
-            { label: 'Total Purchased',  value: supplier.total_purchased, cls: '' },
-            {
-              label: 'Amount Owed',
-              value: supplier.amount_owed,
-              cls: supplier.amount_owed > 0
-                ? 'text-amber-600 dark:text-amber-400'
-                : 'text-emerald-600 dark:text-emerald-400',
-            },
-          ].map(({ label, value, cls }) => (
-            <div key={label} className="bg-muted/40 rounded-xl px-3 py-2.5">
-              <p className="text-xs text-muted-foreground">{label}</p>
-              <p className={cn('text-base font-bold tabular-nums mt-0.5', cls)}>{rupee(value)}</p>
-            </div>
-          ))}
-        </div>
       </div>
 
-      {/* ── Tabs ────────────────────────────────────────────────────────────── */}
-      <div className="flex-1 min-h-0 overflow-hidden">
-        <Tabs defaultValue="purchases" className="h-full flex flex-col">
-          <div className="px-6 pt-3 shrink-0 border-b border-border/60">
-            <TabsList className="h-8 gap-1 bg-transparent p-0">
-              {[
-                { value: 'purchases', label: `Purchases (${purchases.length})` },
-                { value: 'products',  label: `Products (${supplierProducts.length})` },
-              ].map(tab => (
-                <TabsTrigger key={tab.value} value={tab.value}
-                  className="h-8 rounded-lg px-3 text-xs font-medium data-active:bg-black data-active:text-white dark:data-active:bg-white dark:data-active:text-black">
-                  {tab.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
+      {/* ── Metric KPIs Dashboard Row ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 shrink-0">
+        {[
+          { label: 'Opening Balance', value: supplier.opening_balance, desc: 'Owed balance at setup', cls: '' },
+          { label: 'Total Purchased', value: supplier.total_purchased, desc: 'Sum of all supplier bills', cls: '' },
+          {
+            label: 'Amount Owed',
+            value: supplier.amount_owed,
+            desc: 'Current outstanding balance',
+            cls: supplier.amount_owed > 0
+              ? 'text-amber-600 dark:text-amber-400 font-bold'
+              : 'text-emerald-600 dark:text-emerald-400 font-bold',
+          },
+        ].map(({ label, value, desc, cls }) => (
+          <div key={label} className="border rounded-lg p-4 space-y-1 bg-card">
+            <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase block">
+              {label}
+            </span>
+            <div className={cn("text-xl font-bold tracking-tight tabular-nums", cls)}>
+              {rupee(value)}
+            </div>
+            <span className="text-xs text-muted-foreground block font-medium">
+              {desc}
+            </span>
           </div>
+        ))}
+      </div>
 
-          {/* Purchases tab */}
-          <TabsContent value="purchases" className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:thin] px-6 py-4">
-            {loading ? (
-              <TableSkeleton cols={5} />
-            ) : purchases.length === 0 ? (
-              <EmptyState message="No purchases recorded from this supplier yet." />
-            ) : (
-              <div className="rounded-xl border border-border/60 overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/40">
-                    <tr>
-                      {['Date','Purchase No.','Items','Amount','Status'].map(h => (
-                        <th key={h} className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {purchases.map(p => (
-                      <tr key={p.id} className="border-t border-border/30 hover:bg-muted/20 transition-colors">
-                        <td className="px-3 py-2.5 text-xs text-muted-foreground">{fmtDate(p.purchase_date)}</td>
-                        <td className="px-3 py-2.5 font-mono text-xs font-medium">
-                          {p.purchase_number ?? `#${p.id.slice(0, 6)}`}
-                        </td>
-                        <td className="px-3 py-2.5 text-center tabular-nums text-sm">{p.item_count ?? '—'}</td>
-                        <td className="px-3 py-2.5 tabular-nums font-semibold">{rupee(p.grand_total)}</td>
-                        <td className="px-3 py-2.5">
-                          <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-0 text-[10px] font-semibold">
-                            Received
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </TabsContent>
+      {/* ── Bottom Section: Purchases & Products Card ── */}
+      <div className="flex-1 min-h-0 border rounded-lg bg-card flex flex-col overflow-hidden">
+        {/* Custom Tab selectors */}
+        <div className="flex flex-wrap items-center gap-2 border-b px-6 py-3 shrink-0 bg-muted/20">
+          <Button
+            variant={activeTab === 'purchases' ? 'default' : 'ghost'}
+            onClick={() => setActiveTab('purchases')}
+            className="h-8 px-3 text-xs font-medium shadow-none rounded-lg"
+          >
+            Purchases ({purchases.length})
+          </Button>
+          <Button
+            variant={activeTab === 'products' ? 'default' : 'ghost'}
+            onClick={() => setActiveTab('products')}
+            className="h-8 px-3 text-xs font-medium shadow-none rounded-lg"
+          >
+            Products ({supplierProducts.length})
+          </Button>
+        </div>
 
-          {/* Products tab */}
-          <TabsContent value="products" className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:thin] px-6 py-4">
-            {loading ? (
-              <TableSkeleton cols={3} />
-            ) : supplierProducts.length === 0 ? (
-              <EmptyState message="No products purchased from this supplier yet." />
-            ) : (
-              <div className="rounded-xl border border-border/60 overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/40">
-                    <tr>
-                      {['Product','Total Qty Bought','Last Purchased'].map(h => (
-                        <th key={h} className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {supplierProducts.map(sp => (
-                      <tr key={sp.product_id} className="border-t border-border/30 hover:bg-muted/20 transition-colors">
-                        <td className="px-3 py-2.5 font-medium">{sp.product_name}</td>
-                        <td className="px-3 py-2.5 tabular-nums">
-                          {sp.total_qty.toLocaleString('en-IN')} {sp.unit_name}
-                        </td>
-                        <td className="px-3 py-2.5 text-xs text-muted-foreground">
-                          {sp.last_purchased ? fmtDate(sp.last_purchased) : '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+        {/* Tables area with internal scrolling */}
+        <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:thin] p-4">
+          {activeTab === 'purchases' && (
+            loading ? <TableSkeleton cols={5} /> : purchases.length === 0 ? <EmptyState message="No purchases recorded from this supplier yet." /> : (
+              <PurchasesTable purchases={purchases} onViewPurchase={onViewPurchase} />
+            )
+          )}
+          {activeTab === 'products' && (
+            loading ? <TableSkeleton cols={3} /> : supplierProducts.length === 0 ? <EmptyState message="No products purchased from this supplier yet." /> : (
+              <ProductsTable supplierProducts={supplierProducts} />
+            )
+          )}
+        </div>
       </div>
     </div>
   )
 }
 
-// ── helpers ────────────────────────────────────────────────────────────────────
+// ── sub-components ─────────────────────────────────────────────────────────────
+
 function EmptyState({ message }: { message: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground gap-2">
@@ -231,5 +193,65 @@ function TableSkeleton({ cols }: { cols: number }) {
         </div>
       ))}
     </div>
+  )
+}
+
+function PurchasesTable({ purchases, onViewPurchase }: { purchases: Purchase[]; onViewPurchase: (id: string) => void }) {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Date</TableHead>
+          <TableHead>Purchase No.</TableHead>
+          <TableHead className="text-center">Items</TableHead>
+          <TableHead className="text-right">Amount</TableHead>
+          <TableHead className="text-center">Status</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {purchases.map(p => (
+          <TableRow key={p.id} className="cursor-pointer hover:bg-muted/30" onClick={() => onViewPurchase(p.id)}>
+            <TableCell className="text-xs text-muted-foreground">{fmtDate(p.purchase_date)}</TableCell>
+            <TableCell className="font-mono text-xs font-medium">
+              {p.purchase_number ?? `#${p.id.slice(0, 6)}`}
+            </TableCell>
+            <TableCell className="text-center tabular-nums text-xs">{p.item_count ?? '—'}</TableCell>
+            <TableCell className="text-right tabular-nums font-semibold text-xs">{rupee(p.grand_total)}</TableCell>
+            <TableCell className="text-center">
+              <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-0 text-[10px] font-semibold">
+                Received
+              </Badge>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  )
+}
+
+function ProductsTable({ supplierProducts }: { supplierProducts: SupplierProduct[] }) {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Product</TableHead>
+          <TableHead className="text-right">Total Qty Bought</TableHead>
+          <TableHead>Last Purchased</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {supplierProducts.map(sp => (
+          <TableRow key={sp.product_id}>
+            <TableCell className="font-medium text-xs text-foreground">{sp.product_name}</TableCell>
+            <TableCell className="text-right tabular-nums text-xs font-semibold">
+              {sp.total_qty.toLocaleString('en-IN')} {sp.unit_name}
+            </TableCell>
+            <TableCell className="text-xs text-muted-foreground">
+              {sp.last_purchased ? fmtDate(sp.last_purchased) : '—'}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   )
 }

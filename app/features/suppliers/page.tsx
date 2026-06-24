@@ -5,126 +5,47 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Plus, Search, Phone, MapPin, Receipt, Users } from 'lucide-react'
+import {
+  Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
+} from '@/components/ui/table'
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  Plus, Search, Phone, Mail, MapPin, Building2, MoreHorizontal, Pencil, Trash2
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSuppliers } from './_components/useSuppliers'
 import { SupplierForm } from './_components/SupplierForm'
 import type { SupplierWithStats, SupplierFormValues } from './_components/types'
 
 const rupee = (n: number) =>
-  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n)
+  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(n)
 
-// ── Skeleton card ──────────────────────────────────────────────────────────────
-function CardSkeleton() {
-  return (
-    <div className="border rounded-lg p-4 space-y-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1.5 flex-1">
-          <Skeleton className="h-4 w-36" />
-          <Skeleton className="h-3 w-24" />
-        </div>
-        <Skeleton className="h-6 w-16 rounded-full" />
-      </div>
-      <div className="flex gap-4 pt-1">
-        <Skeleton className="h-3 w-24" />
-        <Skeleton className="h-3 w-20" />
-      </div>
-    </div>
-  )
-}
-
-// ── Supplier Card ──────────────────────────────────────────────────────────────
-function SupplierCard({
-  supplier: s,
-  selected,
-  onSelect,
-}: {
-  supplier: SupplierWithStats
-  selected: boolean
-  onSelect: (id: string) => void
-}) {
-  const location = [s.city, s.state].filter(Boolean).join(', ')
-
-  return (
-    <button
-      onClick={() => onSelect(s.id)}
-      className={cn(
-        'w-full text-left border rounded-lg p-4 transition-all duration-150 space-y-3',
-        'hover:shadow-sm hover:border-border',
-        selected
-          ? 'border-black dark:border-white bg-neutral-50 dark:bg-neutral-900 ring-1 ring-black dark:ring-white'
-          : 'border-border/60 bg-card',
-      )}
-    >
-      {/* Top row: name + owed badge */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-0.5 min-w-0">
-          <p className={cn(
-            'text-sm font-semibold truncate',
-            selected ? 'text-black dark:text-white' : 'text-foreground',
-          )}>
-            {s.name}
-          </p>
-          {s.phone && (
-            <div className="flex items-center gap-1">
-              <Phone className="size-2.5 text-muted-foreground/50 shrink-0" />
-              <p className="text-xs text-muted-foreground truncate">{s.phone}</p>
-            </div>
-          )}
-        </div>
-        {s.amount_owed > 0 && (
-          <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 tabular-nums">
-            {rupee(s.amount_owed)} owed
-          </span>
-        )}
-      </div>
-
-      {/* Location + GSTIN */}
-      {(location || s.gstin) && (
-        <div className="space-y-0.5">
-          {location && (
-            <div className="flex items-center gap-1">
-              <MapPin className="size-2.5 text-muted-foreground/40 shrink-0" />
-              <p className="text-xs text-muted-foreground truncate">{location}</p>
-            </div>
-          )}
-          {s.gstin && (
-            <p className="text-[10px] font-mono text-muted-foreground/50 truncate pl-3.5">{s.gstin}</p>
-          )}
-        </div>
-      )}
-
-      {/* Purchases stat */}
-      <div className="flex items-center justify-between pt-1 border-t border-border/40">
-        <div className="flex items-center gap-1">
-          <Receipt className="size-3 text-muted-foreground/50" />
-          <span className="text-xs text-muted-foreground">Total purchases:</span>
-          <span className="text-xs font-semibold tabular-nums">
-            {s.total_purchased > 0 ? rupee(s.total_purchased) : '—'}
-          </span>
-        </div>
-        {s.total_purchased === 0 && (
-          <span className="text-[10px] text-muted-foreground/50">No orders yet</span>
-        )}
-      </div>
-    </button>
-  )
-}
-
-// ── Page ──────────────────────────────────────────────────────────────────────
 export default function SuppliersPage() {
   const router = useRouter()
   const {
     suppliers, kpi, search, loading, kpiLoading,
-    selectedSupplier,
+    selectedSupplier, setSelectedId,
     handleSearchChange,
-    addSupplier, updateSupplier,
+    addSupplier, updateSupplier, deleteSupplier,
   } = useSuppliers()
 
   const [formOpen, setFormOpen] = useState(false)
   const [editMode, setEditMode] = useState(false)
 
-  function openAdd() { setEditMode(false); setFormOpen(true) }
+  function openAdd() {
+    setSelectedId(null)
+    setEditMode(false)
+    setFormOpen(true)
+  }
+
+  function openEdit(s: SupplierWithStats) {
+    setSelectedId(s.id)
+    setEditMode(true)
+    setFormOpen(true)
+  }
 
   async function handleSubmit(values: SupplierFormValues) {
     if (editMode && selectedSupplier) return updateSupplier(selectedSupplier.id, values)
@@ -132,21 +53,21 @@ export default function SuppliersPage() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 bg-background">
 
       {/* ── Page Header ─────────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-4 shrink-0">
         {/* Title and Main Action */}
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight">
+            <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white">
               Suppliers
             </h1>
             <p className="text-sm text-muted-foreground max-w-lg">
               Manage supplier master data, track purchase history and outstanding balances.
             </p>
           </div>
-          <Button onClick={openAdd} size="default" className="px-4 shrink-0">
+          <Button onClick={openAdd} size="default" className="px-4 shrink-0 font-semibold">
             <Plus className="size-4 mr-1.5 stroke-[2.5]" />
             Add Supplier
           </Button>
@@ -155,11 +76,11 @@ export default function SuppliersPage() {
         {/* ── Stats Cards ─────────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1 — Total Suppliers */}
-          <div className="border rounded-lg p-4 space-y-1">
+          <div className="border rounded-lg p-4 space-y-1 bg-card">
             <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase block">
               Total Suppliers
             </span>
-            <div className="text-xl font-semibold tracking-tight">
+            <div className="text-xl font-bold tracking-tight">
               {kpiLoading ? <Skeleton className="h-6 w-16 mt-0.5" /> : kpi.total_count}
             </div>
             <span className="text-xs text-muted-foreground block font-medium">
@@ -168,11 +89,11 @@ export default function SuppliersPage() {
           </div>
 
           {/* Card 2 — Total Purchases */}
-          <div className="border rounded-lg p-4 space-y-1">
+          <div className="border rounded-lg p-4 space-y-1 bg-card">
             <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase block">
               Total Purchases
             </span>
-            <div className="text-xl font-semibold tracking-tight">
+            <div className="text-xl font-bold tracking-tight">
               {kpiLoading ? <Skeleton className="h-6 w-28 mt-0.5" /> : rupee(kpi.total_purchased)}
             </div>
             <span className="text-xs text-muted-foreground block font-medium">
@@ -181,7 +102,7 @@ export default function SuppliersPage() {
           </div>
 
           {/* Card 3 — Amount Owed */}
-          <div className="border rounded-lg p-4 space-y-1">
+          <div className="border rounded-lg p-4 space-y-1 bg-card">
             <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase block">
               Amount Owed
             </span>
@@ -189,7 +110,7 @@ export default function SuppliersPage() {
               {kpi.amount_owed > 0 && (
                 <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
               )}
-              <div className="text-xl font-semibold tracking-tight">
+              <div className="text-xl font-bold tracking-tight text-amber-600 dark:text-amber-400">
                 {kpiLoading ? <Skeleton className="h-6 w-24 mt-0.5" /> : rupee(kpi.amount_owed)}
               </div>
             </div>
@@ -199,11 +120,11 @@ export default function SuppliersPage() {
           </div>
 
           {/* Card 4 — Active (filtered count) */}
-          <div className="border rounded-lg p-4 space-y-1">
+          <div className="border rounded-lg p-4 space-y-1 bg-card">
             <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase block">
               Showing
             </span>
-            <div className="text-xl font-semibold tracking-tight">
+            <div className="text-xl font-bold tracking-tight">
               {loading ? <Skeleton className="h-6 w-10 mt-0.5" /> : suppliers.length}
             </div>
             <span className="text-xs text-muted-foreground block font-medium">
@@ -224,46 +145,133 @@ export default function SuppliersPage() {
         </div>
       </div>
 
-      {/* ── Supplier Cards Grid ─ inside a card like ProductTable ─────────── */}
+      {/* ── Supplier Table ─ inside a card like ProductTable ─────────── */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card">
-        {/* Scrollable area with top fade */}
-        <div className="relative min-h-0 flex-1">
-          {/* Top fade overlay */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute left-0 right-0 top-0 z-10 h-8 bg-gradient-to-b from-card to-transparent"
-          />
-
-          <div className="h-full overflow-y-auto overscroll-contain [scrollbar-width:thin] p-4">
-            {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {Array.from({ length: 8 }).map((_, i) => <CardSkeleton key={i} />)}
-              </div>
-            ) : suppliers.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full gap-3 py-16 text-center">
-                <Users className="size-10 text-muted-foreground/30" />
-                <p className="text-sm font-medium text-muted-foreground">
-                  {search ? 'No suppliers match your search.' : 'No suppliers yet.'}
+        <div className="h-full overflow-y-auto overscroll-contain [scrollbar-width:thin]">
+          {loading ? (
+            <div className="p-4 space-y-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex gap-4 py-2 border-b">
+                  <Skeleton className="h-4 w-1/4" />
+                  <Skeleton className="h-4 w-1/4" />
+                  <Skeleton className="h-4 w-1/6" />
+                  <Skeleton className="h-4 w-1/6" />
+                  <Skeleton className="h-4 w-[10%]" />
+                </div>
+              ))}
+            </div>
+          ) : suppliers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full gap-3 py-16 text-center">
+              <Building2 className="size-10 text-muted-foreground/30" />
+              <p className="text-sm font-medium text-muted-foreground">
+                {search ? 'No suppliers match your search.' : 'No suppliers yet.'}
+              </p>
+              {!search && (
+                <p className="text-xs text-muted-foreground/70">
+                  Add your first supplier to start recording purchases.
                 </p>
-                {!search && (
-                  <p className="text-xs text-muted-foreground/70">
-                    Add your first supplier to start recording purchases.
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {suppliers.map(s => (
-                  <SupplierCard
-                    key={s.id}
-                    supplier={s}
-                    selected={false}
-                    onSelect={id => router.push(`/features/suppliers/${id}`)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          ) : (
+            <Table>
+              <TableHeader className="bg-muted/40 sticky top-0 z-10">
+                <TableRow>
+                  <TableHead className="font-semibold text-xs text-muted-foreground uppercase py-3 pl-4">Supplier</TableHead>
+                  <TableHead className="font-semibold text-xs text-muted-foreground uppercase py-3">Location</TableHead>
+                  <TableHead className="font-semibold text-xs text-muted-foreground uppercase py-3">GSTIN</TableHead>
+                  <TableHead className="font-semibold text-xs text-muted-foreground uppercase py-3 text-right">Total Purchased</TableHead>
+                  <TableHead className="font-semibold text-xs text-muted-foreground uppercase py-3 text-right">Amount Owed</TableHead>
+                  <TableHead className="font-semibold text-xs text-muted-foreground uppercase py-3 text-right pr-4">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {suppliers.map(s => {
+                  const location = [s.city, s.state].filter(Boolean).join(', ')
+                  const owed = s.amount_owed
+
+                  return (
+                    <TableRow
+                      key={s.id}
+                      onClick={() => router.push(`/features/suppliers/${s.id}`)}
+                      className="cursor-pointer hover:bg-muted/30 transition-colors group border-b border-border/40"
+                    >
+                      {/* Supplier Name & contact */}
+                      <TableCell className="py-3 pl-4">
+                        <div className="space-y-0.5">
+                          <p className="font-semibold text-foreground group-hover:text-black dark:group-hover:text-white transition-colors">
+                            {s.name}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                            {s.phone && (
+                              <span className="flex items-center gap-1"><Phone className="size-2.5" /> {s.phone}</span>
+                            )}
+                            {s.email && (
+                              <span className="flex items-center gap-1"><Mail className="size-2.5" /> {s.email}</span>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+
+                      {/* Location */}
+                      <TableCell className="py-3">
+                        {location ? (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <MapPin className="size-2.5 text-muted-foreground/50 shrink-0" />
+                            <span className="truncate">{location}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground/40 text-xs">—</span>
+                        )}
+                      </TableCell>
+
+                      {/* GSTIN */}
+                      <TableCell className="py-3 font-mono text-xs text-muted-foreground">
+                        {s.gstin ? s.gstin : <span className="text-muted-foreground/40">—</span>}
+                      </TableCell>
+
+                      {/* Total Purchased */}
+                      <TableCell className="py-3 text-right tabular-nums text-xs font-semibold text-foreground">
+                        {s.total_purchased > 0 ? rupee(s.total_purchased) : <span className="text-muted-foreground/50">—</span>}
+                      </TableCell>
+
+                      {/* Amount Owed */}
+                      <TableCell className="py-3 text-right tabular-nums font-semibold">
+                        <span className={cn(
+                          'text-xs font-bold tabular-nums',
+                          owed > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400',
+                        )}>
+                          {owed > 0 ? rupee(owed) : '—'}
+                        </span>
+                      </TableCell>
+
+                      {/* Actions */}
+                      <TableCell className="py-3 text-right pr-4 action-trigger" onClick={e => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger render={
+                            <Button variant="ghost" size="icon-sm" className="size-8 rounded-lg">
+                              <MoreHorizontal className="size-4 text-muted-foreground" />
+                            </Button>
+                          } />
+                          <DropdownMenuContent align="end" className="rounded-xl">
+                            <DropdownMenuItem onClick={() => router.push(`/features/suppliers/${s.id}`)}>
+                              <Building2 className="size-4 mr-2" /> View Profile
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openEdit(s)}>
+                              <Pencil className="size-4 mr-2" /> Edit Profile
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem variant="destructive" onClick={() => deleteSupplier(s)}>
+                              <Trash2 className="size-4 mr-2" /> Delete Supplier
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          )}
         </div>
       </div>
 
@@ -277,4 +285,3 @@ export default function SuppliersPage() {
     </div>
   )
 }
-

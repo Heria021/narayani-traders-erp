@@ -1,10 +1,13 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
+import { AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Supplier, SupplierFormValues } from './types'
 import { EMPTY_SUPPLIER_FORM, INDIAN_STATES } from './types'
@@ -16,31 +19,31 @@ interface Props {
   onSubmit: (values: SupplierFormValues) => Promise<boolean>
 }
 
+function Field({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <div className={cn('flex flex-col gap-1.5', className)}>{children}</div>
+}
+
+function FieldLabel({ htmlFor, required, children }: { htmlFor?: string; required?: boolean; children: React.ReactNode }) {
+  return (
+    <label htmlFor={htmlFor} className="text-xs font-semibold text-foreground/80">
+      {children}
+      {required && <span className="text-destructive ml-0.5">*</span>}
+    </label>
+  )
+}
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null
+  return (
+    <p className="text-xs text-destructive flex items-center gap-1.5 mt-1">
+      <AlertCircle className="size-3 shrink-0" />
+      {message}
+    </p>
+  )
+}
+
 const GSTIN_RE = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
 const PIN_RE   = /^\d{6}$/
-
-function FieldRow({ label, required, error, children }: {
-  label: string; required?: boolean; error?: string; children: React.ReactNode
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-[13px] text-muted-foreground">
-        {label}
-      </label>
-      {children}
-      {error && <p className="text-[11px] text-red-500">{error}</p>}
-    </div>
-  )
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-3">
-      <p className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">{title}</p>
-      {children}
-    </div>
-  )
-}
 
 export function SupplierForm({ open, supplier, onClose, onSubmit }: Props) {
   const isEdit = !!supplier
@@ -98,165 +101,185 @@ export function SupplierForm({ open, supplier, onClose, onSubmit }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={v => { if (!v) onClose() }}>
-      {/* ── 12px inset on all sides, rounded corners ── */}
       <SheetContent
         side="right"
-        className="w-full sm:max-w-[640px] flex flex-col gap-0 p-3 bg-transparent shadow-none border-none"
+        className="w-full sm:max-w-none lg:w-[800px] lg:max-w-[800px] h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)] m-4 rounded-xl border flex flex-col p-0 overflow-hidden shadow-xl"
       >
-        <div className="flex flex-col flex-1 overflow-hidden rounded-xl border border-border/60 bg-background">
-
-          {/* Header */}
-          <SheetHeader className="px-5 py-4 border-b border-border/60 shrink-0">
-            <SheetTitle className="text-[15px] font-medium">
-              {isEdit ? `Edit — ${supplier.name}` : 'Add Supplier'}
+        <SheetHeader className="px-8 py-5 border-b border-border/60 shrink-0">
+          <div className="flex flex-col gap-1">
+            <SheetTitle className="text-lg">
+              {isEdit ? 'Edit Supplier' : 'Add Supplier'}
             </SheetTitle>
-          </SheetHeader>
+            <SheetDescription>
+              {isEdit ? `Editing registry profile for "${supplier.name}"` : 'Register a new supplier master account.'}
+            </SheetDescription>
+          </div>
+        </SheetHeader>
 
-          {/* Body */}
-          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-            <div className="flex flex-col gap-5 px-5 py-4">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
+          <div className="flex flex-col gap-6 px-8 py-4">
 
-              {/* Basic Info */}
-              <Section title="Basic info">
-                <div className="flex flex-col gap-3">
-                  <FieldRow label="Name" required error={errors.name}>
-                    <Input
-                      value={values.name}
-                      onChange={e => set('name', e.target.value)}
-                      placeholder="Sharma Stationery Wholesale"
-                      className={cn('bg-muted/50 text-[13px] h-8 rounded-lg', errors.name && 'border-red-400')}
-                    />
-                  </FieldRow>
+            {/* Basic Info Section */}
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <h3 className="text-sm font-semibold text-foreground">Basic Info</h3>
+                <p className="text-xs text-muted-foreground">General details and business identifiers.</p>
+              </div>
 
-                  <FieldRow label="Phone" required error={errors.phone}>
-                    <Input
-                      value={values.phone}
-                      onChange={e => set('phone', e.target.value)}
-                      placeholder="9812345678"
-                      maxLength={10}
-                      className={cn('bg-muted/50 text-[13px] h-8 rounded-lg', errors.phone && 'border-red-400')}
-                    />
-                  </FieldRow>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Field>
+                  <FieldLabel required>Supplier Name</FieldLabel>
+                  <Input
+                    value={values.name}
+                    onChange={e => set('name', e.target.value)}
+                    placeholder="e.g. Sharma Stationery Wholesale"
+                    className={cn(errors.name && 'border-destructive')}
+                  />
+                  <FieldError message={errors.name} />
+                </Field>
 
-                  <FieldRow label="Email">
-                    <Input
-                      value={values.email}
-                      onChange={e => set('email', e.target.value)}
-                      type="email"
-                      placeholder="sharma@wholesale.com"
-                      className="bg-muted/50 text-[13px] h-8 rounded-lg"
-                    />
-                  </FieldRow>
+                <Field>
+                  <FieldLabel required>Phone Number</FieldLabel>
+                  <Input
+                    value={values.phone}
+                    onChange={e => set('phone', e.target.value)}
+                    placeholder="e.g. 9812345678"
+                    maxLength={10}
+                    className={cn(errors.phone && 'border-destructive')}
+                  />
+                  <FieldError message={errors.phone} />
+                </Field>
 
-                  <FieldRow label="GSTIN" error={errors.gstin}>
-                    <Input
-                      value={values.gstin}
-                      onChange={e => set('gstin', e.target.value.toUpperCase())}
-                      placeholder="08XYZAB1234C1Z2"
-                      maxLength={15}
-                      className={cn('bg-muted/50 text-[13px] h-8 rounded-lg font-mono', errors.gstin && 'border-red-400')}
-                    />
-                  </FieldRow>
-                </div>
-              </Section>
+                <Field>
+                  <FieldLabel>Email Address</FieldLabel>
+                  <Input
+                    value={values.email}
+                    onChange={e => set('email', e.target.value)}
+                    type="email"
+                    placeholder="e.g. sharma@wholesale.com"
+                  />
+                </Field>
 
-              <Separator />
+                <Field>
+                  <FieldLabel>GSTIN</FieldLabel>
+                  <Input
+                    value={values.gstin}
+                    onChange={e => set('gstin', e.target.value.toUpperCase())}
+                    placeholder="e.g. 08XYZAB1234C1Z2"
+                    maxLength={15}
+                    className={cn('font-mono', errors.gstin && 'border-destructive')}
+                  />
+                  <FieldError message={errors.gstin} />
+                </Field>
+              </div>
+            </div>
 
-              {/* Address */}
-              <Section title="Address">
-                <div className="flex flex-col gap-3">
-                  <FieldRow label="Street / Area">
-                    <textarea
-                      value={values.address}
-                      onChange={e => set('address', e.target.value)}
-                      rows={2}
-                      placeholder="Shop 12, Market Complex"
-                      className="flex w-full rounded-lg border border-input bg-muted/50 px-3 py-2 text-[13px] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
-                    />
-                  </FieldRow>
+            <Separator />
 
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <FieldRow label="City">
-                      <Input
-                        value={values.city}
-                        onChange={e => set('city', e.target.value)}
-                        placeholder="Jaipur"
-                        className="bg-muted/50 text-[13px] h-8 rounded-lg"
-                      />
-                    </FieldRow>
-                    <FieldRow label="Postal code" error={errors.postal_code}>
-                      <Input
-                        value={values.postal_code}
-                        onChange={e => set('postal_code', e.target.value)}
-                        placeholder="302001"
-                        maxLength={6}
-                        className={cn('bg-muted/50 text-[13px] h-8 rounded-lg', errors.postal_code && 'border-red-400')}
-                      />
-                    </FieldRow>
+            {/* Address & Location Section */}
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <h3 className="text-sm font-semibold text-foreground">Address & Location</h3>
+                <p className="text-xs text-muted-foreground">Primary warehouse or office location.</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Field className="md:col-span-2">
+                  <FieldLabel>Street Address</FieldLabel>
+                  <Textarea
+                    value={values.address}
+                    onChange={e => set('address', e.target.value)}
+                    rows={2}
+                    placeholder="e.g. Shop 12, Market Complex"
+                    className="resize-none"
+                  />
+                </Field>
+
+                <Field>
+                  <FieldLabel>City</FieldLabel>
+                  <Input
+                    value={values.city}
+                    onChange={e => set('city', e.target.value)}
+                    placeholder="e.g. Jaipur"
+                  />
+                </Field>
+
+                <Field>
+                  <FieldLabel>Postal Code</FieldLabel>
+                  <Input
+                    value={values.postal_code}
+                    onChange={e => set('postal_code', e.target.value)}
+                    placeholder="e.g. 302001"
+                    maxLength={6}
+                    className={cn(errors.postal_code && 'border-destructive')}
+                  />
+                  <FieldError message={errors.postal_code} />
+                </Field>
+
+                <Field className="md:col-span-2">
+                  <FieldLabel>State / Union Territory</FieldLabel>
+                  <Input
+                    value={values.state}
+                    onChange={e => set('state', e.target.value)}
+                    list="sup-states-list"
+                    placeholder="e.g. Rajasthan"
+                  />
+                  <datalist id="sup-states-list">
+                    {INDIAN_STATES.map(s => <option key={s} value={s} />)}
+                  </datalist>
+                </Field>
+              </div>
+            </div>
+
+            {/* Opening Balance — add mode only */}
+            {!isEdit && (
+              <>
+                <Separator />
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-semibold text-foreground">Opening Balance</h3>
+                    <p className="text-xs text-muted-foreground">Owed amount at account setup.</p>
                   </div>
 
-                  <FieldRow label="State">
-                    <Input
-                      value={values.state}
-                      onChange={e => set('state', e.target.value)}
-                      list="sup-states-list"
-                      placeholder="Rajasthan"
-                      className="bg-muted/50 text-[13px] h-8 rounded-lg"
-                    />
-                    <datalist id="sup-states-list">
-                      {INDIAN_STATES.map(s => <option key={s} value={s} />)}
-                    </datalist>
-                  </FieldRow>
+                  <div className="grid grid-cols-1 gap-4">
+                    <Field>
+                      <FieldLabel>Opening Balance (₹)</FieldLabel>
+                      <Input
+                        value={values.opening_balance}
+                        onChange={e => set('opening_balance', e.target.value)}
+                        type="number"
+                        placeholder="0"
+                      />
+                      <p className="text-[11px] text-muted-foreground">
+                        Amount owed to this supplier from before this system. Positive = you owe them. 0 = fresh start.
+                      </p>
+                    </Field>
+                  </div>
                 </div>
-              </Section>
+              </>
+            )}
 
-              {/* Opening Balance — add mode only */}
-              {!isEdit && (
-                <>
-                  <Separator />
-                  <Section title="Opening balance">
-                    <div className="flex flex-col gap-3">
-                      <FieldRow label="Opening balance (₹)">
-                        <Input
-                          value={values.opening_balance}
-                          onChange={e => set('opening_balance', e.target.value)}
-                          type="number"
-                          placeholder="0"
-                          className="bg-muted/50 text-[13px] h-8 rounded-lg"
-                        />
-                        <p className="text-[11px] text-muted-foreground">
-                          Amount owed from before this system. Positive = you owe them. 0 = fresh start.
-                        </p>
-                      </FieldRow>
-                    </div>
-                  </Section>
-                </>
-              )}
-
-            </div>
-          </form>
-
-          {/* Footer */}
-          <div className="flex items-center justify-end gap-2 px-5 py-3.5 border-t border-border/60 shrink-0">
-            <Button
-              variant="outline"
-              type="button"
-              onClick={onClose}
-              disabled={saving}
-              className="h-8 px-4 text-[13px] rounded-lg"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={saving}
-              onClick={handleSubmit}
-              className="h-8 px-4 text-[13px] rounded-lg bg-foreground text-background hover:bg-foreground/90"
-            >
-              {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add Supplier'}
-            </Button>
           </div>
+        </form>
 
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-2 px-8 py-4 border-t border-border/60 shrink-0 bg-muted/10">
+          <Button
+            variant="outline"
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={saving}
+            onClick={handleSubmit}
+            className="bg-foreground text-background hover:bg-foreground/90 font-semibold"
+          >
+            {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Supplier'}
+          </Button>
         </div>
       </SheetContent>
     </Sheet>

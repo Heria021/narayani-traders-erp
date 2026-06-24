@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Edit } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { useSupplierDetail } from './_components/useSupplierDetail'
 import { SupplierDetail } from '../_components/SupplierDetail'
 import { SupplierForm } from '../_components/SupplierForm'
 import type { SupplierFormValues } from '../_components/types'
 import { useBreadcrumb } from '@/components/app-shell'
+import { PurchaseDetail } from '../../purchases/_components/PurchaseDetail'
 
 export default function SupplierDetailPage() {
   const params = useParams()
@@ -21,6 +22,10 @@ export default function SupplierDetailPage() {
     supplierProducts,
     loading,
     notFound,
+    selectedPurchase,
+    purchaseLoading,
+    fetchPurchaseDetail,
+    setSelectedPurchase,
     updateSupplier,
     deleteSupplier,
   } = useSupplierDetail(id)
@@ -61,22 +66,6 @@ export default function SupplierDetailPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
-      {/* ── Back Header ── */}
-      <div className="flex items-center gap-4 border-b border-border/60 px-6 py-4 shrink-0 bg-muted/10">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => router.push('/features/suppliers')}
-          className="size-8"
-        >
-          <ArrowLeft className="size-4" />
-        </Button>
-        <div className="space-y-0.5">
-          <h1 className="text-lg font-semibold tracking-tight">Supplier Profile</h1>
-          <p className="text-xs text-muted-foreground">View details, order history, and pricing metrics</p>
-        </div>
-      </div>
-
       {/* ── Detail Panel ── */}
       <div className="flex-1 min-h-0 overflow-y-auto">
         <SupplierDetail
@@ -86,6 +75,7 @@ export default function SupplierDetailPage() {
           loading={loading}
           onEdit={() => setFormOpen(true)}
           onDelete={handleDelete}
+          onViewPurchase={fetchPurchaseDetail}
         />
       </div>
 
@@ -96,7 +86,14 @@ export default function SupplierDetailPage() {
         onClose={() => setFormOpen(false)}
         onSubmit={handleSubmit}
       />
+
+      {/* ── Purchase Detail Sheet Drawer ── */}
+      <PurchaseDetail
+        open={!!selectedPurchase}
+        purchase={selectedPurchase}
+        loading={purchaseLoading}
+        onClose={() => setSelectedPurchase(null)}
+      />
     </div>
   )
 }
-

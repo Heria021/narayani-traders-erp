@@ -1,12 +1,13 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import {
-  type Supplier, type SupplierWithStats, type Purchase,
+  type SupplierWithStats, type Purchase,
   type PurchaseItem, type SupplierProduct, type SupplierKpi,
-  type SupplierFormValues, EMPTY_SUPPLIER_FORM,
+  type SupplierFormValues,
 } from './types'
 
 // ─── hook ─────────────────────────────────────────────────────────────────────

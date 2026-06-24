@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
@@ -10,6 +11,7 @@ import type {
   SupplierProduct,
   SupplierFormValues,
 } from '../../_components/types'
+import type { PurchaseWithItems } from '../../../purchases/_components/types'
 
 export function useSupplierDetail(id: string) {
   const supabase = createClient()
@@ -20,6 +22,10 @@ export function useSupplierDetail(id: string) {
   const [supplierProducts, setSupplierProducts] = useState<SupplierProduct[]>([])
   const [loading,          setLoading]          = useState(true)
   const [notFound,         setNotFound]         = useState(false)
+
+  // ── purchase detail state ──
+  const [selectedPurchase, setSelectedPurchase] = useState<PurchaseWithItems | null>(null)
+  const [purchaseLoading,  setPurchaseLoading]  = useState(false)
 
   // ── fetch everything ────────────────────────────────────────────────────────
   const fetchAll = useCallback(async () => {
@@ -121,6 +127,64 @@ export function useSupplierDetail(id: string) {
 
   useEffect(() => { fetchAll() }, [fetchAll])
 
+  // ── fetch single purchase detail ──
+  const fetchPurchaseDetail = useCallback(async (purchaseId: string) => {
+    setPurchaseLoading(true)
+    const [
+      { data: purchase },
+      { data: items },
+    ] = await Promise.all([
+      supabase
+        .from('purchases')
+        .select('*, suppliers!inner(name)')
+        .eq('id', purchaseId)
+        .single(),
+      supabase
+        .from('purchase_items')
+        .select('*, products!inner(name, unit_name)')
+        .eq('purchase_id', purchaseId)
+        .order('id'),
+    ])
+
+    if (!purchase) {
+      setPurchaseLoading(false)
+      return
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const enrichedItems: any[] = (items ?? []).map((i: any) => ({
+      id: i.id,
+      purchase_id: i.purchase_id,
+      product_id: i.product_id,
+      product_name: i.products?.name ?? '—',
+      unit_name: i.products?.unit_name ?? 'unit',
+      buy_mode: i.buy_mode,
+      box_count: i.box_count,
+      quantity: i.quantity,
+      unit_price: i.unit_price,
+      tax_rate: i.tax_rate,
+      line_total: i.line_total,
+    }))
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const p = purchase as any
+    setSelectedPurchase({
+      id: p.id,
+      supplier_id: p.supplier_id,
+      supplier_name: p.suppliers?.name ?? '—',
+      purchase_number: p.purchase_number,
+      purchase_date: p.purchase_date,
+      subtotal: p.subtotal,
+      tax_amount: p.tax_amount,
+      discount_amount: p.discount_amount,
+      grand_total: p.grand_total,
+      notes: p.notes,
+      created_at: p.created_at,
+      items: enrichedItems,
+    })
+    setPurchaseLoading(false)
+  }, [supabase])
+
   // ── update ───────────────────────────────────────────────────────────────────
   const updateSupplier = useCallback(async (values: SupplierFormValues): Promise<boolean> => {
     const { error } = await supabase
@@ -164,6 +228,8 @@ export function useSupplierDetail(id: string) {
   return {
     supplier, purchases, purchaseItems, supplierProducts,
     loading, notFound,
+    selectedPurchase, purchaseLoading,
+    fetchPurchaseDetail, setSelectedPurchase,
     updateSupplier, deleteSupplier,
     refresh: fetchAll,
   }
