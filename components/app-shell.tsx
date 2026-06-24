@@ -27,6 +27,10 @@ const routeTitles: Record<string, string> = {
   "/features/inventory": "Inventory",
   "/features/customers": "Customers",
   "/features/suppliers": "Suppliers",
+  "/portfolio/admin/projects": "Projects Manager",
+  "/portfolio/admin/projects/new": "New Project",
+  "/portfolio/admin/media": "Media Library",
+  "/portfolio/admin/settings": "Studio Settings",
 }
 
 function getRouteTitle(pathname: string) {
@@ -73,6 +77,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const parentPath = isSubRoute ? pathParts.slice(0, 3).join('/') : null
   const parentTitle = parentPath ? routeTitles[parentPath] : null
 
+  const isPortfolio = pathname.startsWith('/portfolio')
+
   return (
     <BreadcrumbContext.Provider value={{ customTitle, setCustomTitle }}>
       <SidebarProvider className="h-svh overflow-hidden">
@@ -87,7 +93,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="/features">Narayani Traders</BreadcrumbLink>
+                  <BreadcrumbLink href={isPortfolio ? "/portfolio/admin/projects" : "/features"}>
+                    {isPortfolio ? "Studio Workspace" : "Narayani Traders"}
+                  </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />
 
