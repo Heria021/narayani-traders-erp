@@ -1,11 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
+import { AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Customer, CustomerFormValues } from './types'
 import { EMPTY_CUSTOMER_FORM, INDIAN_STATES } from './types'
@@ -17,26 +19,26 @@ interface Props {
   onSubmit:   (values: CustomerFormValues) => Promise<boolean>
 }
 
-function FieldRow({
-  label, required, error, children,
-}: { label: string; required?: boolean; error?: string; children: React.ReactNode }) {
+function Field({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <div className={cn('flex flex-col gap-1.5', className)}>{children}</div>
+}
+
+function FieldLabel({ htmlFor, required, children }: { htmlFor?: string; required?: boolean; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-sm font-medium text-foreground/80">
-        {label}{required && <span className="text-red-500 ml-0.5">*</span>}
-      </label>
+    <label htmlFor={htmlFor} className="text-xs font-semibold text-foreground/80">
       {children}
-      {error && <p className="text-xs text-red-500">{error}</p>}
-    </div>
+      {required && <span className="text-destructive ml-0.5">*</span>}
+    </label>
   )
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null
   return (
-    <div className="flex flex-col gap-4">
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</p>
-      {children}
-    </div>
+    <p className="text-xs text-destructive flex items-center gap-1.5 mt-1">
+      <AlertCircle className="size-3 shrink-0" />
+      {message}
+    </p>
   )
 }
 
@@ -104,115 +106,195 @@ export function CustomerForm({ open, customer, onClose, onSubmit }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={v => { if (!v) onClose() }}>
-      <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col gap-0 p-0">
-        <SheetHeader className="px-6 py-5 border-b border-border/60 shrink-0">
-          <SheetTitle className="text-lg font-bold">
-            {isEdit ? `Edit — ${customer.name}` : 'Add Customer'}
-          </SheetTitle>
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-none lg:w-[800px] lg:max-w-[800px] h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)] m-4 rounded-xl border flex flex-col p-0 overflow-hidden shadow-xl"
+      >
+        <SheetHeader className="px-8 py-5 border-b border-border/60 shrink-0">
+          <div className="flex flex-col gap-1">
+            <SheetTitle className="text-lg">
+              {isEdit ? 'Edit Customer' : 'Add Customer'}
+            </SheetTitle>
+            <SheetDescription>
+              {isEdit ? `Editing registry profile for "${customer.name}"` : 'Register a new customer master account.'}
+            </SheetDescription>
+          </div>
         </SheetHeader>
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-          <div className="flex flex-col gap-6 px-6 py-5">
+          <div className="flex flex-col gap-6 px-8 py-1">
 
             {/* ── Section 1: Basic Info ─────────────────────────────────── */}
-            <Section title="Basic Info">
-              <FieldRow label="Name" required error={errors.name}>
-                <Input value={values.name} onChange={e => set('name', e.target.value)}
-                  placeholder="Ramesh Kumar" className={cn(errors.name && 'border-red-400')} />
-              </FieldRow>
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <h3 className="text-sm font-semibold text-foreground">Basic Info</h3>
+                <p className="text-xs text-muted-foreground">General details and account identifiers.</p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Field>
+                  <FieldLabel required>Customer Name</FieldLabel>
+                  <Input
+                    value={values.name}
+                    onChange={e => set('name', e.target.value)}
+                    placeholder="e.g. Ramesh Kumar"
+                    className={cn(errors.name && 'border-destructive')}
+                  />
+                  <FieldError message={errors.name} />
+                </Field>
 
-              <FieldRow label="Phone" required error={errors.phone}>
-                <Input value={values.phone} onChange={e => set('phone', e.target.value)}
-                  placeholder="9876543210" maxLength={10}
-                  className={cn(errors.phone && 'border-red-400')} />
-              </FieldRow>
+                <Field>
+                  <FieldLabel required>Phone Number</FieldLabel>
+                  <Input
+                    value={values.phone}
+                    onChange={e => set('phone', e.target.value)}
+                    placeholder="e.g. 9876543210"
+                    maxLength={10}
+                    className={cn(errors.phone && 'border-destructive')}
+                  />
+                  <FieldError message={errors.phone} />
+                </Field>
 
-              <FieldRow label="Email" error={errors.email}>
-                <Input value={values.email} onChange={e => set('email', e.target.value)}
-                  type="email" placeholder="ramesh@example.com" />
-              </FieldRow>
+                <Field>
+                  <FieldLabel>Email Address</FieldLabel>
+                  <Input
+                    value={values.email}
+                    onChange={e => set('email', e.target.value)}
+                    type="email"
+                    placeholder="e.g. ramesh@example.com"
+                  />
+                </Field>
 
-              <FieldRow label="GSTIN" error={errors.gstin}>
-                <Input value={values.gstin} onChange={e => set('gstin', e.target.value.toUpperCase())}
-                  placeholder="08ABCDE1234F1Z5" maxLength={15}
-                  className={cn('font-mono', errors.gstin && 'border-red-400')} />
-              </FieldRow>
+                <Field>
+                  <FieldLabel>GSTIN</FieldLabel>
+                  <Input
+                    value={values.gstin}
+                    onChange={e => set('gstin', e.target.value.toUpperCase())}
+                    placeholder="e.g. 08ABCDE1234F1Z5"
+                    maxLength={15}
+                    className={cn('font-mono', errors.gstin && 'border-destructive')}
+                  />
+                  <FieldError message={errors.gstin} />
+                </Field>
+              </div>
 
-              <div className="flex items-center justify-between rounded-xl border border-border/60 px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium">Active</p>
-                  <p className="text-xs text-muted-foreground">Inactive customers are hidden from sales search</p>
+              <div className="flex items-center justify-between rounded-xl border border-border/60 px-4 py-3 bg-muted/20 mt-2">
+                <div className="space-y-0.5">
+                  <p className="text-xs font-semibold text-foreground">Active Status</p>
+                  <p className="text-[11px] text-muted-foreground">Inactive customers are hidden from checkout auto-completions.</p>
                 </div>
                 <Switch checked={values.is_active} onCheckedChange={v => set('is_active', v)} />
               </div>
-            </Section>
+            </div>
 
             <Separator />
 
             {/* ── Section 2: Address ────────────────────────────────────── */}
-            <Section title="Address">
-              <FieldRow label="Street / Area">
-                <textarea
-                  value={values.address}
-                  onChange={e => set('address', e.target.value)}
-                  rows={2}
-                  placeholder="123 Main Road, Near City Center"
-                  className="flex w-full rounded-xl border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
-                />
-              </FieldRow>
-
-              <div className="grid grid-cols-2 gap-3">
-                <FieldRow label="City">
-                  <Input value={values.city} onChange={e => set('city', e.target.value)} placeholder="Jaipur" />
-                </FieldRow>
-                <FieldRow label="Postal Code" error={errors.postal_code}>
-                  <Input value={values.postal_code} onChange={e => set('postal_code', e.target.value)}
-                    placeholder="302001" maxLength={6}
-                    className={cn(errors.postal_code && 'border-red-400')} />
-                </FieldRow>
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <h3 className="text-sm font-semibold text-foreground">Address & Location</h3>
+                <p className="text-xs text-muted-foreground">Primary billing address and shipping location.</p>
               </div>
 
-              <FieldRow label="State">
-                <Input value={values.state} onChange={e => set('state', e.target.value)}
-                  list="states-list" placeholder="Rajasthan" />
-                <datalist id="states-list">
-                  {INDIAN_STATES.map(s => <option key={s} value={s} />)}
-                </datalist>
-              </FieldRow>
-            </Section>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Field className="md:col-span-2">
+                  <FieldLabel>Street Address</FieldLabel>
+                  <Textarea
+                    value={values.address}
+                    onChange={e => set('address', e.target.value)}
+                    rows={2}
+                    placeholder="e.g. 123 Main Road, Near City Center"
+                    className="resize-none rounded-xl focus-visible:ring-1 focus-visible:ring-ring"
+                  />
+                </Field>
+
+                <Field>
+                  <FieldLabel>City</FieldLabel>
+                  <Input value={values.city} onChange={e => set('city', e.target.value)} placeholder="e.g. Jaipur" />
+                </Field>
+
+                <Field>
+                  <FieldLabel>Postal Code</FieldLabel>
+                  <Input
+                    value={values.postal_code}
+                    onChange={e => set('postal_code', e.target.value)}
+                    placeholder="e.g. 302001"
+                    maxLength={6}
+                    className={cn(errors.postal_code && 'border-destructive')}
+                  />
+                  <FieldError message={errors.postal_code} />
+                </Field>
+
+                <Field className="md:col-span-2">
+                  <FieldLabel>State</FieldLabel>
+                  <Input
+                    value={values.state}
+                    onChange={e => set('state', e.target.value)}
+                    list="states-list"
+                    placeholder="e.g. Rajasthan"
+                  />
+                  <datalist id="states-list">
+                    {INDIAN_STATES.map(s => <option key={s} value={s} />)}
+                  </datalist>
+                </Field>
+              </div>
+            </div>
 
             <Separator />
 
             {/* ── Section 3: Credit Settings ────────────────────────────── */}
-            <Section title="Credit Settings">
-              <FieldRow label="Credit Limit (₹)" error={errors.credit_limit}>
-                <Input value={values.credit_limit} onChange={e => set('credit_limit', e.target.value)}
-                  type="number" min="0" placeholder="Leave blank for no limit"
-                  className={cn(errors.credit_limit && 'border-red-400')} />
-              </FieldRow>
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <h3 className="text-sm font-semibold text-foreground">Credit & Ledger Settings</h3>
+                <p className="text-xs text-muted-foreground">Accounts balances and credit boundaries.</p>
+              </div>
 
-              {/* Opening balance only on Add form */}
-              {!isEdit && (
-                <FieldRow label="Opening Balance (₹)">
-                  <Input value={values.opening_balance} onChange={e => set('opening_balance', e.target.value)}
-                    type="number" placeholder="0" />
-                  <p className="text-xs text-muted-foreground">
-                    Positive = they owe you. Negative = advance received. 0 = fresh start.
-                  </p>
-                </FieldRow>
-              )}
-            </Section>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Field>
+                  <FieldLabel>Credit Limit (₹)</FieldLabel>
+                  <Input
+                    value={values.credit_limit}
+                    onChange={e => set('credit_limit', e.target.value)}
+                    type="number"
+                    min="0"
+                    placeholder="Leave blank for no limit"
+                    className={cn(errors.credit_limit && 'border-destructive')}
+                  />
+                  <FieldError message={errors.credit_limit} />
+                </Field>
+
+                {/* Opening balance only on Add form */}
+                {!isEdit && (
+                  <Field>
+                    <FieldLabel>Opening Balance (₹)</FieldLabel>
+                    <Input
+                      value={values.opening_balance}
+                      onChange={e => set('opening_balance', e.target.value)}
+                      type="number"
+                      placeholder="0"
+                    />
+                    <p className="text-[10px] text-muted-foreground mt-1 leading-normal">
+                      Positive = customer owes you. Negative = advance deposit credit.
+                    </p>
+                  </Field>
+                )}
+              </div>
+            </div>
 
           </div>
         </form>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border/60 shrink-0">
-          <Button variant="outline" type="button" onClick={onClose} disabled={saving}>
+        <div className="flex items-center justify-end gap-3 px-8 py-4 border-t border-border/60 shrink-0">
+          <Button variant="outline" type="button" onClick={onClose} disabled={saving} className="rounded-lg">
             Cancel
           </Button>
-          <Button type="submit" disabled={saving} onClick={handleSubmit}
-            className="bg-black hover:bg-black/90 text-white dark:bg-white dark:text-black dark:hover:bg-white/90 rounded-lg px-5">
+          <Button
+            type="submit"
+            disabled={saving}
+            onClick={handleSubmit}
+            className="bg-black hover:bg-black/90 text-white dark:bg-white dark:text-black dark:hover:bg-white/90 rounded-lg px-5"
+          >
             {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Customer'}
           </Button>
         </div>

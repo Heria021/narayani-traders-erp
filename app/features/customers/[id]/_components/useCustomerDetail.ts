@@ -1,0 +1,245 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
+import type {
+  CustomerWithStats,
+  Sale,
+  Payment,
+  LedgerEntry,
+  CustomerFormValues,
+  PaymentFormValues,
+} from '../../_components/types'
+
+// ─── helpers ──────────────────────────────────────────────────────────────────
+const num = (v: string | number) => Number(v) || 0
+const today = () => new Date().toISOString().slice(0, 10)
+
+export function useCustomerDetail(id: string) {
+  const supabase = createClient()
+
+  const [customer,        setCustomer]        = useState<CustomerWithStats | null>(null)
+  const [sales,           setSales]           = useState<Sale[]>([])
+  const [payments,        setPayments]        = useState<Payment[]>([])
+  const [loading,          setLoading]          = useState(true)
+  const [notFound,         setNotFound]         = useState(false)
+
+  // ── fetch everything ────────────────────────────────────────────────────────
+  const fetchAll = useCallback(async () => {
+    setLoading(true)
+
+    // 1. Customer row
+    const { data: cust, error: custError } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (custError || !cust) {
+      setNotFound(true)
+      setLoading(false)
+      return
+    }
+
+    // 2. Fetch sales
+    const { data: salesData } = await supabase
+      .from('sales')
+      .select('*')
+      .eq('customer_id', id)
+      .order('sale_date', { ascending: false })
+
+    // 3. Fetch payments
+    const { data: paymentsData } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('customer_id', id)
+      .order('payment_date', { ascending: false })
+
+    const salesList = (salesData ?? []) as Sale[]
+    const paymentsList = (paymentsData ?? []) as Payment[]
+
+    const totalBilled = salesList.reduce((sum, s) => sum + s.grand_total, 0)
+    const totalOutstanding = salesList
+      .filter(s => s.payment_status !== 'paid')
+      .reduce((sum, s) => sum + s.balance_due, 0)
+    const totalPaid = paymentsList.reduce((sum, p) => sum + p.amount, 0)
+
+    setCustomer({
+      ...cust,
+      total_billed:      totalBilled,
+      total_outstanding: totalOutstanding,
+      total_paid:        totalPaid,
+    })
+
+    setSales(salesList)
+    setPayments(paymentsList)
+    setLoading(false)
+  }, [supabase, id])
+
+  useEffect(() => {
+    fetchAll()
+  }, [fetchAll])
+
+  // ── build ledger ────────────────────────────────────────────────────────────
+  const buildLedger = useCallback((): LedgerEntry[] => {
+    if (!customer) return []
+    const entries: LedgerEntry[] = []
+
+    // Opening balance (oldest)
+    if (customer.opening_balance !== 0) {
+      entries.push({
+        kind: 'opening',
+        date: customer.created_at.slice(0, 10),
+        amount: customer.opening_balance,
+      })
+    }
+
+    // Sales → invoices
+    for (const s of sales) {
+      entries.push({ kind: 'invoice', date: s.sale_date, amount: s.grand_total, sale: s })
+    }
+
+    // Payments
+    const billMap = new Map(sales.map(s => [s.id, s.bill_number ?? undefined]))
+    for (const p of payments) {
+      entries.push({
+        kind: 'payment',
+        date: p.payment_date,
+        amount: p.amount,
+        payment: p,
+        bill_number: p.sale_id ? billMap.get(p.sale_id) : undefined,
+      })
+    }
+
+    // Sort by date descending (newest first)
+    entries.sort((a, b) => b.date.localeCompare(a.date))
+    return entries
+  }, [customer, sales, payments])
+
+  // ── update ───────────────────────────────────────────────────────────────────
+  const updateCustomer = useCallback(async (values: CustomerFormValues): Promise<boolean> => {
+    const { error } = await supabase
+      .from('customers')
+      .update({
+        name:        values.name.trim(),
+        phone:       values.phone.trim(),
+        email:       values.email.trim() || null,
+        gstin:       values.gstin.trim() || null,
+        address:     values.address.trim() || null,
+        city:        values.city.trim() || null,
+        state:       values.state.trim() || null,
+        postal_code: values.postal_code.trim() || null,
+        credit_limit: num(values.credit_limit) || null,
+        is_active:   values.is_active,
+      })
+      .eq('id', id)
+
+    if (error) {
+      toast.error(error.message)
+      return false
+    }
+    toast.success(`${values.name} updated`)
+    await fetchAll()
+    return true
+  }, [supabase, id, fetchAll])
+
+  // ── toggle active ────────────────────────────────────────────────────────────
+  const toggleActive = useCallback(async () => {
+    if (!customer) return
+    const next = !customer.is_active
+    const { error } = await supabase
+      .from('customers')
+      .update({ is_active: next })
+      .eq('id', id)
+
+    if (error) {
+      toast.error(error.message)
+      return
+    }
+    toast.success(`${customer.name} ${next ? 'activated' : 'deactivated'}`)
+    await fetchAll()
+  }, [supabase, id, customer, fetchAll])
+
+  // ── delete ───────────────────────────────────────────────────────────────────
+  const deleteCustomer = useCallback(async (): Promise<boolean> => {
+    const [{ count: sCount }, { count: pCount }] = await Promise.all([
+      supabase.from('sales').select('id', { count: 'exact', head: true }).eq('customer_id', id),
+      supabase.from('payments').select('id', { count: 'exact', head: true }).eq('customer_id', id),
+    ])
+
+    if ((sCount ?? 0) > 0 || (pCount ?? 0) > 0) {
+      toast.error('Customer has transaction history. Deactivate instead.')
+      return false
+    }
+
+    const { error } = await supabase.from('customers').delete().eq('id', id)
+    if (error) {
+      toast.error(error.message)
+      return false
+    }
+    toast.success('Customer deleted')
+    return true
+  }, [supabase, id])
+
+  // ── record payment ───────────────────────────────────────────────────────────
+  const recordPayment = useCallback(async (values: PaymentFormValues): Promise<boolean> => {
+    if (!customer) return false
+    const amount = num(values.amount)
+    if (amount <= 0) {
+      toast.error('Amount must be > 0')
+      return false
+    }
+
+    // Insert payment
+    const { error: pErr } = await supabase.from('payments').insert({
+      customer_id:      customer.id,
+      sale_id:          values.sale_id || null,
+      amount,
+      payment_method:   values.payment_method,
+      reference_number: values.reference_number.trim() || null,
+      payment_date:     values.payment_date || today(),
+      note:             values.note.trim() || null,
+    })
+    if (pErr) {
+      toast.error(pErr.message)
+      return false
+    }
+
+    // Update linked sale if provided
+    if (values.sale_id) {
+      const linkedSale = sales.find(s => s.id === values.sale_id)
+      if (linkedSale) {
+        const newPaid    = linkedSale.amount_paid + amount
+        const newBalance = Math.max(0, linkedSale.grand_total - newPaid)
+        const newStatus  = newBalance <= 0 ? 'paid' : newPaid > 0 ? 'partial' : 'pending'
+        await supabase
+          .from('sales')
+          .update({
+            amount_paid:    newPaid,
+            balance_due:    newBalance,
+            payment_status: newStatus,
+          })
+          .eq('id', values.sale_id)
+      }
+    }
+
+    toast.success(`₹${amount.toFixed(2)} recorded for ${customer.name}`)
+    await fetchAll()
+    return true
+  }, [supabase, customer, sales, fetchAll])
+
+  return {
+    customer,
+    sales,
+    payments,
+    loading,
+    notFound,
+    buildLedger,
+    updateCustomer,
+    toggleActive,
+    deleteCustomer,
+    recordPayment,
+    refresh: fetchAll,
+  }
+}

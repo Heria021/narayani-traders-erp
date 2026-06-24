@@ -6,9 +6,6 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent,
-} from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Progress, ProgressTrack, ProgressIndicator } from '@/components/ui/progress'
 import {
@@ -74,37 +71,40 @@ export function CustomerDetail({
     <div className="flex h-full flex-col overflow-hidden">
 
       {/* ── Header ────────────────────────────────────────────────────────────── */}
-      <Card className="shrink-0 gap-4 rounded-none border-x-0 border-t-0">
-        <CardHeader>
-          <CardTitle className="flex flex-wrap items-center gap-2 text-xl">
-            {customer.name}
-            <Badge variant={customer.is_active ? 'default' : 'secondary'} className="text-xs font-semibold">
-              {customer.is_active ? 'Active' : 'Inactive'}
-            </Badge>
-          </CardTitle>
-          <CardDescription className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-sm">
-            {customer.phone && (
-              <span className="flex items-center gap-1"><Phone className="size-3" />{customer.phone}</span>
-            )}
-            {customer.email && (
-              <span className="flex items-center gap-1"><Mail className="size-3" />{customer.email}</span>
-            )}
-            {(customer.city || customer.state) && (
-              <span className="flex items-center gap-1">
-                <MapPin className="size-3" />
-                {[customer.city, customer.state].filter(Boolean).join(', ')}
-              </span>
-            )}
-            {customer.gstin && (
-              <span className="rounded bg-muted/60 px-2 py-0.5 font-mono text-xs">GSTIN: {customer.gstin}</span>
-            )}
-          </CardDescription>
-          <CardAction className="flex items-center gap-2">
+      <div className="shrink-0 px-6 py-4 border-b border-border/60">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <h2 className="text-xl font-bold flex items-center gap-2 text-black dark:text-white">
+              {customer.name}
+              <Badge variant={customer.is_active ? 'default' : 'secondary'} className="text-[10px] font-semibold">
+                {customer.is_active ? 'Active' : 'Inactive'}
+              </Badge>
+            </h2>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              {customer.phone && (
+                <span className="flex items-center gap-1"><Phone className="size-3" />{customer.phone}</span>
+              )}
+              {customer.email && (
+                <span className="flex items-center gap-1"><Mail className="size-3" />{customer.email}</span>
+              )}
+              {(customer.city || customer.state) && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="size-3" />
+                  {[customer.city, customer.state].filter(Boolean).join(', ')}
+                </span>
+              )}
+              {customer.gstin && (
+                <span className="rounded bg-muted/60 px-1.5 py-0.5 font-mono text-[10px]">GSTIN: {customer.gstin}</span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
             <Button size="sm" onClick={onPayment} className="h-8 px-3 text-xs">
-              <CreditCard className="size-3" /> Record Payment
+              <CreditCard className="size-3 mr-1" /> Record Payment
             </Button>
             <Button variant="outline" size="sm" onClick={onEdit} className="h-8 text-xs">
-              <Pencil className="size-3" /> Edit
+              <Pencil className="size-3 mr-1" /> Edit
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" className="size-8" />}>
@@ -113,50 +113,48 @@ export function CustomerDetail({
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={onToggle}>
                   {customer.is_active
-                    ? <><PowerOff className="size-4" /> Deactivate</>
-                    : <><Power className="size-4" /> Activate</>}
+                    ? <><PowerOff className="size-4 mr-2" /> Deactivate</>
+                    : <><Power className="size-4 mr-2" /> Activate</>}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" onClick={onDelete}>
-                  <Trash2 className="size-4" /> Delete Customer
+                  <Trash2 className="size-4 mr-2" /> Delete Customer
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </CardAction>
-        </CardHeader>
-
-        <CardContent className="space-y-3">
-          {/* Balance summary */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {[
-              { label: 'Opening Balance', value: customer.opening_balance, cls: '' },
-              { label: 'Total Billed', value: customer.total_billed, cls: '' },
-              { label: 'Total Paid', value: customer.total_paid, cls: 'text-emerald-600 dark:text-emerald-400' },
-              { label: 'Net Owed', value: netOwed, cls: netOwed > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400' },
-            ].map(({ label, value, cls }) => (
-              <Card key={label} className="gap-1 bg-muted/40 px-3 py-2.5 shadow-none">
-                <p className="text-xs text-muted-foreground">{label}</p>
-                <p className={cn('text-base font-bold tabular-nums', cls)}>{rupee(value)}</p>
-              </Card>
-            ))}
           </div>
+        </div>
 
-          {/* Credit limit bar */}
-          {limit > 0 && (
-            <div>
-              <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
-                <span>Credit Limit: {rupee(limit)}</span>
-                <span>{Math.round(creditUsedPct)}% used · Free: {rupee(Math.max(0, limit - netOwed))}</span>
-              </div>
-              <Progress value={creditUsedPct} className="w-full">
-                <ProgressTrack className="h-2">
-                  <ProgressIndicator className={creditBarColor} style={{ width: `${creditUsedPct}%` }} />
-                </ProgressTrack>
-              </Progress>
+        {/* Balance summary */}
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { label: 'Opening Balance', value: customer.opening_balance, cls: '' },
+            { label: 'Total Billed', value: customer.total_billed, cls: '' },
+            { label: 'Total Paid', value: customer.total_paid, cls: 'text-emerald-600 dark:text-emerald-400' },
+            { label: 'Net Owed', value: netOwed, cls: netOwed > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400' },
+          ].map(({ label, value, cls }) => (
+            <div key={label} className="bg-muted/40 rounded-xl px-3 py-2.5">
+              <p className="text-xs text-muted-foreground">{label}</p>
+              <p className={cn('text-base font-bold tabular-nums mt-0.5', cls)}>{rupee(value)}</p>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          ))}
+        </div>
+
+        {/* Credit limit bar */}
+        {limit > 0 && (
+          <div className="mt-4">
+            <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
+              <span>Credit Limit: {rupee(limit)}</span>
+              <span>{Math.round(creditUsedPct)}% used · Free: {rupee(Math.max(0, limit - netOwed))}</span>
+            </div>
+            <Progress value={creditUsedPct} className="w-full">
+              <ProgressTrack className="h-2">
+                <ProgressIndicator className={creditBarColor} style={{ width: `${creditUsedPct}%` }} />
+              </ProgressTrack>
+            </Progress>
+          </div>
+        )}
+      </div>
 
       {/* ── Tabs ──────────────────────────────────────────────────────────────── */}
       <div className="min-h-0 flex-1 overflow-hidden">
