@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
 import { Input } from '@/components/ui/input'
@@ -420,7 +420,19 @@ function LineItemRow({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function NewPurchasePage() {
+  return (
+    <Suspense fallback={<div className="flex h-full items-center justify-center"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>}>
+      <NewPurchaseForm />
+    </Suspense>
+  )
+}
+
+function NewPurchaseForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const preSupplierId = searchParams.get('supplier_id')
+  const preProductId = searchParams.get('product_id')
+
   const {
     generatePurchaseNumber,
     savePurchase,
@@ -461,6 +473,38 @@ export default function NewPurchasePage() {
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Pre-populate supplier
+  useEffect(() => {
+    if (preSupplierId && suppliers.length > 0) {
+      const found = suppliers.find(s => s.id === preSupplierId)
+      if (found) {
+        setSelectedSupplier(found)
+        setHeader(h => ({ ...h, supplier_id: found.id }))
+      }
+    }
+  }, [preSupplierId, suppliers])
+
+  // Pre-populate product row
+  useEffect(() => {
+    if (preProductId && products.length > 0 && rows.length === 1 && !rows[0].product) {
+      const found = products.find(p => p.id === preProductId)
+      if (found) {
+        setRows([
+          {
+            id: localId(),
+            product: found,
+            buy_mode: 'unit',
+            qty_input: '',
+            unit_price: String(found.purchase_price),
+            tax_rate: String(found.gst_rate || 18),
+            base_units: 0,
+            line_total: 0,
+          }
+        ])
+      }
+    }
+  }, [preProductId, products, rows])
 
   const updateRow = useCallback((id: string, patch: Partial<LineItemDraft>) => {
     setRows(prev => prev.map(r => r.id !== id ? r : { ...r, ...patch }))
