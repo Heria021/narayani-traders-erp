@@ -5,25 +5,10 @@ import { Button } from '@/components/ui/button'
 import { Printer, X } from 'lucide-react'
 import type { SaleWithItems } from './types'
 import { PAYMENT_METHOD_LABELS } from './types'
+import { SHOP } from '@/lib/config/shop'
 
-// ─── Shop constants ───────────────────────────────────────────────────────────
-const SHOP = {
-  name1:    'Narayani',
-  name2:    'Traders',
-  tagline:  'Hardware & Building Materials',
-  address:  'Ward No. 20, Aadhar Super Market, PWD Road, Dariba, Bidasar',
-  phone1:   '+91 97823 53866',
-  phone2:   '+91 90229 91101',
-  email:    'narayanitraders011@gmail.com',
-  gstin:    '08AAAPL8767A1ZH',
-  upi:      '9022991101-3@ybl',
-  terms: [
-    'Goods once sold will not be taken back or exchanged without prior approval.',
-    'Payment for Udhaar (credit) bills is due within 30 days of invoice date.',
-    'Interest of 2% per month will be charged on overdue balances.',
-    'All disputes are subject to Bidasar (Churu) jurisdiction only.',
-  ],
-}
+// ─── Constants ────────────────────────────────────────────────────────────────
+const FLOAT_DUST = 0.001
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -35,10 +20,7 @@ const fmtDate = (d: string) =>
 
 function getWalkinDisplayName(sale: SaleWithItems): { name: string; phone?: string } {
   if (sale.customer_name !== 'Walk-in') return { name: sale.customer_name }
-  if (sale.notes?.startsWith('Walk-in: ')) {
-    const extracted = sale.notes.split('\n')[0].replace('Walk-in: ', '').trim()
-    if (extracted) return { name: extracted }
-  }
+  if (sale.walkin_name) return { name: sale.walkin_name }
   return { name: 'Walk-in Customer' }
 }
 
@@ -82,15 +64,13 @@ export function InvoiceModal({ open, sale, onClose }: Props) {
   const hasTax     = sale.tax_amount > 0
   const hasDiscount = sale.discount > 0
   const hasPaid    = sale.amount_paid > 0
-  const hasBalance = sale.balance_due > 0.001
-  const primaryPayment = sale.payments[0]
-  const paymentMode = primaryPayment
-    ? PAYMENT_METHOD_LABELS[primaryPayment.payment_method]
-    : (sale.amount_paid > 0 ? 'Cash' : 'Udhaar')
-  const refNo = primaryPayment?.reference_number
+  const hasBalance = sale.balance_due > FLOAT_DUST
 
   const isUdhaar = hasBalance
 
+  // Note: sale.created_at is UTC from the database. Since this app is built for a
+  // single-owner shop operating entirely in Rajasthan, toLocaleTimeString('en-IN')
+  // is appropriate as it correctly resolves to the local IST timezone on client browsers.
   const saleTime = new Date(sale.created_at).toLocaleTimeString('en-IN', {
     hour: '2-digit', minute: '2-digit', hour12: true,
   })
@@ -239,9 +219,9 @@ export function InvoiceModal({ open, sale, onClose }: Props) {
                     <div className="inv-billno-label">Tax Invoice</div>
                     <div className="inv-billno-val">{sale.invoice_number}</div>
                     <div className="inv-gstin">GSTIN: {SHOP.gstin}</div>
-                    {sale.notes && !sale.notes.startsWith('Walk-in: ') && (
+                    {sale.notes && (
                       <div style={{ fontSize: '.7rem', color: '#6b5e52', marginTop: '.2rem' }}>
-                        Ref: {sale.notes.split('\n').slice(-1)[0]}
+                        Note: {sale.notes}
                       </div>
                     )}
                   </div>
@@ -274,8 +254,15 @@ export function InvoiceModal({ open, sale, onClose }: Props) {
                     {isUdhaar && dueDate && (
                       <><br /><span style={{ fontSize: '.7rem', color: '#b91c1c', marginTop: '3px', display: 'block' }}>Due by {dueDate}</span></>
                     )}
-                    {refNo && (
-                      <><br /><span style={{ fontSize: '.7rem', color: '#6b5e52', fontFamily: 'monospace' }}>Ref: {refNo}</span></>
+                    {sale.payments && sale.payments.length > 0 ? (
+                      sale.payments.map((p) => (
+                        <div key={p.id} style={{ fontSize: '.7rem', color: '#6b5e52', marginTop: '3px', lineHeight: '1.2' }}>
+                          • {PAYMENT_METHOD_LABELS[p.payment_method] || p.payment_method}
+                          {p.reference_number ? ` (Ref: ${p.reference_number})` : ''}
+                        </div>
+                      ))
+                    ) : (
+                      hasPaid && <div style={{ fontSize: '.7rem', color: '#dc2626', marginTop: '3px' }}>• Payment method unlinked</div>
                     )}
                   </div>
                 </div>
@@ -364,11 +351,20 @@ export function InvoiceModal({ open, sale, onClose }: Props) {
                         <td>{rupee(sale.grand_total)}</td>
                       </tr>
                       {/* Amount Paid */}
-                      {hasPaid && (
-                        <tr className="paid-line">
-                          <td>Paid ({paymentMode})</td>
-                          <td>− {rupee(sale.amount_paid)}</td>
-                        </tr>
+                      {sale.payments && sale.payments.length > 0 ? (
+                        sale.payments.map((p) => (
+                          <tr key={p.id} className="paid-line">
+                            <td>Paid ({PAYMENT_METHOD_LABELS[p.payment_method] || p.payment_method})</td>
+                            <td>− {rupee(p.amount)}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        hasPaid ? (
+                          <tr className="paid-line">
+                            <td style={{ color: '#ef4444' }}>Paid (—)</td>
+                            <td style={{ color: '#ef4444' }}>− {rupee(sale.amount_paid)}</td>
+                          </tr>
+                        ) : null
                       )}
                       {/* Balance Due */}
                       {hasBalance ? (

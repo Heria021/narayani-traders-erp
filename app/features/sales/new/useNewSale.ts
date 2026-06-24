@@ -137,11 +137,6 @@ export function useNewSale() {
       referenceNumber, dueDate, notes,
     } = params
 
-    // Compose notes — prepend walk-in name if provided
-    const finalNotes = isWalkin && walkinName.trim()
-      ? `Walk-in: ${walkinName.trim()}${notes.trim() ? `\n${notes.trim()}` : ''}`
-      : notes.trim() || null
-
     // 1. INSERT sales
     const { data: sale, error: saleErr } = await supabase
       .from('sales')
@@ -157,7 +152,8 @@ export function useNewSale() {
         balance_due:    parseFloat(balanceDue.toFixed(2)),
         payment_status: paymentStatus,
         due_date:       dueDate || null,
-        notes:          finalNotes,
+        notes:          notes.trim() || null,
+        walkin_name:    isWalkin ? (walkinName.trim() || null) : null,
       })
       .select()
       .single()

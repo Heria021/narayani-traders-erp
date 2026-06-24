@@ -186,6 +186,7 @@ create table sales (
   due_date        date,                               -- optional — for credit sales
 
   notes           text,
+  walkin_name     text,                               -- optional customer name for walk-in sales
   created_at      timestamptz    not null default now()
 );
 comment on table  sales                is 'Sales invoices (formerly bills).';

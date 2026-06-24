@@ -36,6 +36,7 @@ export interface Sale {
   id: string
   customer_id: string
   customer_name: string          // joined from customers (or "Walk-in")
+  walkin_name: string | null     // optional display name for walk-in customer
   invoice_number: string
   sale_date: string
   subtotal: number

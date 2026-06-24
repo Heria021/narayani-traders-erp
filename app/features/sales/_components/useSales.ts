@@ -152,7 +152,7 @@ export function useSales() {
       .select(`
         id, customer_id, invoice_number, sale_date,
         subtotal, tax_amount, discount, grand_total,
-        amount_paid, balance_due, payment_status, due_date, notes, created_at,
+        amount_paid, balance_due, payment_status, due_date, notes, walkin_name, created_at,
         customers!inner(name)
       `, { count: 'exact' })
 
@@ -167,7 +167,11 @@ export function useSales() {
 
     const { data, count, error } = await query
 
-    if (error) { console.error(error); setLoading(false); return }
+    if (error) {
+      console.error('Error fetching sales:', error.message, error.details, error.hint)
+      setLoading(false)
+      return
+    }
 
     // Fetch item counts per sale
     const saleIds = (data ?? []).map(s => s.id)
@@ -185,11 +189,14 @@ export function useSales() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let rows: Sale[] = (data ?? []).map((s: any) => {
       const rawName = s.customers?.name ?? '—'
-      const customerName = rawName === WALKIN_CUSTOMER_NAME ? 'Walk-in' : rawName
+      const customerName = rawName === WALKIN_CUSTOMER_NAME
+        ? (s.walkin_name ? `Walk-in (${s.walkin_name})` : 'Walk-in')
+        : rawName
       return {
         id: s.id,
         customer_id: s.customer_id,
         customer_name: customerName,
+        walkin_name: s.walkin_name,
         invoice_number: s.invoice_number,
         sale_date: s.sale_date,
         subtotal: s.subtotal,
@@ -285,6 +292,7 @@ export function useSales() {
       id: s.id,
       customer_id: s.customer_id,
       customer_name: rawName === WALKIN_CUSTOMER_NAME ? 'Walk-in' : rawName,
+      walkin_name: s.walkin_name,
       invoice_number: s.invoice_number,
       sale_date: s.sale_date,
       subtotal: s.subtotal,

@@ -742,6 +742,7 @@ export default function NewSalePage() {
       id:             '',
       customer_id:    '',
       customer_name:  displayName,
+      walkin_name:    !header.customer_id ? header.walkin_name.trim() || null : null,
       invoice_number: header.invoice_number,
       sale_date:      header.sale_date || today(),
       subtotal,
