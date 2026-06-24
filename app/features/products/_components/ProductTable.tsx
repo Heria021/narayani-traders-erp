@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
+  Table,
   TableBody, TableCell, TableRow,
 } from '@/components/ui/table'
 import {
@@ -281,7 +282,7 @@ export function ProductTable({
           </div>
         ) : (
           <div className="min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain [scrollbar-width:thin]">
-            <table className="w-full min-w-[900px] caption-bottom border-separate border-spacing-0 text-sm">
+            <Table className="w-full min-w-[900px] caption-bottom border-separate border-spacing-0 text-sm">
               <TableBody>
                 {loading ? (
                   <TableSkeleton />
@@ -395,7 +396,7 @@ export function ProductTable({
                   ))
                 )}
               </TableBody>
-            </table>
+            </Table>
           </div>
         )}
 

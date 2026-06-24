@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import type { CustomerWithStats, Sale, PaymentFormValues } from './types'
+import { DatePicker } from '@/components/ui/date-picker'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -146,7 +147,7 @@ export function PaymentModal({ open, customer, unpaidSales, onClose, onSubmit }:
           {/* Date */}
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium">Date <span className="text-red-500">*</span></label>
-            <Input type="date" value={values.payment_date} onChange={e => set('payment_date', e.target.value)} />
+            <DatePicker value={values.payment_date} onChange={val => set('payment_date', val)} />
           </div>
 
           {/* Note */}

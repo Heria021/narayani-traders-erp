@@ -4,15 +4,54 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
+import { ButtonGroup } from '@/components/ui/button-group'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from '@/components/ui/input-group'
 import { Badge } from '@/components/ui/badge'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
+} from '@/components/ui/card'
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+  FieldDescription,
+  FieldError,
+} from '@/components/ui/field'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/table'
+import {
+  Combobox,
+  ComboboxInput,
+  ComboboxContent,
+  ComboboxList,
+  ComboboxItem,
+} from '@/components/ui/combobox'
+import { DatePicker } from '@/components/ui/date-picker'
+import { useCustomers } from '../../customers/_components/useCustomers'
+import { CustomerForm } from '../../customers/_components/CustomerForm'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import {
-  Plus, Trash2, AlertCircle, ChevronDown, X,
+  Plus, Trash2, AlertCircle, X,
   Package, Loader2, CalendarDays, FileText, User,
   AlertTriangle, Info, CreditCard, Eye,
 } from 'lucide-react'
@@ -62,106 +101,92 @@ function emptyRow(): SaleDraftLineItem {
 
 const REFERENCE_METHODS: PaymentMethod[] = ['upi', 'card', 'bank_transfer']
 
-// ─── FieldLabel ───────────────────────────────────────────────────────────────
-
-function FieldLabel({ children, required }: { children: React.ReactNode; required?: boolean }) {
-  return (
-    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-      {children}{required && <span className="text-red-500 ml-0.5 normal-case">*</span>}
-    </Label>
-  )
-}
-
 // ─── CustomerSearch ───────────────────────────────────────────────────────────
 
 function CustomerSearch({
-  value, options, loading, onSelect,
+  value, options, onSelect, onAddCustomerClick,
 }: {
   value: Customer | null
   options: Customer[]
   loading: boolean
   onSelect: (c: Customer | null) => void
+  onAddCustomerClick: () => void
 }) {
   const [query, setQuery] = useState('')
-  const [open,  setOpen]  = useState(false)
+  const [open, setOpen] = useState(false)
 
   const results = useMemo(() => {
     const q = normalized(query.trim())
     const filtered = q
       ? options.filter(c =>
-          normalized(c.name).includes(q) ||
-          normalized(c.phone).includes(q)
-        )
+        normalized(c.name).includes(q) ||
+        normalized(c.phone).includes(q)
+      )
       : options
     return filtered.slice(0, 12)
   }, [options, query])
 
-  function handleInput(next: string) {
-    if (value) onSelect(null)
-    setQuery(next)
-    setOpen(true)
-  }
-
-  function pick(c: Customer) {
-    onSelect(c)
-    setQuery('')
-    setOpen(false)
-  }
-
   return (
-    <Popover open={open && !value} onOpenChange={setOpen}>
-      <PopoverTrigger render={<div className="relative" />} nativeButton={false}>
-        <Input
-          value={value ? value.name : query}
-          onChange={e => handleInput(e.target.value)}
-          onFocus={() => setOpen(true)}
-          placeholder="Search customer by name or phone…"
-          className="pr-9"
-        />
-        {value ? (
-          <button
+    <Combobox
+      value={value?.id ?? ''}
+      onValueChange={(val) => {
+        if (!val) {
+          onSelect(null)
+          setQuery('')
+        } else {
+          const found = options.find(o => o.id === val) || null
+          onSelect(found)
+          setQuery('')
+        }
+      }}
+      open={open}
+      onOpenChange={setOpen}
+      inputValue={value ? value.name : query}
+      onInputValueChange={(q) => {
+        if (value) onSelect(null)
+        setQuery(q)
+      }}
+    >
+      <ComboboxInput
+        placeholder="Search customer by name or phone…"
+        showClear={!!value}
+        showTrigger={!value}
+        className="w-full"
+      />
+      <ComboboxContent align="start" sideOffset={6} className="w-full min-w-80">
+        <ComboboxList>
+          {results.map((c) => (
+            <ComboboxItem key={c.id} value={c.id}>
+              <div className="flex items-center gap-2 py-1">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-semibold text-muted-foreground">
+                  {c.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">{c.name}</p>
+                  {c.phone && <p className="truncate text-xs text-muted-foreground">{c.phone}</p>}
+                </div>
+              </div>
+            </ComboboxItem>
+          ))}
+        </ComboboxList>
+
+        <div className="border-t p-1 bg-muted/20">
+          <Button
             type="button"
-            onClick={() => { onSelect(null); setQuery(''); setOpen(false) }}
-            className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-            aria-label="Clear customer"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setOpen(false)
+              onAddCustomerClick()
+            }}
+            className="w-full justify-start text-xs font-semibold text-primary hover:text-primary hover:bg-muted"
           >
-            <X className="size-3.5" />
-          </button>
-        ) : loading ? (
-          <Loader2 className="absolute right-3 top-1/2 size-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
-        ) : (
-          <ChevronDown className="absolute right-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-        )}
-      </PopoverTrigger>
-      <PopoverContent align="start" sideOffset={6} className="max-h-72 w-80 max-w-[calc(100vw-2rem)] gap-0 overflow-y-auto p-1">
-        {loading ? (
-          <div className="flex items-center gap-2 px-3 py-2.5 text-sm text-muted-foreground">
-            <Loader2 className="size-3.5 animate-spin" />Loading customers…
-          </div>
-        ) : results.length > 0 ? (
-          results.map(c => (
-            <button
-              key={c.id}
-              type="button"
-              className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-muted/60"
-              onClick={() => pick(c)}
-            >
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-semibold text-muted-foreground">
-                {c.name.charAt(0).toUpperCase()}
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-foreground">{c.name}</p>
-                {c.phone && <p className="truncate text-xs text-muted-foreground">{c.phone}</p>}
-              </div>
-            </button>
-          ))
-        ) : (
-          <div className="px-3 py-3 text-sm text-muted-foreground">
-            {query.trim() ? 'No customers found' : 'No customers available'}
-          </div>
-        )}
-      </PopoverContent>
-    </Popover>
+            <Plus className="size-3.5" />
+            Add New Customer
+          </Button>
+        </div>
+      </ComboboxContent>
+    </Combobox>
   )
 }
 
@@ -170,81 +195,81 @@ function CustomerSearch({
 function CustomerInfoPanel({
   customer, outstanding,
 }: { customer: Customer; outstanding: number }) {
-  const creditLimit   = customer.credit_limit
-  const openingBal    = customer.opening_balance
-  const totalOwed     = outstanding + Math.max(0, openingBal)
-  const hasAdvance    = openingBal < 0
+  const creditLimit = customer.credit_limit
+  const openingBal = customer.opening_balance
+  const totalOwed = outstanding + Math.max(0, openingBal)
+  const hasAdvance = openingBal < 0
 
-  // No limit means 0
   const noLimit = creditLimit <= 0
-  const usageRatio   = noLimit ? 0 : totalOwed / creditLimit
-  const nearLimit    = !noLimit && usageRatio >= 0.8 && usageRatio < 1
-  const atLimit      = !noLimit && usageRatio >= 1
+  const usageRatio = noLimit ? 0 : totalOwed / creditLimit
+  const nearLimit = !noLimit && usageRatio >= 0.8 && usageRatio < 1
+  const atLimit = !noLimit && usageRatio >= 1
 
   return (
-    <div className="rounded-lg border border-border/60 bg-muted/30 p-3 space-y-2">
-      {/* Header row */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-background border text-xs font-bold text-foreground">
-            {customer.name.charAt(0).toUpperCase()}
+    <Card className="bg-muted/30 border-border/60 shadow-none">
+      <CardContent className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex size-8 items-center justify-center rounded-lg border bg-background text-xs font-bold text-foreground">
+              {customer.name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <p className="text-sm font-semibold leading-tight text-foreground">{customer.name}</p>
+              {customer.phone && (
+                <FieldDescription>{customer.phone}</FieldDescription>
+              )}
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-semibold text-foreground leading-tight">{customer.name}</p>
-            {customer.phone && (
-              <p className="text-xs text-muted-foreground">📞 {customer.phone}</p>
-            )}
+          <div className="space-y-0.5 text-right text-xs">
+            <p className="text-muted-foreground">Outstanding</p>
+            <p className={cn('font-bold tabular-nums', outstanding > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-foreground')}>
+              {rupee(outstanding)}
+            </p>
           </div>
         </div>
-        <div className="text-right text-xs space-y-0.5">
-          <p className="text-muted-foreground">Outstanding</p>
-          <p className={cn('font-bold tabular-nums', outstanding > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-foreground')}>
-            {rupee(outstanding)}
-          </p>
-        </div>
-      </div>
 
-      {/* Credit limit info */}
-      {!noLimit && (
-        <div className="text-xs text-muted-foreground flex items-center justify-between">
-          <span>Credit Limit: {rupee(creditLimit)}</span>
-          <span>Available: {rupee(Math.max(0, creditLimit - totalOwed))}</span>
-        </div>
-      )}
+        {!noLimit && (
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Credit Limit: {rupee(creditLimit)}</span>
+            <span>Available: {rupee(Math.max(0, creditLimit - totalOwed))}</span>
+          </div>
+        )}
 
-      {/* Advance credit */}
-      {hasAdvance && (
-        <div className="flex items-center gap-1.5 rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 px-3 py-2 text-xs text-blue-700 dark:text-blue-400">
-          <Info className="size-3.5 shrink-0" />
-          <span>{customer.name} has {rupee(Math.abs(openingBal))} advance credit</span>
-        </div>
-      )}
+        {hasAdvance && (
+          <Alert className="border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-400 [&>svg]:text-blue-700 dark:[&>svg]:text-blue-400">
+            <Info className="size-3.5" />
+            <AlertDescription>
+              {customer.name} has {rupee(Math.abs(openingBal))} advance credit
+            </AlertDescription>
+          </Alert>
+        )}
 
-      {/* Near limit warning */}
-      {nearLimit && !atLimit && (
-        <div className="flex items-center gap-1.5 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
-          <AlertTriangle className="size-3.5 shrink-0" />
-          <span>
-            {customer.name} is nearing their credit limit ({rupee(totalOwed)} of {rupee(creditLimit)} used)
-          </span>
-        </div>
-      )}
+        {nearLimit && !atLimit && (
+          <Alert className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-400 [&>svg]:text-amber-700 dark:[&>svg]:text-amber-400">
+            <AlertTriangle className="size-3.5" />
+            <AlertDescription>
+              {customer.name} is nearing their credit limit ({rupee(totalOwed)} of {rupee(creditLimit)} used)
+            </AlertDescription>
+          </Alert>
+        )}
 
-      {/* At limit */}
-      {atLimit && (
-        <div className="flex items-center gap-1.5 rounded-md bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 px-3 py-2 text-xs text-red-700 dark:text-red-400">
-          <AlertCircle className="size-3.5 shrink-0" />
-          <span>Credit limit reached. {rupee(totalOwed)} outstanding.</span>
-        </div>
-      )}
-    </div>
+        {atLimit && (
+          <Alert variant="destructive">
+            <AlertCircle className="size-3.5" />
+            <AlertDescription>
+              Credit limit reached. {rupee(totalOwed)} outstanding.
+            </AlertDescription>
+          </Alert>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
 // ─── ProductSearch ────────────────────────────────────────────────────────────
 
 function ProductSearch({
-  value, options, loading, usedProductIds, onSelect, onQuickAdd,
+  value, options, usedProductIds, onSelect, onQuickAdd,
 }: {
   value: SaleProduct | null
   options: SaleProduct[]
@@ -254,15 +279,15 @@ function ProductSearch({
   onQuickAdd: (name: string) => void
 }) {
   const [query, setQuery] = useState('')
-  const [open,  setOpen]  = useState(false)
+  const [open, setOpen] = useState(false)
 
   const results = useMemo(() => {
     const q = normalized(query.trim())
     const filtered = q
       ? options.filter(p =>
-          normalized(p.name).includes(q) ||
-          normalized(p.sku).includes(q)
-        )
+        normalized(p.name).includes(q) ||
+        normalized(p.sku).includes(q)
+      )
       : options
     return filtered.slice(0, 18)
   }, [options, query])
@@ -272,98 +297,88 @@ function ProductSearch({
     return q.length > 0 && options.some(p => normalized(p.name) === q)
   }, [options, query])
 
-  function pick(p: SaleProduct) {
-    onSelect(p)
-    setQuery('')
-    setOpen(false)
-  }
-
   const showQuickAdd = query.trim().length > 1 && !hasExactName
 
-  return (
-    <div className="relative">
-      {value ? (
-        <div className="flex h-10 items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3">
-          <Package className="size-3.5 text-muted-foreground shrink-0" />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium leading-4 text-foreground">{value.name}</p>
-            <p className="truncate text-[11px] leading-4 text-muted-foreground">
-              {value.unit_name} · {rupee(value.selling_price)}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => { onSelect(null); setQuery('') }}
-            className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            <X className="size-3.5" />
-          </button>
+  if (value) {
+    return (
+      <div className="flex h-10 items-center gap-2 rounded-lg border bg-muted/30 px-3">
+        <Package className="size-3.5 shrink-0 text-muted-foreground" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium leading-4 text-foreground">{value.name}</p>
+          <p className="truncate text-[11px] leading-4 text-muted-foreground">
+            {value.unit_name} · {rupee(value.selling_price)}
+          </p>
         </div>
-      ) : (
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger render={<div className="relative" />} nativeButton={false}>
-            <Input
-              value={query}
-              onChange={e => { setQuery(e.target.value); setOpen(true) }}
-              onFocus={() => setOpen(true)}
-              placeholder="Search product…"
-              className="pr-8"
-            />
-            {loading
-              ? <Loader2 className="absolute right-3 top-1/2 size-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
-              : <ChevronDown className="absolute right-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            }
-          </PopoverTrigger>
-          <PopoverContent align="start" sideOffset={6} className="max-h-80 w-80 max-w-[calc(100vw-2rem)] gap-0 overflow-y-auto p-1">
-            {loading ? (
-              <div className="flex items-center gap-2 px-3 py-2.5 text-sm text-muted-foreground">
-                <Loader2 className="size-3.5 animate-spin" />Loading products…
-              </div>
-            ) : results.length > 0 ? (
-              results.map(p => {
-                const alreadyUsed = usedProductIds.includes(p.id)
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    disabled={alreadyUsed}
-                    className={cn(
-                      'flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left transition-colors',
-                      alreadyUsed ? 'cursor-not-allowed opacity-50' : 'hover:bg-muted/60',
-                    )}
-                    onClick={() => !alreadyUsed && pick(p)}
-                  >
-                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
-                      <Package className="size-3.5 text-muted-foreground" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-foreground">{p.name}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {p.sku ? `${p.sku} · ` : ''}{p.unit_name} · {rupee(p.selling_price)}
-                        {alreadyUsed && ' · already added'}
-                      </p>
-                    </div>
-                  </button>
-                )
-              })
-            ) : (
-              <div className="px-3 py-3 text-sm text-muted-foreground">
-                {query.trim() ? `No products found for "${query.trim()}"` : 'No products available'}
-              </div>
-            )}
-            {showQuickAdd && (
-              <button
-                type="button"
-                className="mt-1 w-full rounded-md border-t border-border/40 px-3 py-2.5 text-left transition-colors hover:bg-muted/60"
-                onClick={() => { setOpen(false); onQuickAdd(query.trim()) }}
-              >
-                <p className="text-sm font-medium text-foreground">Add &quot;{query.trim()}&quot; as product</p>
-              </button>
-            )}
-          </PopoverContent>
-        </Popover>
-      )}
-    </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          onClick={() => { onSelect(null); setQuery('') }}
+          className="shrink-0 text-muted-foreground"
+        >
+          <X className="size-3.5" />
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <Combobox
+      value=""
+      onValueChange={(val) => {
+        if (!val) {
+          onSelect(null)
+          setQuery('')
+        } else {
+          const found = options.find(o => o.id === val) || null
+          onSelect(found)
+          setQuery('')
+        }
+      }}
+      open={open}
+      onOpenChange={setOpen}
+      inputValue={query}
+      onInputValueChange={setQuery}
+    >
+      <ComboboxInput placeholder="Search product…" showClear={false} showTrigger className="w-full" />
+      <ComboboxContent align="start" sideOffset={6} className="w-full min-w-80">
+        <ComboboxList>
+          {results.map((p) => {
+            const alreadyUsed = usedProductIds.includes(p.id)
+            return (
+              <ComboboxItem key={p.id} value={p.id} disabled={alreadyUsed} className="flex items-center justify-between">
+                <div className="min-w-0 flex-1 py-1">
+                  <p className="truncate text-sm font-medium text-foreground">{p.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {p.sku ? `${p.sku} · ` : ''}{p.unit_name} · {rupee(p.selling_price)}
+                    {alreadyUsed && ' · already added'}
+                  </p>
+                </div>
+                {alreadyUsed && <Badge variant="secondary" className="text-[10px]">Added</Badge>}
+              </ComboboxItem>
+            )
+          })}
+        </ComboboxList>
+        {showQuickAdd && (
+          <div className="border-t p-1 bg-muted/20">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setOpen(false)
+                onQuickAdd(query.trim())
+                setQuery('')
+              }}
+              className="w-full justify-start text-xs font-semibold text-primary hover:text-primary hover:bg-muted"
+            >
+              <Plus className="size-3.5" />
+              Quick Add &quot;{query.trim()}&quot;
+            </Button>
+          </div>
+        )}
+      </ComboboxContent>
+    </Combobox>
   )
 }
 
@@ -377,14 +392,14 @@ function StockIndicator({ product, requestedUnits }: {
 
   if (stock <= 0) {
     return (
-      <p className="text-[10px] text-red-600 dark:text-red-400 flex items-center gap-1 mt-0.5">
+      <FieldError className="mt-0.5 flex items-center gap-1 text-[10px]">
         <AlertCircle className="size-3" />Out of stock
-      </p>
+      </FieldError>
     )
   }
   if (requestedUnits > stock) {
     return (
-      <p className="text-[10px] text-amber-600 dark:text-amber-400 flex items-center gap-1 mt-0.5">
+      <p className="mt-0.5 flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400">
         <AlertTriangle className="size-3" />Only {stock} in stock
       </p>
     )
@@ -405,8 +420,8 @@ function LineItemRow({
   onRemove: (id: string) => void
   onQuickAdd: (name: string, rowId: string) => void
 }) {
-  const lineTotal  = computeLineTotal(row)
-  const baseUnits  = computeBaseUnits(row)
+  const lineTotal = computeLineTotal(row)
+  const baseUnits = computeBaseUnits(row)
 
   function selectProduct(p: SaleProduct | null) {
     if (!p) {
@@ -414,11 +429,11 @@ function LineItemRow({
       return
     }
     onUpdate(row.id, {
-      product:    p,
-      sell_mode:  'unit',
+      product: p,
+      sell_mode: 'unit',
       unit_price: String(p.selling_price),
-      tax_rate:   String(p.gst_rate || 18),
-      qty_input:  '',
+      tax_rate: String(p.gst_rate || 18),
+      qty_input: '',
     })
   }
 
@@ -433,9 +448,8 @@ function LineItemRow({
   const canBox = row.product?.has_box && row.product?.units_per_box
 
   return (
-    <tr className="group border-b border-border/40 last:border-0 hover:bg-muted/40 transition-colors">
-      {/* Product */}
-      <td className="py-3 pl-4 pr-3 align-middle min-w-[220px]">
+    <TableRow className="group">
+      <TableCell className="min-w-[140px] align-top">
         <div>
           <ProductSearch
             value={row.product}
@@ -449,97 +463,93 @@ function LineItemRow({
             <StockIndicator product={row.product} requestedUnits={baseUnits} />
           )}
         </div>
-      </td>
+      </TableCell>
 
-      {/* Mode toggle */}
-      <td className="px-3 py-3 align-middle w-[100px]">
-        <div className="flex rounded-lg overflow-hidden border border-border/60 h-9">
-          <button type="button"
+      <TableCell className="w-[140px] align-middle">
+        <ButtonGroup className="h-8">
+          <Button
+            type="button"
+            variant={row.sell_mode === 'unit' ? 'default' : 'outline'}
+            size="xs"
             onClick={() => toggleMode('unit')}
-            className={cn(
-              'flex-1 text-xs font-medium transition-colors',
-              row.sell_mode === 'unit'
-                ? 'bg-foreground text-background'
-                : 'bg-background text-muted-foreground hover:bg-muted/50',
-            )}>
-            Unit
-          </button>
-          <button type="button"
+            className="h-full px-3 text-xs font-semibold"
+          >
+            {row.product?.unit_name ?? 'Unit'}
+          </Button>
+          <Button
+            type="button"
+            variant={row.sell_mode === 'box' ? 'default' : 'outline'}
+            size="xs"
             onClick={() => canBox && toggleMode('box')}
             disabled={!canBox}
-            className={cn(
-              'flex-1 text-xs font-medium transition-colors border-l border-border/60',
-              !canBox && 'opacity-30 cursor-not-allowed',
-              row.sell_mode === 'box' && canBox
-                ? 'bg-foreground text-background'
-                : 'bg-background text-muted-foreground hover:bg-muted/50',
-            )}>
-            Box
-          </button>
-        </div>
-      </td>
+            title={!canBox ? 'Product has no box configuration' : undefined}
+            className="h-full px-3 text-xs font-semibold"
+          >
+            {row.product?.box_name ?? 'Box'}
+          </Button>
+        </ButtonGroup>
+      </TableCell>
 
-      {/* Qty */}
-      <td className="px-3 py-3 align-middle w-[90px]">
+      <TableCell className="w-[100px] align-middle">
         <div>
           <Input
-            type="number" min="0" step={row.sell_mode === 'box' ? '1' : '0.001'}
+            min="0"
             value={row.qty_input}
             onChange={e => onUpdate(row.id, { qty_input: e.target.value })}
             placeholder="0"
             className="h-9 text-sm tabular-nums"
           />
           {row.sell_mode === 'box' && row.product?.units_per_box && num(row.qty_input) > 0 && (
-            <p className="text-[10px] text-muted-foreground mt-0.5 text-right">
+            <FieldDescription className="mt-0.5 text-right text-[10px]">
               = {baseUnits} {row.product.unit_name}
-            </p>
+            </FieldDescription>
           )}
         </div>
-      </td>
+      </TableCell>
 
-      {/* Sell Price */}
-      <td className="px-3 py-3 align-middle w-[110px]">
-        <div className="relative">
-          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">₹</span>
-          <Input
-            type="number" min="0" step="0.01"
+      <TableCell className="w-[160px] align-middle">
+        <InputGroup>
+          <InputGroupAddon>
+            <InputGroupText>₹</InputGroupText>
+          </InputGroupAddon>
+          <InputGroupInput
             value={row.unit_price}
             onChange={e => onUpdate(row.id, { unit_price: e.target.value })}
             placeholder="0"
-            className="h-9 pl-6 text-sm tabular-nums"
           />
-        </div>
-      </td>
+        </InputGroup>
+      </TableCell>
 
-      {/* Tax % */}
-      <td className="px-3 py-3 align-middle w-[80px]">
-        <div className="relative">
-          <Input
-            type="number" min="0" max="100" step="0.01"
+      <TableCell className="w-[120px] align-middle">
+        <InputGroup>
+          <InputGroupAddon>
+            <InputGroupText>%</InputGroupText>
+          </InputGroupAddon>
+          <InputGroupInput
             value={row.tax_rate}
             onChange={e => onUpdate(row.id, { tax_rate: e.target.value })}
-            className="h-9 pr-5 text-sm tabular-nums"
           />
-          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-[10px]">%</span>
-        </div>
-      </td>
+        </InputGroup>
+      </TableCell>
 
-      {/* Line total */}
-      <td className="px-3 py-3 text-right align-middle w-[120px]">
-        <span className="text-sm tabular-nums font-semibold text-foreground">
+      <TableCell className="w-[135px] text-right align-middle">
+        <span className="text-sm font-semibold tabular-nums text-foreground">
           {lineTotal > 0 ? rupee(lineTotal) : <span className="text-muted-foreground/40">—</span>}
         </span>
-      </td>
+      </TableCell>
 
-      {/* Delete */}
-      <td className="py-3 pl-3 pr-4 align-middle w-10">
-        <button type="button"
+      <TableCell className="w-10 align-middle" onClick={e => e.stopPropagation()}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
           onClick={() => onRemove(row.id)}
-          className="h-8 w-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors opacity-0 group-hover:opacity-100">
+          className="size-8 text-muted-foreground opacity-0 transition-all duration-150 hover:text-red-500 hover:bg-red-50 group-hover:opacity-100 dark:hover:bg-red-950/30"
+        >
           <Trash2 className="size-3.5" />
-        </button>
-      </td>
-    </tr>
+        </Button>
+      </TableCell>
+    </TableRow>
   )
 }
 
@@ -547,10 +557,15 @@ function LineItemRow({
 
 export default function NewSalePage() {
   const router = useRouter()
-  const { generateBillNumber, saveSale, customers, products, optionsLoading, quickAddProduct, getOrCreateWalkinCustomer } = useNewSale()
+  const {
+    generateBillNumber, saveSale, customers, products,
+    optionsLoading, quickAddProduct, getOrCreateWalkinCustomer,
+    refreshCustomers
+  } = useNewSale()
+  const { addCustomer } = useCustomers()
+  const [customerFormOpen, setCustomerFormOpen] = useState(false)
   const { setCustomTitle } = useBreadcrumb()
 
-  // ── header state ────────────────────────────────────────────────────────────
   const [header, setHeader] = useState<SaleHeaderValues>({
     invoice_number: '',
     sale_date: today(),
@@ -563,43 +578,34 @@ export default function NewSalePage() {
   const [loadingOutstanding, setLoadingOutstanding] = useState(false)
   const [headerErrors, setHeaderErrors] = useState<Partial<Record<string, string>>>({})
 
-  // ── line items state ─────────────────────────────────────────────────────────
   const [rows, setRows] = useState<SaleDraftLineItem[]>([emptyRow()])
 
-  // ── discount state ───────────────────────────────────────────────────────────
-  const [discount,     setDiscount]     = useState('')
+  const [discount, setDiscount] = useState('')
   const [discountMode, setDiscountMode] = useState<DiscountMode>('flat')
 
-  // ── payment state ────────────────────────────────────────────────────────────
-  const [paymentMethod,  setPaymentMethod]  = useState<PaymentMethod>('cash')
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
   const [referenceNumber, setReferenceNumber] = useState('')
-  const [amountPaid,     setAmountPaid]     = useState('')
-  const [dueDate,        setDueDate]        = useState('')
+  const [amountPaid, setAmountPaid] = useState('')
+  const [dueDate, setDueDate] = useState('')
 
-  // ── quick-add state ──────────────────────────────────────────────────────────
-  const [quickAddOpen,  setQuickAddOpen]  = useState(false)
-  const [quickAddName,  setQuickAddName]  = useState('')
+  const [quickAddOpen, setQuickAddOpen] = useState(false)
+  const [quickAddName, setQuickAddName] = useState('')
   const [quickAddRowId, setQuickAddRowId] = useState('')
 
-  // ── save state ───────────────────────────────────────────────────────────────
   const [saving, setSaving] = useState(false)
 
-  // ── invoice preview state ─────────────────────────────────────────────────────
   const [previewOpen, setPreviewOpen] = useState(false)
   const [previewSale, setPreviewSale] = useState<SaleWithItems | null>(null)
 
-  // Set dynamic breadcrumb
   useEffect(() => {
     setCustomTitle(header.invoice_number || 'New Sale')
   }, [header.invoice_number, setCustomTitle])
 
-  // Generate bill number on mount
   useEffect(() => {
     generateBillNumber().then(bn => setHeader(h => ({ ...h, invoice_number: bn })))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Load customer outstanding when customer selected
   const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
@@ -617,38 +623,34 @@ export default function NewSalePage() {
       })
   }, [selectedCustomer, supabase])
 
-  // ── totals ───────────────────────────────────────────────────────────────────
-  const validRows   = rows.filter(r => r.product && num(r.qty_input) > 0)
-  const subtotal    = validRows.reduce((s, r) => s + computeLineTotal(r), 0)
-  const taxAmount   = validRows.reduce((s, r) => s + computeLineTotal(r) * num(r.tax_rate) / 100, 0)
+  const validRows = rows.filter(r => r.product && num(r.qty_input) > 0)
+  const subtotal = validRows.reduce((s, r) => s + computeLineTotal(r), 0)
+  const taxAmount = validRows.reduce((s, r) => s + computeLineTotal(r) * num(r.tax_rate) / 100, 0)
   const discountVal = discountMode === 'flat' ? num(discount) : subtotal * num(discount) / 100
-  const grandTotal  = subtotal + taxAmount - discountVal
+  const grandTotal = subtotal + taxAmount - discountVal
 
-  // Sync amountPaid on first render / grandTotal change if not yet set
   useEffect(() => {
     if (!amountPaid && grandTotal > 0) {
       setAmountPaid(grandTotal.toFixed(2))
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [grandTotal])
 
-  const paidAmt    = num(amountPaid)
+  const paidAmt = num(amountPaid)
   const balanceDue = Math.max(0, grandTotal - paidAmt)
 
   const paymentStatus =
-    paidAmt <= 0       ? 'pending'
-    : balanceDue <= 0.001 ? 'paid'
-    : 'partial'
+    paidAmt <= 0 ? 'pending'
+      : balanceDue <= 0.001 ? 'paid'
+        : 'partial'
 
-  // Auto-set amount paid to 0 when method = credit
   useEffect(() => {
     if (paymentMethod === 'credit') setAmountPaid('0')
   }, [paymentMethod])
 
   const showReference = REFERENCE_METHODS.includes(paymentMethod)
-  const showDueDate   = paymentMethod === 'credit'
+  const showDueDate = paymentMethod === 'credit'
 
-  // ── row helpers ──────────────────────────────────────────────────────────────
   const updateRow = useCallback((id: string, patch: Partial<SaleDraftLineItem>) => {
     setRows(prev => prev.map(r => r.id !== id ? r : { ...r, ...patch }))
   }, [])
@@ -663,7 +665,6 @@ export default function NewSalePage() {
 
   const usedProductIds = rows.map(r => r.product?.id ?? '').filter(Boolean)
 
-  // ── quick-add ────────────────────────────────────────────────────────────────
   function openQuickAdd(name: string, rowId: string) {
     setQuickAddName(name)
     setQuickAddRowId(rowId)
@@ -675,21 +676,20 @@ export default function NewSalePage() {
     if (!product) return false
     updateRow(quickAddRowId, {
       product,
-      sell_mode:  'unit',
+      sell_mode: 'unit',
       unit_price: String(product.selling_price),
-      tax_rate:   String(product.gst_rate || 18),
-      qty_input:  '',
+      tax_rate: String(product.gst_rate || 18),
+      qty_input: '',
     })
     setQuickAddOpen(false)
     return true
   }
 
-  // ── validation ───────────────────────────────────────────────────────────────
   function validate(): boolean {
     const errs: typeof headerErrors = {}
     if (!header.invoice_number.trim()) errs.invoice_number = 'Required'
-    if (paidAmt > grandTotal + 0.001)   errs.amount_paid  = 'Cannot exceed grand total'
-    if (paidAmt < 0)                    errs.amount_paid  = 'Cannot be negative'
+    if (paidAmt > grandTotal + 0.001) errs.amount_paid = 'Cannot exceed grand total'
+    if (paidAmt < 0) errs.amount_paid = 'Cannot be negative'
 
     setHeaderErrors(errs)
     if (Object.keys(errs).length > 0) return false
@@ -707,60 +707,58 @@ export default function NewSalePage() {
     return true
   }
 
-  // ── build preview object (without saving) ────────────────────────────────────
   function buildPreviewSale(): SaleWithItems {
     const displayName = selectedCustomer?.name ?? (header.walkin_name.trim() || 'Walk-in Customer')
     const items: SaleItem[] = validRows.map(r => ({
-      id:           r.id,
-      sale_id:      '',
-      product_id:   r.product!.id,
+      id: r.id,
+      sale_id: '',
+      product_id: r.product!.id,
       product_name: r.product!.name,
-      unit_name:    r.product!.unit_name,
-      box_name:     r.product!.box_name,
-      units_per_box:r.product!.units_per_box,
-      sell_mode:    r.sell_mode,
-      box_count:    r.sell_mode === 'box' ? num(r.qty_input) : null,
-      quantity:     computeBaseUnits(r),
-      unit_price:   num(r.unit_price),
-      tax_rate:     num(r.tax_rate),
-      line_total:   computeLineTotal(r),
+      unit_name: r.product!.unit_name,
+      box_name: r.product!.box_name,
+      units_per_box: r.product!.units_per_box,
+      sell_mode: r.sell_mode,
+      box_count: r.sell_mode === 'box' ? num(r.qty_input) : null,
+      quantity: computeBaseUnits(r),
+      unit_price: num(r.unit_price),
+      tax_rate: num(r.tax_rate),
+      line_total: computeLineTotal(r),
     }))
 
     const fakePayment: PaymentRecord | undefined = paidAmt > 0 ? {
-      id:               'preview',
-      sale_id:          null,
-      customer_id:      '',
-      amount:           paidAmt,
-      payment_method:   paymentMethod,
+      id: 'preview',
+      sale_id: null,
+      customer_id: '',
+      amount: paidAmt,
+      payment_method: paymentMethod,
       reference_number: referenceNumber || null,
-      payment_date:     today(),
-      note:             null,
-      created_at:       new Date().toISOString(),
+      payment_date: today(),
+      note: null,
+      created_at: new Date().toISOString(),
     } : undefined
 
     return {
-      id:             '',
-      customer_id:    '',
-      customer_name:  displayName,
-      walkin_name:    !header.customer_id ? header.walkin_name.trim() || null : null,
+      id: '',
+      customer_id: '',
+      customer_name: displayName,
+      walkin_name: !header.customer_id ? header.walkin_name.trim() || null : null,
       invoice_number: header.invoice_number,
-      sale_date:      header.sale_date || today(),
+      sale_date: header.sale_date || today(),
       subtotal,
-      tax_amount:     taxAmount,
-      discount:       discountVal,
-      grand_total:    grandTotal,
-      amount_paid:    paidAmt,
-      balance_due:    balanceDue,
+      tax_amount: taxAmount,
+      discount: discountVal,
+      grand_total: grandTotal,
+      amount_paid: paidAmt,
+      balance_due: balanceDue,
       payment_status: paymentStatus as 'paid' | 'partial' | 'pending',
-      due_date:       dueDate || null,
-      notes:          header.notes || null,
-      created_at:     new Date().toISOString(),
+      due_date: dueDate || null,
+      notes: header.notes || null,
+      created_at: new Date().toISOString(),
       items,
-      payments:       fakePayment ? [fakePayment] : [],
+      payments: fakePayment ? [fakePayment] : [],
     }
   }
 
-  // ── preview invoice (without saving) ─────────────────────────────────────────
   function handlePreview() {
     if (validRows.length === 0) {
       toast.error('Add at least one product to preview the invoice')
@@ -770,13 +768,11 @@ export default function NewSalePage() {
     setPreviewOpen(true)
   }
 
-  // ── submit ────────────────────────────────────────────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!validate()) return
     setSaving(true)
 
-    // Resolve customer ID
     let customerId = header.customer_id
     const isWalkin = !customerId
     if (isWalkin) {
@@ -790,45 +786,42 @@ export default function NewSalePage() {
     }
 
     const lineItemsPayload = validRows.map(r => ({
-      product:    r.product!,
-      sell_mode:  r.sell_mode,
-      qty_input:  num(r.qty_input),
+      product: r.product!,
+      sell_mode: r.sell_mode,
+      qty_input: num(r.qty_input),
       unit_price: num(r.unit_price),
-      tax_rate:   num(r.tax_rate),
+      tax_rate: num(r.tax_rate),
       line_total: computeLineTotal(r),
       base_units: computeBaseUnits(r),
-      box_count:  r.sell_mode === 'box' ? num(r.qty_input) : null,
+      box_count: r.sell_mode === 'box' ? num(r.qty_input) : null,
     }))
 
     const saleId = await saveSale({
-      invoiceNumber:   header.invoice_number,
-      saleDate:        header.sale_date,
+      invoiceNumber: header.invoice_number,
+      saleDate: header.sale_date,
       customerId,
-      walkinName:      header.walkin_name,
+      walkinName: header.walkin_name,
       isWalkin,
-      lineItems:       lineItemsPayload,
+      lineItems: lineItemsPayload,
       subtotal,
       taxAmount,
       discountVal,
       grandTotal,
-      amountPaid:      paidAmt,
+      amountPaid: paidAmt,
       balanceDue,
       paymentStatus,
       paymentMethod,
       referenceNumber,
       dueDate,
-      notes:           header.notes,
+      notes: header.notes,
     })
 
     if (saleId) {
-      // Build preview for auto-open after save
       const preview = buildPreviewSale()
       setPreviewSale({ ...preview, id: saleId })
       setPreviewOpen(true)
-      // Navigate back after modal closes — handled in onClose
     } else {
       setSaving(false)
-      // Refresh bill number in case of duplicate
       const nextBn = await generateBillNumber()
       setHeader(h => ({ ...h, invoice_number: nextBn }))
     }
@@ -839,350 +832,342 @@ export default function NewSalePage() {
   return (
     <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
 
-      {/* ── Scrollable body ──────────────────────────────────────────────────── */}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain [scrollbar-width:thin] p-4 space-y-4">
 
-        {/* ── Section 1: Sale Header ─────────────────────────────────────────── */}
-        <div className="rounded-lg border bg-card overflow-hidden">
-          <div className="flex items-center gap-2 border-b px-4 py-3 shrink-0">
-            <User className="size-3.5 text-muted-foreground/60" />
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Sale Details</p>
-          </div>
-
-          <div className="px-4 py-4 space-y-4">
-            {/* Row 1: Bill Number + Date */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <FieldLabel required>Bill Number</FieldLabel>
-                <Input
-                  value={header.invoice_number}
-                  onChange={e => {
-                    setHeader(h => ({ ...h, invoice_number: e.target.value }))
-                    setHeaderErrors(e2 => ({ ...e2, invoice_number: undefined }))
-                  }}
-                  placeholder="BILL-2024-001"
-                  className={cn('font-mono', headerErrors.invoice_number && 'border-red-400')}
-                />
-                {headerErrors.invoice_number && (
-                  <p className="text-xs text-destructive flex items-center gap-1">
-                    <AlertCircle className="size-3" />{headerErrors.invoice_number}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-1.5">
-                <FieldLabel required>
-                  <span className="inline-flex items-center gap-1.5">
-                    <CalendarDays className="size-3" />Date
-                  </span>
-                </FieldLabel>
-                <Input
-                  type="date"
-                  value={header.sale_date}
-                  onChange={e => setHeader(h => ({ ...h, sale_date: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            {/* Row 2: Customer */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <FieldLabel>Customer</FieldLabel>
-                <span className="text-xs text-muted-foreground">Leave blank for Walk-in</span>
-              </div>
-              <CustomerSearch
-                value={selectedCustomer}
-                options={customers}
-                loading={optionsLoading}
-                onSelect={c => {
-                  setSelectedCustomer(c)
-                  setHeader(h => ({ ...h, customer_id: c?.id ?? '' }))
-                }}
-              />
-              {!selectedCustomer && (
-                <div className="space-y-1.5 pt-1">
-                  <FieldLabel>Customer Name <span className="text-muted-foreground font-normal normal-case">(optional — for invoice)</span></FieldLabel>
+        {/* ── Sale Details ──────────────────────────────────────────────────── */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <User className="size-3.5 text-muted-foreground/60" />
+              Sale Details
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <FieldGroup>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field data-invalid={!!headerErrors.invoice_number}>
+                  <FieldLabel htmlFor="invoice_number">Bill Number *</FieldLabel>
                   <Input
-                    value={header.walkin_name}
-                    onChange={e => setHeader(h => ({ ...h, walkin_name: e.target.value }))}
-                    placeholder="e.g. Rahul Sharma (or leave blank)"
+                    id="invoice_number"
+                    value={header.invoice_number}
+                    onChange={e => {
+                      setHeader(h => ({ ...h, invoice_number: e.target.value }))
+                      setHeaderErrors(e2 => ({ ...e2, invoice_number: undefined }))
+                    }}
+                    placeholder="BILL-2024-001"
+                    className="font-mono"
+                    aria-invalid={!!headerErrors.invoice_number}
                   />
+                  {headerErrors.invoice_number && (
+                    <FieldError>{headerErrors.invoice_number}</FieldError>
+                  )}
+                </Field>
+
+                <Field>
+                  <FieldLabel htmlFor="sale_date">
+                    <CalendarDays className="size-3" />Date *
+                  </FieldLabel>
+                  <DatePicker
+                    value={header.sale_date}
+                    onChange={val => setHeader(h => ({ ...h, sale_date: val }))}
+                  />
+                </Field>
+              </div>
+
+              <Field>
+                <div className="flex items-center justify-between">
+                  <FieldLabel>Customer</FieldLabel>
+                  <span className="text-xs text-muted-foreground">Leave blank for Walk-in</span>
                 </div>
-              )}
-              {selectedCustomer && (
-                <CustomerInfoPanel
-                  customer={selectedCustomer}
-                  outstanding={loadingOutstanding ? 0 : customerOutstanding}
+                <CustomerSearch
+                  value={selectedCustomer}
+                  options={customers}
+                  loading={optionsLoading}
+                  onSelect={c => {
+                    setSelectedCustomer(c)
+                    setHeader(h => ({ ...h, customer_id: c?.id ?? '' }))
+                  }}
+                  onAddCustomerClick={() => setCustomerFormOpen(true)}
                 />
-              )}
-            </div>
-
-            {/* Row 3: Notes */}
-            <div className="space-y-1.5">
-              <FieldLabel>
-                <span className="inline-flex items-center gap-1.5">
-                  <FileText className="size-3" />Notes
-                </span>
-              </FieldLabel>
-              <textarea
-                value={header.notes}
-                onChange={e => setHeader(h => ({ ...h, notes: e.target.value }))}
-                rows={2}
-                placeholder="e.g. Delivered to shop, urgent order…"
-                className={cn(
-                  'flex w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm',
-                  'placeholder:text-muted-foreground/50',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:border-ring/40',
-                  'transition-colors resize-none',
+                {!selectedCustomer && (
+                  <Field className="pt-1">
+                    <FieldLabel htmlFor="walkin_name">
+                      Customer Name <span className="font-normal normal-case text-muted-foreground">(optional — for invoice)</span>
+                    </FieldLabel>
+                    <Input
+                      id="walkin_name"
+                      value={header.walkin_name}
+                      onChange={e => setHeader(h => ({ ...h, walkin_name: e.target.value }))}
+                      placeholder="e.g. Rahul Sharma (or leave blank)"
+                    />
+                  </Field>
                 )}
-              />
-            </div>
-          </div>
-        </div>
+                {selectedCustomer && (
+                  <CustomerInfoPanel
+                    customer={selectedCustomer}
+                    outstanding={loadingOutstanding ? 0 : customerOutstanding}
+                  />
+                )}
+              </Field>
 
-        {/* ── Section 2: Line Items ──────────────────────────────────────────── */}
-        <div className="rounded-lg border bg-card overflow-hidden">
-          <div className="flex items-center justify-between border-b px-4 py-3 shrink-0">
-            <div className="flex items-center gap-2">
+              <Field>
+                <FieldLabel htmlFor="notes">
+                  <FileText className="size-3" />Notes
+                </FieldLabel>
+                <Textarea
+                  id="notes"
+                  value={header.notes}
+                  onChange={e => setHeader(h => ({ ...h, notes: e.target.value }))}
+                  rows={2}
+                  placeholder="e.g. Delivered to shop, urgent order…"
+                  className="resize-none"
+                />
+              </Field>
+            </FieldGroup>
+          </CardContent>
+        </Card>
+
+        {/* ── Line Items ─────────────────────────────────────────────────────── */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               <Package className="size-3.5 text-muted-foreground/60" />
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Line Items</p>
+              Line Items
               {validRows.length > 0 && (
-                <Badge variant="outline" className="text-[10px] h-4 px-1.5">
+                <Badge variant="outline" className="h-4 px-1.5 text-[10px]">
                   {validRows.length}
                 </Badge>
               )}
-            </div>
-            <Button type="button" variant="outline" size="sm" onClick={addRow} className="h-7 px-2.5 text-xs">
-              <Plus className="size-3 mr-1" />Add Row
-            </Button>
-          </div>
+            </CardTitle>
+            <CardFooter className="p-0">
+              <Button type="button" variant="outline" size="sm" onClick={addRow} className="h-7 px-2.5 text-xs">
+                <Plus className="size-3" />Add Row
+              </Button>
+            </CardFooter>
+          </CardHeader>
 
-          <div className="overflow-x-auto [scrollbar-width:thin]">
-            <table className="w-full min-w-[760px] caption-bottom border-separate border-spacing-0 text-sm">
-              <thead>
-                <tr className="border-b border-border/60 hover:bg-transparent">
-                  {['Product', 'Mode', 'Qty', 'Sell Price', 'Tax %', 'Total', ''].map((col, i) => (
-                    <th
-                      key={i}
-                      className={cn(
-                        'h-10 align-middle text-xs font-medium text-muted-foreground whitespace-nowrap',
-                        i === 0 ? 'pl-4 pr-3 text-left' :
-                        i === 6 ? 'py-3 pl-3 pr-4 w-10' :
-                        (i === 4 || i === 5) ? 'px-3 text-right' :
-                        'px-3 text-left'
-                      )}
-                    >
-                      {col}
-                    </th>
+          <CardContent className="px-0">
+            <div className="overflow-x-auto [scrollbar-width:thin]">
+              <Table className="min-w-[760px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[180px] pl-4">Product</TableHead>
+                    <TableHead className="w-[125px]">Mode</TableHead>
+                    <TableHead className="w-[100px]">Qty</TableHead>
+                    <TableHead className="w-[125px]">Sell Price</TableHead>
+                    <TableHead className="w-[90px] text-right">Tax %</TableHead>
+                    <TableHead className="w-[135px] text-right">Total</TableHead>
+                    <TableHead className="w-10 pr-4" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.map(row => (
+                    <LineItemRow
+                      key={row.id}
+                      row={row}
+                      products={products}
+                      optionsLoading={optionsLoading}
+                      usedProductIds={usedProductIds}
+                      onUpdate={updateRow}
+                      onRemove={removeRow}
+                      onQuickAdd={openQuickAdd}
+                    />
                   ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map(row => (
-                  <LineItemRow
-                    key={row.id}
-                    row={row}
-                    products={products}
-                    optionsLoading={optionsLoading}
-                    usedProductIds={usedProductIds}
-                    onUpdate={updateRow}
-                    onRemove={removeRow}
-                    onQuickAdd={openQuickAdd}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* ── Section 3: Totals ─────────────────────────────────────────────── */}
-        <div className="rounded-lg border bg-card overflow-hidden">
-          <div className="divide-y divide-border/60">
+        {/* ── Totals ─────────────────────────────────────────────────────────── */}
+        <Card>
+          <CardContent className="divide-y p-0">
             <div className="flex items-center justify-between px-5 py-3">
               <p className="text-sm text-muted-foreground">Subtotal</p>
-              <p className="text-sm tabular-nums font-medium">{rupee(subtotal)}</p>
+              <p className="text-sm font-medium tabular-nums">{rupee(subtotal)}</p>
             </div>
             <div className="flex items-center justify-between px-5 py-3">
               <p className="text-sm text-muted-foreground">Tax (GST)</p>
-              <p className="text-sm tabular-nums font-medium">{rupee(taxAmount)}</p>
+              <p className="text-sm font-medium tabular-nums">{rupee(taxAmount)}</p>
             </div>
-            {/* Discount */}
-            <div className="flex items-center justify-between px-5 py-3 gap-4">
+            <div className="flex items-center justify-between gap-4 px-5 py-3">
               <div className="flex items-center gap-3">
                 <p className="text-sm text-muted-foreground">Discount</p>
-                <div className="flex rounded-md overflow-hidden border border-border/60 text-xs h-6">
-                  <button type="button"
+                <ButtonGroup className="h-6">
+                  <Button
+                    type="button"
+                    variant={discountMode === 'flat' ? 'default' : 'outline'}
+                    size="xs"
                     onClick={() => setDiscountMode('flat')}
-                    className={cn('px-2.5 transition-colors font-medium',
-                      discountMode === 'flat' ? 'bg-foreground text-background' : 'bg-background text-muted-foreground hover:bg-muted/50'
-                    )}>₹</button>
-                  <button type="button"
+                    className="h-full px-2.5 text-xs font-semibold"
+                  >
+                    ₹
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={discountMode === 'percent' ? 'default' : 'outline'}
+                    size="xs"
                     onClick={() => setDiscountMode('percent')}
-                    className={cn('px-2.5 transition-colors font-medium border-l border-border/60',
-                      discountMode === 'percent' ? 'bg-foreground text-background' : 'bg-background text-muted-foreground hover:bg-muted/50'
-                    )}>%</button>
-                </div>
+                    className="h-full px-2.5 text-xs font-semibold"
+                  >
+                    %
+                  </Button>
+                </ButtonGroup>
               </div>
               <div className="flex items-center gap-3">
-                <div className="relative w-28">
-                  {discountMode === 'flat'
-                    ? <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">₹</span>
-                    : <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">%</span>
-                  }
-                  <Input
-                    type="number" min="0" step="0.01"
+                <InputGroup className="h-8 w-28">
+                  <InputGroupAddon>
+                    <InputGroupText>{discountMode === 'flat' ? '₹' : '%'}</InputGroupText>
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    type="number"
                     value={discount}
                     onChange={e => setDiscount(e.target.value)}
                     placeholder="0"
-                    className={cn('h-8 text-sm tabular-nums', discountMode === 'flat' ? 'pl-6' : 'pr-6')}
                   />
-                </div>
-                <p className="text-sm tabular-nums font-medium text-emerald-600 dark:text-emerald-400 w-28 text-right">
+                </InputGroup>
+                <p className="w-28 text-right text-sm font-medium tabular-nums text-emerald-600 dark:text-emerald-400">
                   {discountVal > 0 ? `−${rupee(discountVal)}` : '—'}
                 </p>
               </div>
             </div>
-            {/* Grand Total */}
-            <div className="flex items-center justify-between px-5 py-4 bg-muted/30">
+            <div className="flex items-center justify-between bg-muted/30 px-5 py-4">
               <p className="text-sm font-bold text-foreground">Grand Total</p>
-              <p className="text-2xl tabular-nums font-bold text-foreground tracking-tight">
+              <p className="text-2xl font-bold tabular-nums tracking-tight text-foreground">
                 {rupee(grandTotal)}
               </p>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* ── Section 4: Payment ────────────────────────────────────────────── */}
-        <div className="rounded-lg border bg-card overflow-hidden">
-          <div className="flex items-center gap-2 border-b px-4 py-3 shrink-0">
-            <CreditCard className="size-3.5 text-muted-foreground/60" />
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Payment</p>
-          </div>
-          <div className="px-4 py-4 space-y-4">
+        {/* ── Payment ────────────────────────────────────────────────────────── */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <CreditCard className="size-3.5 text-muted-foreground/60" />
+              Payment
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <FieldGroup>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field>
+                  <FieldLabel htmlFor="payment_method">Payment Method *</FieldLabel>
+                  <Select value={paymentMethod} onValueChange={v => setPaymentMethod(v as PaymentMethod)}>
+                    <SelectTrigger id="payment_method">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(Object.entries(PAYMENT_METHOD_LABELS) as [PaymentMethod, string][]).map(([val, label]) => (
+                        <SelectItem key={val} value={val}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
 
-            {/* Method + Reference */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <FieldLabel required>Payment Method</FieldLabel>
-                <Select value={paymentMethod} onValueChange={v => setPaymentMethod(v as PaymentMethod)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(Object.entries(PAYMENT_METHOD_LABELS) as [PaymentMethod, string][]).map(([val, label]) => (
-                      <SelectItem key={val} value={val}>{label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {showReference && (
+                  <Field>
+                    <FieldLabel htmlFor="reference_number">Reference No.</FieldLabel>
+                    <Input
+                      id="reference_number"
+                      value={referenceNumber}
+                      onChange={e => setReferenceNumber(e.target.value)}
+                      placeholder={paymentMethod === 'upi' ? 'UPI transaction ID' : 'Reference number'}
+                    />
+                  </Field>
+                )}
+
+                {showDueDate && (
+                  <Field>
+                    <FieldLabel htmlFor="due_date">
+                      Due Date <span className="font-normal normal-case text-muted-foreground">(optional)</span>
+                    </FieldLabel>
+                    <DatePicker value={dueDate} onChange={setDueDate} />
+                  </Field>
+                )}
               </div>
 
-              {showReference && (
-                <div className="space-y-1.5">
-                  <FieldLabel>Reference No.</FieldLabel>
-                  <Input
-                    value={referenceNumber}
-                    onChange={e => setReferenceNumber(e.target.value)}
-                    placeholder={paymentMethod === 'upi' ? 'UPI transaction ID' : 'Reference number'}
-                  />
+              <Field data-invalid={!!headerErrors.amount_paid}>
+                <div className="flex items-center justify-between">
+                  <FieldLabel htmlFor="amount_paid">Amount Paid *</FieldLabel>
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="xs"
+                    onClick={() => setAmountPaid(grandTotal.toFixed(2))}
+                    className="h-auto p-0 text-xs font-semibold text-primary hover:underline"
+                  >
+                    Pay Full ({rupee(grandTotal)})
+                  </Button>
                 </div>
-              )}
-
-              {showDueDate && (
-                <div className="space-y-1.5">
-                  <FieldLabel>Due Date <span className="text-muted-foreground font-normal normal-case">(optional)</span></FieldLabel>
-                  <Input
-                    type="date"
-                    value={dueDate}
-                    onChange={e => setDueDate(e.target.value)}
+                <InputGroup>
+                  <InputGroupAddon>
+                    <InputGroupText>₹</InputGroupText>
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    id="amount_paid"
+                    type="number"
+                    value={amountPaid}
+                    onChange={e => {
+                      setAmountPaid(e.target.value)
+                      setHeaderErrors(e2 => ({ ...e2, amount_paid: undefined }))
+                    }}
+                    placeholder="0.00"
+                    className="tabular-nums"
+                    disabled={paymentMethod === 'credit'}
+                    aria-invalid={!!headerErrors.amount_paid}
                   />
-                </div>
-              )}
-            </div>
+                </InputGroup>
+                {headerErrors.amount_paid && <FieldError>{headerErrors.amount_paid}</FieldError>}
+              </Field>
 
-            {/* Amount paid */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <FieldLabel required>Amount Paid</FieldLabel>
-                <button
-                  type="button"
-                  className="text-xs text-primary hover:underline font-medium"
-                  onClick={() => setAmountPaid(grandTotal.toFixed(2))}
-                >
-                  Pay Full ({rupee(grandTotal)})
-                </button>
-              </div>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">₹</span>
-                <Input
-                  type="number" min="0" step="0.01"
-                  value={amountPaid}
-                  onChange={e => {
-                    setAmountPaid(e.target.value)
-                    setHeaderErrors(e2 => ({ ...e2, amount_paid: undefined }))
-                  }}
-                  placeholder="0.00"
-                  className={cn('pl-7 tabular-nums', headerErrors.amount_paid && 'border-red-400')}
-                  disabled={paymentMethod === 'credit'}
-                />
-              </div>
-              {headerErrors.amount_paid && (
-                <p className="text-xs text-destructive flex items-center gap-1">
-                  <AlertCircle className="size-3" />{headerErrors.amount_paid}
-                </p>
-              )}
-            </div>
-
-            {/* Balance due + Status */}
-            <div className="rounded-xl bg-muted/40 border border-border/40 divide-y divide-border/40 overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3">
-                <span className="text-sm text-muted-foreground">Balance Due</span>
-                <span className={cn(
-                  'text-sm tabular-nums font-bold',
-                  balanceDue > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400',
-                )}>
-                  {rupee(balanceDue)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between px-4 py-3">
-                <span className="text-sm text-muted-foreground">Status</span>
-                <span className={cn('inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold', statusCfg.color)}>
-                  {statusCfg.label}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
+              <Card className="bg-muted/40 shadow-none">
+                <CardContent className="divide-y p-0">
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <span className="text-sm text-muted-foreground">Balance Due</span>
+                    <span className={cn(
+                      'text-sm font-bold tabular-nums',
+                      balanceDue > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400',
+                    )}>
+                      {rupee(balanceDue)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <span className="text-sm text-muted-foreground">Status</span>
+                    <Badge variant="outline" className={cn('font-semibold', statusCfg.color)}>
+                      {statusCfg.label}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </FieldGroup>
+          </CardContent>
+        </Card>
 
         <div className="h-4" />
       </div>
 
       {/* ── Sticky footer ─────────────────────────────────────────────────────── */}
-      <div className="shrink-0 border-t bg-card px-6 py-4 flex items-center justify-between gap-4">
+      <div className="flex shrink-0 items-center justify-between gap-4 border-t bg-card px-6 py-4">
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Grand Total:</span>
-          <span className="text-lg font-bold text-foreground tabular-nums">{rupee(grandTotal)}</span>
+          <span className="text-lg font-bold tabular-nums text-foreground">{rupee(grandTotal)}</span>
         </div>
         <div className="flex items-center gap-2">
-          <Button type="button" variant="outline" size="default"
-            onClick={() => router.back()} disabled={saving}
-            className="h-9 px-4 text-xs font-semibold">
+          <Button type="button" variant="outline" onClick={() => router.back()} disabled={saving} className="h-9 px-4 text-xs font-semibold">
             Cancel
           </Button>
-          <Button type="button" variant="outline" size="default"
-            onClick={handlePreview} disabled={saving}
-            className="h-9 px-4 text-xs font-semibold gap-1.5">
+          <Button type="button" variant="outline" onClick={handlePreview} disabled={saving} className="h-9 px-4 text-xs font-semibold">
             <Eye className="size-3.5" />Preview Invoice
           </Button>
-          <Button type="submit" size="default" disabled={saving}
-            className="h-9 px-5 text-xs font-semibold">
+          <Button type="submit" disabled={saving} className="h-9 px-5 text-xs font-semibold">
             {saving
-              ? <><Loader2 className="size-3.5 animate-spin mr-1.5" />Saving…</>
+              ? <><Loader2 className="size-3.5 animate-spin" />Saving…</>
               : 'Save & Generate'}
           </Button>
         </div>
       </div>
 
-      {/* Quick-add product dialog */}
       <ProductQuickAdd
         open={quickAddOpen}
         initialName={quickAddName}
@@ -1190,16 +1175,36 @@ export default function NewSalePage() {
         onSave={handleQuickAddSave}
       />
 
-      {/* Invoice Preview (pre-save) */}
       <InvoiceModal
         open={previewOpen}
         sale={previewSale}
         onClose={() => {
           setPreviewOpen(false)
-          // If sale was saved (has real id), navigate away
           if (previewSale?.id && previewSale.id !== '') {
             router.push('/features/sales')
           }
+        }}
+      />
+
+      <CustomerForm
+        open={customerFormOpen}
+        customer={null}
+        onClose={() => setCustomerFormOpen(false)}
+        onSubmit={async (values) => {
+          const ok = await addCustomer(values)
+          if (ok) {
+            await refreshCustomers()
+            const { data } = await supabase
+              .from('customers')
+              .select('id, name, phone, email, address, city, credit_limit, opening_balance, is_active')
+              .eq('phone', values.phone.trim())
+              .single()
+            if (data) {
+              setSelectedCustomer(data as any)
+              setHeader(h => ({ ...h, customer_id: data.id }))
+            }
+          }
+          return ok
         }}
       />
     </form>

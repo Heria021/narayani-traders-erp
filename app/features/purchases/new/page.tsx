@@ -3,16 +3,52 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { ButtonGroup } from '@/components/ui/button-group'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Textarea } from '@/components/ui/textarea'
 import {
-  Plus, Trash2, AlertCircle, ChevronDown, X,
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from '@/components/ui/input-group'
+import { Badge } from '@/components/ui/badge'
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
+} from '@/components/ui/card'
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+  FieldDescription,
+  FieldError,
+} from '@/components/ui/field'
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/table'
+import {
+  Combobox,
+  ComboboxInput,
+  ComboboxContent,
+  ComboboxList,
+  ComboboxItem,
+} from '@/components/ui/combobox'
+import {
+  Plus, Trash2, AlertCircle, X,
   Package, Loader2, CalendarDays, FileText, Building2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { DatePicker } from '@/components/ui/date-picker'
 import { ProductQuickAdd } from '../_components/ProductQuickAdd'
 import { useNewPurchase } from './useNewPurchase'
 import { useBreadcrumb } from '@/components/app-shell'
@@ -45,20 +81,10 @@ function normalized(value: string | null | undefined) {
   return (value ?? '').toLocaleLowerCase('en-IN')
 }
 
-// ─── FieldLabel ───────────────────────────────────────────────────────────────
-
-function FieldLabel({ children, required }: { children: React.ReactNode; required?: boolean }) {
-  return (
-    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-      {children}{required && <span className="text-red-500 ml-0.5 normal-case">*</span>}
-    </Label>
-  )
-}
-
 // ─── SupplierSearch ───────────────────────────────────────────────────────────
 
 function SupplierSearch({
-  value, options, loading, onSelect, error,
+  value, options, onSelect, error,
 }: {
   value: Supplier | null
   options: Supplier[]
@@ -81,91 +107,64 @@ function SupplierSearch({
     return filtered.slice(0, 12)
   }, [options, query])
 
-  function handleInput(next: string) {
-    if (value) onSelect(null)
-    setQuery(next)
-    setOpen(true)
-  }
-
-  function pick(s: Supplier) {
-    onSelect(s)
-    setQuery('')
-    setOpen(false)
-  }
-
   return (
-    <div className="space-y-1">
-      <Popover open={open && !value} onOpenChange={setOpen}>
-        <PopoverTrigger render={<div className="relative" />}>
-          <Input
-            value={value ? value.name : query}
-            onChange={e => handleInput(e.target.value)}
-            onFocus={() => setOpen(true)}
-            placeholder="Search supplier by name..."
-            className={cn('pr-9', error && 'border-red-400 focus-visible:ring-red-400/40')}
-          />
-          {value ? (
-            <button
-              type="button"
-              onClick={() => { onSelect(null); setQuery(''); setOpen(false) }}
-              className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-              aria-label="Clear supplier"
-            >
-              <X className="size-3.5" />
-            </button>
-          ) : loading ? (
-            <Loader2 className="absolute right-3 top-1/2 size-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
-          ) : (
-            <ChevronDown className="absolute right-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-          )}
-        </PopoverTrigger>
-        <PopoverContent align="start" sideOffset={6} className="max-h-72 w-80 max-w-[calc(100vw-2rem)] gap-0 overflow-y-auto p-1">
-          {loading ? (
-            <div className="flex items-center gap-2 px-3 py-2.5 text-sm text-muted-foreground">
-              <Loader2 className="size-3.5 animate-spin" />
-              Loading suppliers...
-            </div>
-          ) : results.length > 0 ? (
-            results.map(s => (
-              <button
-                key={s.id}
-                type="button"
-                className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-muted/60"
-                onClick={() => pick(s)}
-              >
-                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
-                  <span className="text-xs font-semibold text-muted-foreground">
+    <Field data-invalid={!!error}>
+      <Combobox
+        value={value?.id ?? ''}
+        onValueChange={(val) => {
+          if (!val) {
+            onSelect(null)
+            setQuery('')
+          } else {
+            const found = options.find(o => o.id === val) || null
+            onSelect(found)
+            setQuery('')
+          }
+        }}
+        open={open}
+        onOpenChange={setOpen}
+        inputValue={value ? value.name : query}
+        onInputValueChange={(q) => {
+          if (value) onSelect(null)
+          setQuery(q)
+        }}
+      >
+        <ComboboxInput
+          placeholder="Search supplier by name..."
+          showClear={!!value}
+          showTrigger={!value}
+          className="w-full"
+          aria-invalid={!!error}
+        />
+        <ComboboxContent align="start" sideOffset={6} className="w-full min-w-80">
+          <ComboboxList>
+            {results.map((s) => (
+              <ComboboxItem key={s.id} value={s.id}>
+                <div className="flex items-center gap-2 py-1">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-semibold text-muted-foreground">
                     {s.name.charAt(0).toUpperCase()}
-                  </span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{s.name}</p>
+                    {(s.phone || s.email) && (
+                      <p className="truncate text-xs text-muted-foreground">{s.phone || s.email}</p>
+                    )}
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">{s.name}</p>
-                  {(s.phone || s.email) && (
-                    <p className="truncate text-xs text-muted-foreground">{s.phone || s.email}</p>
-                  )}
-                </div>
-              </button>
-            ))
-          ) : (
-            <div className="px-3 py-3 text-sm text-muted-foreground">
-              {query.trim() ? 'No suppliers found' : 'No suppliers available'}
-            </div>
-          )}
-        </PopoverContent>
-      </Popover>
-      {error && (
-        <p className="flex items-center gap-1 text-xs text-destructive">
-          <AlertCircle className="size-3" />{error}
-        </p>
-      )}
-    </div>
+              </ComboboxItem>
+            ))}
+          </ComboboxList>
+        </ComboboxContent>
+      </Combobox>
+      {error && <FieldError>{error}</FieldError>}
+    </Field>
   )
 }
 
 // ─── ProductSearch ────────────────────────────────────────────────────────────
 
 function ProductSearch({
-  value, options, loading, usedProductIds, onSelect, onQuickAdd,
+  value, options, usedProductIds, onSelect, onQuickAdd,
 }: {
   value: Product | null
   options: Product[]
@@ -194,106 +193,89 @@ function ProductSearch({
     return q.length > 0 && options.some(p => normalized(p.name) === q)
   }, [options, query])
 
-  function handleInput(next: string) {
-    setQuery(next)
-    setOpen(true)
-  }
-
-  function pick(p: Product) {
-    onSelect(p)
-    setQuery('')
-    setOpen(false)
-  }
-
   const showQuickAdd = query.trim().length > 1 && !hasExactProductName
 
-  return (
-    <div className="relative">
-      {value ? (
-        <div className="flex h-10 items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3">
-          <Package className="size-3.5 text-muted-foreground shrink-0" />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium leading-4 text-foreground">{value.name}</p>
-            <p className="truncate text-[11px] leading-4 text-muted-foreground">
-              {value.unit_name} · {rupee(value.purchase_price)}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => { onSelect(null); setQuery('') }}
-            className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-            aria-label="Clear product"
-          >
-            <X className="size-3.5" />
-          </button>
+  if (value) {
+    return (
+      <div className="flex h-10 items-center gap-2 rounded-lg border bg-muted/30 px-3">
+        <Package className="size-3.5 shrink-0 text-muted-foreground" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium leading-4 text-foreground">{value.name}</p>
+          <p className="truncate text-[11px] leading-4 text-muted-foreground">
+            {value.unit_name} · {rupee(value.purchase_price)}
+          </p>
         </div>
-      ) : (
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger render={<div className="relative" />}>
-            <Input
-              value={query}
-              onChange={e => handleInput(e.target.value)}
-              onFocus={() => setOpen(true)}
-              placeholder="Search product..."
-              className="pr-8"
-            />
-            {loading ? (
-              <Loader2 className="absolute right-3 top-1/2 size-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
-            ) : (
-              <ChevronDown className="absolute right-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            )}
-          </PopoverTrigger>
-          <PopoverContent align="start" sideOffset={6} className="max-h-80 w-80 max-w-[calc(100vw-2rem)] gap-0 overflow-y-auto p-1">
-            {loading ? (
-              <div className="flex items-center gap-2 px-3 py-2.5 text-sm text-muted-foreground">
-                <Loader2 className="size-3.5 animate-spin" />
-                Loading products...
-              </div>
-            ) : results.length > 0 ? (
-              results.map(p => {
-                const alreadyUsed = usedProductIds.includes(p.id)
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    disabled={alreadyUsed}
-                    className={cn(
-                      'flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left transition-colors',
-                      alreadyUsed ? 'cursor-not-allowed opacity-50' : 'hover:bg-muted/60',
-                    )}
-                    onClick={() => !alreadyUsed && pick(p)}
-                  >
-                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
-                      <Package className="size-3.5 text-muted-foreground" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-foreground">{p.name}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {p.sku ? `${p.sku} · ` : ''}{p.unit_name} · {rupee(p.purchase_price)}
-                        {alreadyUsed && ' · already added'}
-                      </p>
-                    </div>
-                  </button>
-                )
-              })
-            ) : (
-              <div className="px-3 py-3 text-sm text-muted-foreground">
-                {query.trim() ? `No products found for "${query.trim()}"` : 'No products available'}
-              </div>
-            )}
-            {showQuickAdd && (
-              <button
-                type="button"
-                className="mt-1 w-full rounded-md border-t border-border/40 px-3 py-2.5 text-left transition-colors hover:bg-muted/60"
-                onClick={() => { setOpen(false); onQuickAdd(query.trim()) }}
-              >
-                <p className="text-sm font-medium text-foreground">Add &quot;{query.trim()}&quot; as product</p>
-              </button>
-            )}
-          </PopoverContent>
-        </Popover>
-      )}
-    </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          onClick={() => { onSelect(null); setQuery('') }}
+          className="shrink-0 text-muted-foreground"
+        >
+          <X className="size-3.5" />
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <Combobox
+      value=""
+      onValueChange={(val) => {
+        if (!val) {
+          onSelect(null)
+          setQuery('')
+        } else {
+          const found = options.find(o => o.id === val) || null
+          onSelect(found)
+          setQuery('')
+        }
+      }}
+      open={open}
+      onOpenChange={setOpen}
+      inputValue={query}
+      onInputValueChange={setQuery}
+    >
+      <ComboboxInput placeholder="Search product..." showClear={false} showTrigger className="w-full" />
+      <ComboboxContent align="start" sideOffset={6} className="w-full min-w-80">
+        <ComboboxList>
+          {results.map((p) => {
+            const alreadyUsed = usedProductIds.includes(p.id)
+            return (
+              <ComboboxItem key={p.id} value={p.id} disabled={alreadyUsed} className="flex items-center justify-between">
+                <div className="flex min-w-0 flex-1 items-center gap-2 py-1">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
+                    <Package className="size-3.5 text-muted-foreground" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{p.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {p.sku ? `${p.sku} · ` : ''}{p.unit_name} · {rupee(p.purchase_price)}
+                      {alreadyUsed && ' · already added'}
+                    </p>
+                  </div>
+                </div>
+                {alreadyUsed && <Badge variant="secondary" className="text-[10px]">Added</Badge>}
+              </ComboboxItem>
+            )
+          })}
+        </ComboboxList>
+        {showQuickAdd && (
+          <div className="border-t p-1 bg-muted/20">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => { setOpen(false); onQuickAdd(query.trim()); setQuery('') }}
+              className="w-full justify-start text-xs font-semibold text-primary hover:text-primary hover:bg-muted"
+            >
+              <Plus className="size-3.5" />
+              Add &quot;{query.trim()}&quot; as product
+            </Button>
+          </div>
+        )}
+      </ComboboxContent>
+    </Combobox>
   )
 }
 
@@ -316,11 +298,11 @@ function LineItemRow({
   function selectProduct(p: Product | null) {
     if (!p) { onUpdate(row.id, { product: null, unit_price: '', buy_mode: 'unit', qty_input: '' }); return }
     onUpdate(row.id, {
-      product:    p,
-      buy_mode:   'unit',
+      product: p,
+      buy_mode: 'unit',
       unit_price: String(p.purchase_price),
-      tax_rate:   String(p.gst_rate || 18),
-      qty_input:  '',
+      tax_rate: String(p.gst_rate || 18),
+      qty_input: '',
     })
   }
 
@@ -335,9 +317,8 @@ function LineItemRow({
   const canBox = row.product?.has_box && row.product?.units_per_box
 
   return (
-    <tr className="group border-b border-border/40 last:border-0 hover:bg-muted/40 transition-colors">
-      {/* Product */}
-      <td className="py-3 pl-4 pr-3 align-middle min-w-[220px]">
+    <TableRow className="group">
+      <TableCell className="min-w-[220px] align-middle">
         <ProductSearch
           value={row.product}
           options={products}
@@ -346,38 +327,33 @@ function LineItemRow({
           onSelect={selectProduct}
           onQuickAdd={(name) => onQuickAdd(name, row.id)}
         />
-      </td>
+      </TableCell>
 
-      {/* Mode toggle */}
-      <td className="px-3 py-3 align-middle w-[100px]">
-        <div className="flex rounded-lg overflow-hidden border border-border/60 h-9">
-          <button type="button"
+      <TableCell className="w-[140px] align-middle">
+        <ButtonGroup className="h-9">
+          <Button
+            type="button"
+            variant={row.buy_mode === 'unit' ? 'default' : 'outline'}
+            size="xs"
             onClick={() => toggleMode('unit')}
-            className={cn(
-              'flex-1 text-xs font-medium transition-colors',
-              row.buy_mode === 'unit'
-                ? 'bg-foreground text-background'
-                : 'bg-background text-muted-foreground hover:bg-muted/50',
-            )}>
+            className="h-full flex-1 px-3 text-xs font-medium"
+          >
             Unit
-          </button>
-          <button type="button"
+          </Button>
+          <Button
+            type="button"
+            variant={row.buy_mode === 'box' ? 'default' : 'outline'}
+            size="xs"
             onClick={() => canBox && toggleMode('box')}
             disabled={!canBox}
-            className={cn(
-              'flex-1 text-xs font-medium transition-colors border-l border-border/60',
-              !canBox && 'opacity-30 cursor-not-allowed',
-              row.buy_mode === 'box' && canBox
-                ? 'bg-foreground text-background'
-                : 'bg-background text-muted-foreground hover:bg-muted/50',
-            )}>
+            className="h-full flex-1 px-3 text-xs font-medium"
+          >
             Box
-          </button>
-        </div>
-      </td>
+          </Button>
+        </ButtonGroup>
+      </TableCell>
 
-      {/* Qty */}
-      <td className="px-3 py-3 align-middle w-[90px]">
+      <TableCell className="w-[90px] align-middle">
         <div>
           <Input
             type="number" min="0" step={row.buy_mode === 'box' ? '1' : '0.001'}
@@ -387,56 +363,58 @@ function LineItemRow({
             className="h-9 text-sm tabular-nums"
           />
           {row.buy_mode === 'box' && row.product?.units_per_box && num(row.qty_input) > 0 && (
-            <p className="text-[10px] text-muted-foreground mt-0.5 text-right">
+            <FieldDescription className="mt-0.5 text-right text-[10px]">
               = {baseUnits} {row.product.unit_name}
-            </p>
+            </FieldDescription>
           )}
         </div>
-      </td>
+      </TableCell>
 
-      {/* Unit price */}
-      <td className="px-3 py-3 align-middle w-[110px]">
-        <div className="relative">
-          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">₹</span>
-          <Input
+      <TableCell className="w-[130px] align-middle">
+        <InputGroup>
+          <InputGroupAddon>
+            <InputGroupText>₹</InputGroupText>
+          </InputGroupAddon>
+          <InputGroupInput
             type="number" min="0" step="0.01"
             value={row.unit_price}
             onChange={e => onUpdate(row.id, { unit_price: e.target.value })}
             placeholder="0"
-            className="h-9 pl-6 text-sm tabular-nums"
           />
-        </div>
-      </td>
+        </InputGroup>
+      </TableCell>
 
-      {/* Tax % */}
-      <td className="px-3 py-3 align-middle w-[80px]">
-        <div className="relative">
-          <Input
+      <TableCell className="w-[110px] align-middle">
+        <InputGroup>
+          <InputGroupAddon>
+            <InputGroupText>%</InputGroupText>
+          </InputGroupAddon>
+          <InputGroupInput
             type="number" min="0" max="100" step="0.01"
             value={row.tax_rate}
             onChange={e => onUpdate(row.id, { tax_rate: e.target.value })}
-            className="h-9 pr-5 text-sm tabular-nums"
           />
-          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-[10px]">%</span>
-        </div>
-      </td>
+        </InputGroup>
+      </TableCell>
 
-      {/* Line total */}
-      <td className="px-3 py-3 text-right align-middle w-[120px]">
-        <span className="text-sm tabular-nums font-semibold text-foreground">
+      <TableCell className="w-[120px] text-right align-middle">
+        <span className="text-sm font-semibold tabular-nums text-foreground">
           {lineTotal > 0 ? rupee(lineTotal) : <span className="text-muted-foreground/40">—</span>}
         </span>
-      </td>
+      </TableCell>
 
-      {/* Delete */}
-      <td className="py-3 pl-3 pr-4 align-middle w-10">
-        <button type="button"
+      <TableCell className="w-10 align-middle">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
           onClick={() => onRemove(row.id)}
-          className="h-8 w-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors opacity-0 group-hover:opacity-100">
+          className="size-8 text-muted-foreground opacity-0 transition-all duration-150 hover:text-red-500 hover:bg-red-50 group-hover:opacity-100 dark:hover:bg-red-950/30"
+        >
           <Trash2 className="size-3.5" />
-        </button>
-      </td>
-    </tr>
+        </Button>
+      </TableCell>
+    </TableRow>
   )
 }
 
@@ -454,45 +432,37 @@ export default function NewPurchasePage() {
   } = useNewPurchase()
   const { setCustomTitle } = useBreadcrumb()
 
-  // ── header state ────────────────────────────────────────────────────────────
   const [header, setHeader] = useState<PurchaseHeaderValues>({
     purchase_number: '',
-    purchase_date:   today(),
-    supplier_id:     '',
-    notes:           '',
+    purchase_date: today(),
+    supplier_id: '',
+    notes: '',
   })
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null)
   const [headerErrors, setHeaderErrors] = useState<Partial<Record<keyof PurchaseHeaderValues, string>>>({})
 
-  // Set dynamic breadcrumb title
   useEffect(() => {
     setCustomTitle(header.purchase_number || 'New Purchase')
   }, [header.purchase_number, setCustomTitle])
 
-  // ── line items state ─────────────────────────────────────────────────────────
   const [rows, setRows] = useState<LineItemDraft[]>([emptyRow()])
 
-  // ── discount state ───────────────────────────────────────────────────────────
-  const [discount,     setDiscount]     = useState('')
+  const [discount, setDiscount] = useState('')
   const [discountMode, setDiscountMode] = useState<DiscountMode>('flat')
 
-  // ── quick-add state ──────────────────────────────────────────────────────────
-  const [quickAddOpen,  setQuickAddOpen]  = useState(false)
-  const [quickAddName,  setQuickAddName]  = useState('')
+  const [quickAddOpen, setQuickAddOpen] = useState(false)
+  const [quickAddName, setQuickAddName] = useState('')
   const [quickAddRowId, setQuickAddRowId] = useState('')
 
-  // ── save state ───────────────────────────────────────────────────────────────
   const [saving, setSaving] = useState(false)
 
-  // Generate PO number on mount
   useEffect(() => {
     generatePurchaseNumber().then(pn => {
       setHeader(h => ({ ...h, purchase_number: pn }))
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ── row helpers ──────────────────────────────────────────────────────────────
   const updateRow = useCallback((id: string, patch: Partial<LineItemDraft>) => {
     setRows(prev => prev.map(r => r.id !== id ? r : { ...r, ...patch }))
   }, [])
@@ -507,7 +477,6 @@ export default function NewPurchasePage() {
 
   const usedProductIds = rows.map(r => r.product?.id ?? '').filter(Boolean)
 
-  // ── quick-add ────────────────────────────────────────────────────────────────
   function openQuickAdd(name: string, rowId: string) {
     setQuickAddName(name)
     setQuickAddRowId(rowId)
@@ -519,27 +488,25 @@ export default function NewPurchasePage() {
     if (!product) return false
     updateRow(quickAddRowId, {
       product,
-      buy_mode:   'unit',
+      buy_mode: 'unit',
       unit_price: String(product.purchase_price),
-      tax_rate:   String(product.gst_rate || 18),
-      qty_input:  '',
+      tax_rate: String(product.gst_rate || 18),
+      qty_input: '',
     })
     setQuickAddOpen(false)
     return true
   }
 
-  // ── totals ───────────────────────────────────────────────────────────────────
-  const validRows   = rows.filter(r => r.product && num(r.qty_input) > 0)
-  const subtotal    = validRows.reduce((s, r) => s + computeLineTotal(r), 0)
-  const taxAmount   = validRows.reduce((s, r) => s + computeLineTotal(r) * num(r.tax_rate) / 100, 0)
+  const validRows = rows.filter(r => r.product && num(r.qty_input) > 0)
+  const subtotal = validRows.reduce((s, r) => s + computeLineTotal(r), 0)
+  const taxAmount = validRows.reduce((s, r) => s + computeLineTotal(r) * num(r.tax_rate) / 100, 0)
   const discountVal = discountMode === 'flat' ? num(discount) : subtotal * num(discount) / 100
-  const grandTotal  = subtotal + taxAmount - discountVal
+  const grandTotal = subtotal + taxAmount - discountVal
 
-  // ── validation ───────────────────────────────────────────────────────────────
   function validate(): boolean {
     const errs: typeof headerErrors = {}
     if (!header.purchase_number.trim()) errs.purchase_number = 'Required'
-    if (!header.supplier_id)            errs.supplier_id     = 'Select a supplier'
+    if (!header.supplier_id) errs.supplier_id = 'Select a supplier'
     setHeaderErrors(errs)
     if (Object.keys(errs).length > 0) return false
     if (validRows.length === 0) {
@@ -552,7 +519,6 @@ export default function NewPurchasePage() {
     return true
   }
 
-  // ── submit ───────────────────────────────────────────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!validate()) return
@@ -574,239 +540,212 @@ export default function NewPurchasePage() {
 
   return (
     <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      {/* ── Scrollable body ─────────────────────────────────────────────────── */}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain [scrollbar-width:thin] p-4 space-y-4">
 
-        {/* ── Section 1: Purchase Header ────────────────────────────────────── */}
-        <div className="rounded-lg border bg-card overflow-hidden">
-          {/* Card header */}
-          <div className="flex items-center gap-2 border-b px-4 py-3 shrink-0">
-            <Building2 className="size-3.5 text-muted-foreground/60" />
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        {/* ── Purchase Details ──────────────────────────────────────────────── */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <Building2 className="size-3.5 text-muted-foreground/60" />
               Purchase Details
-            </p>
-          </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <FieldGroup>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field data-invalid={!!headerErrors.purchase_number}>
+                  <FieldLabel htmlFor="purchase_number">Purchase Number </FieldLabel>
+                  <Input
+                    id="purchase_number"
+                    value={header.purchase_number}
+                    onChange={e => {
+                      setHeader(h => ({ ...h, purchase_number: e.target.value }))
+                      setHeaderErrors(e2 => ({ ...e2, purchase_number: undefined }))
+                    }}
+                    placeholder="PO-2025-001"
+                    className="font-mono"
+                    aria-invalid={!!headerErrors.purchase_number}
+                  />
+                  {headerErrors.purchase_number && (
+                    <FieldError>{headerErrors.purchase_number}</FieldError>
+                  )}
+                </Field>
 
-          <div className="px-4 py-4 space-y-4">
-            {/* Row 1: PO number + Date */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <FieldLabel required>Purchase Number</FieldLabel>
-                <Input
-                  value={header.purchase_number}
-                  onChange={e => {
-                    setHeader(h => ({ ...h, purchase_number: e.target.value }))
-                    setHeaderErrors(e2 => ({ ...e2, purchase_number: undefined }))
+                <Field>
+                  <FieldLabel htmlFor="purchase_date">
+                    <CalendarDays className="size-3" />Date 
+                  </FieldLabel>
+                  <DatePicker
+                    value={header.purchase_date}
+                    onChange={val => setHeader(h => ({ ...h, purchase_date: val }))}
+                  />
+                </Field>
+              </div>
+
+              <Field>
+                <FieldLabel>Supplier </FieldLabel>
+                <SupplierSearch
+                  value={selectedSupplier}
+                  options={suppliers}
+                  loading={optionsLoading}
+                  onSelect={s => {
+                    setSelectedSupplier(s)
+                    setHeader(h => ({ ...h, supplier_id: s?.id ?? '' }))
+                    setHeaderErrors(e => ({ ...e, supplier_id: undefined }))
                   }}
-                  placeholder="PO-2025-001"
-                  className={cn('font-mono', headerErrors.purchase_number && 'border-red-400')}
+                  error={headerErrors.supplier_id}
                 />
-                {headerErrors.purchase_number && (
-                  <p className="text-xs text-destructive flex items-center gap-1">
-                    <AlertCircle className="size-3" />{headerErrors.purchase_number}
-                  </p>
-                )}
-              </div>
+              </Field>
 
-              <div className="space-y-1.5">
-                <FieldLabel required>
-                  <span className="inline-flex items-center gap-1.5">
-                    <CalendarDays className="size-3" />
-                    Date
-                  </span>
+              <Field>
+                <FieldLabel htmlFor="notes">
+                  <FileText className="size-3" />Notes
                 </FieldLabel>
-                <Input
-                  type="date"
-                  value={header.purchase_date}
-                  onChange={e => setHeader(h => ({ ...h, purchase_date: e.target.value }))}
+                <Textarea
+                  id="notes"
+                  value={header.notes}
+                  onChange={e => setHeader(h => ({ ...h, notes: e.target.value }))}
+                  rows={2}
+                  placeholder="e.g. Festival restock, urgent order…"
+                  className="resize-none"
                 />
-              </div>
-            </div>
+              </Field>
+            </FieldGroup>
+          </CardContent>
+        </Card>
 
-            {/* Row 2: Supplier */}
-            <div className="space-y-1.5">
-              <FieldLabel required>Supplier</FieldLabel>
-              <SupplierSearch
-                value={selectedSupplier}
-                options={suppliers}
-                loading={optionsLoading}
-                onSelect={s => {
-                  setSelectedSupplier(s)
-                  setHeader(h => ({ ...h, supplier_id: s?.id ?? '' }))
-                  setHeaderErrors(e => ({ ...e, supplier_id: undefined }))
-                }}
-                error={headerErrors.supplier_id}
-              />
-            </div>
-
-            {/* Row 3: Notes */}
-            <div className="space-y-1.5">
-              <FieldLabel>
-                <span className="inline-flex items-center gap-1.5">
-                  <FileText className="size-3" />
-                  Notes
-                </span>
-              </FieldLabel>
-              <textarea
-                value={header.notes}
-                onChange={e => setHeader(h => ({ ...h, notes: e.target.value }))}
-                rows={2}
-                placeholder="e.g. Festival restock, urgent order…"
-                className={cn(
-                  'flex w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm',
-                  'placeholder:text-muted-foreground/50',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:border-ring/40',
-                  'transition-colors resize-none',
-                )}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* ── Section 2: Line Items ─────────────────────────────────────────── */}
-        <div className="rounded-lg border bg-card overflow-hidden">
-          {/* Card header */}
-          <div className="flex items-center justify-between border-b px-4 py-3 shrink-0">
-            <div className="flex items-center gap-2">
+        {/* ── Line Items ─────────────────────────────────────────────────────── */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               <Package className="size-3.5 text-muted-foreground/60" />
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Line Items
-              </p>
+              Line Items
               {validRows.length > 0 && (
-                <Badge variant="outline" className="text-[10px] h-4 px-1.5">
+                <Badge variant="outline" className="h-4 px-1.5 text-[10px]">
                   {validRows.length}
                 </Badge>
               )}
-            </div>
-            <Button type="button" variant="outline" size="sm" onClick={addRow} className="h-7 px-2.5 text-xs">
-              <Plus className="size-3 mr-1" />Add Row
-            </Button>
-          </div>
+            </CardTitle>
+            <CardFooter className="p-0">
+              <Button type="button" variant="outline" size="sm" onClick={addRow} className="h-7 px-2.5 text-xs">
+                <Plus className="size-3" />Add Row
+              </Button>
+            </CardFooter>
+          </CardHeader>
 
-          {/* Table */}
-          <div className="overflow-x-auto [scrollbar-width:thin]">
-            <table className="w-full min-w-[760px] caption-bottom border-separate border-spacing-0 text-sm">
-              <thead>
-                <tr className="border-b border-border/60 hover:bg-transparent">
-                  {['Product', 'Mode', 'Qty', 'Unit Price', 'Tax %', 'Total', ''].map((col, i) => (
-                    <th
-                      key={i}
-                      className={cn(
-                        'h-10 align-middle text-xs font-medium text-muted-foreground whitespace-nowrap',
-                        i === 0 ? 'pl-4 pr-3 text-left' : 
-                        i === 6 ? 'py-3 pl-3 pr-4 w-10' : 
-                        (i === 4 || i === 5) ? 'px-3 text-right' : 
-                        'px-3 text-left'
-                      )}
-                    >
-                      {col}
-                    </th>
+          <CardContent className="px-0">
+            <div className="overflow-x-auto [scrollbar-width:thin]">
+              <Table className="min-w-[760px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[220px] pl-4">Product</TableHead>
+                    <TableHead className="w-[140px]">Mode</TableHead>
+                    <TableHead className="w-[90px]">Qty</TableHead>
+                    <TableHead className="w-[130px]">Unit Price</TableHead>
+                    <TableHead className="w-[110px] text-right">Tax %</TableHead>
+                    <TableHead className="w-[120px] text-right">Total</TableHead>
+                    <TableHead className="w-10 pr-4" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.map(row => (
+                    <LineItemRow
+                      key={row.id}
+                      row={row}
+                      products={products}
+                      optionsLoading={optionsLoading}
+                      usedProductIds={usedProductIds}
+                      onUpdate={updateRow}
+                      onRemove={removeRow}
+                      onQuickAdd={openQuickAdd}
+                    />
                   ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map(row => (
-                  <LineItemRow
-                    key={row.id}
-                    row={row}
-                    products={products}
-                    optionsLoading={optionsLoading}
-                    usedProductIds={usedProductIds}
-                    onUpdate={updateRow}
-                    onRemove={removeRow}
-                    onQuickAdd={openQuickAdd}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* ── Section 3: Totals footer card ─────────────────────────────────── */}
-        <div className="rounded-lg border bg-card overflow-hidden">
-          <div className="divide-y divide-border/60">
-
-            {/* Subtotal */}
+        {/* ── Totals ─────────────────────────────────────────────────────────── */}
+        <Card>
+          <CardContent className="divide-y p-0">
             <div className="flex items-center justify-between px-5 py-3">
               <p className="text-sm text-muted-foreground">Subtotal</p>
-              <p className="text-sm tabular-nums font-medium">{rupee(subtotal)}</p>
+              <p className="text-sm font-medium tabular-nums">{rupee(subtotal)}</p>
             </div>
-
-            {/* Tax */}
             <div className="flex items-center justify-between px-5 py-3">
               <p className="text-sm text-muted-foreground">Tax (GST)</p>
-              <p className="text-sm tabular-nums font-medium">{rupee(taxAmount)}</p>
+              <p className="text-sm font-medium tabular-nums">{rupee(taxAmount)}</p>
             </div>
-
-            {/* Discount */}
-            <div className="flex items-center justify-between px-5 py-3 gap-4">
+            <div className="flex items-center justify-between gap-4 px-5 py-3">
               <div className="flex items-center gap-3">
                 <p className="text-sm text-muted-foreground">Discount</p>
-                {/* mode toggle */}
-                <div className="flex rounded-md overflow-hidden border border-border/60 text-xs h-6">
-                  <button type="button"
+                <ButtonGroup className="h-6">
+                  <Button
+                    type="button"
+                    variant={discountMode === 'flat' ? 'default' : 'outline'}
+                    size="xs"
                     onClick={() => setDiscountMode('flat')}
-                    className={cn('px-2.5 transition-colors font-medium',
-                      discountMode === 'flat' ? 'bg-foreground text-background' : 'bg-background text-muted-foreground hover:bg-muted/50'
-                    )}>₹</button>
-                  <button type="button"
+                    className="h-full px-2.5 text-xs font-semibold"
+                  >
+                    ₹
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={discountMode === 'percent' ? 'default' : 'outline'}
+                    size="xs"
                     onClick={() => setDiscountMode('percent')}
-                    className={cn('px-2.5 transition-colors font-medium border-l border-border/60',
-                      discountMode === 'percent' ? 'bg-foreground text-background' : 'bg-background text-muted-foreground hover:bg-muted/50'
-                    )}>%</button>
-                </div>
+                    className="h-full px-2.5 text-xs font-semibold"
+                  >
+                    %
+                  </Button>
+                </ButtonGroup>
               </div>
               <div className="flex items-center gap-3">
-                <div className="relative w-28">
-                  {discountMode === 'flat'
-                    ? <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">₹</span>
-                    : <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">%</span>
-                  }
-                  <Input
+                <InputGroup className="h-8 w-28">
+                  <InputGroupAddon>
+                    <InputGroupText>{discountMode === 'flat' ? '₹' : '%'}</InputGroupText>
+                  </InputGroupAddon>
+                  <InputGroupInput
                     type="number" min="0" step="0.01"
                     value={discount}
                     onChange={e => setDiscount(e.target.value)}
                     placeholder="0"
-                    className={cn('h-8 text-sm tabular-nums', discountMode === 'flat' ? 'pl-6' : 'pr-6')}
                   />
-                </div>
-                <p className="text-sm tabular-nums font-medium text-emerald-600 dark:text-emerald-400 w-28 text-right">
+                </InputGroup>
+                <p className="w-28 text-right text-sm font-medium tabular-nums text-emerald-600 dark:text-emerald-400">
                   {discountVal > 0 ? `−${rupee(discountVal)}` : '—'}
                 </p>
               </div>
             </div>
-
-            {/* Grand Total */}
-            <div className="flex items-center justify-between px-5 py-4 bg-muted/30">
+            <div className="flex items-center justify-between bg-muted/30 px-5 py-4">
               <p className="text-sm font-bold text-foreground">Grand Total</p>
-              <p className="text-2xl tabular-nums font-bold text-foreground tracking-tight">
+              <p className="text-2xl font-bold tabular-nums tracking-tight text-foreground">
                 {rupee(grandTotal)}
               </p>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* bottom padding */}
         <div className="h-4" />
       </div>
 
-      {/* ── Sticky bottom footer bar ───────────────────────────────────────── */}
-      <div className="shrink-0 border-t bg-card px-6 py-4 flex items-center justify-between gap-4">
+      {/* ── Sticky footer ─────────────────────────────────────────────────────── */}
+      <div className="flex shrink-0 items-center justify-between gap-4 border-t bg-card px-6 py-4">
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Grand Total:</span>
-          <span className="text-lg font-bold text-foreground tabular-nums">{rupee(grandTotal)}</span>
+          <span className="text-lg font-bold tabular-nums text-foreground">{rupee(grandTotal)}</span>
         </div>
         <div className="flex items-center gap-2">
-          <Button type="button" variant="outline" size="default" onClick={() => router.back()} disabled={saving} className="h-9 px-4 text-xs font-semibold">
+          <Button type="button" variant="outline" onClick={() => router.back()} disabled={saving} className="h-9 px-4 text-xs font-semibold">
             Cancel
           </Button>
-          <Button type="submit" size="default" disabled={saving} className="h-9 px-5 text-xs font-semibold">
-            {saving ? <><Loader2 className="size-3.5 animate-spin mr-1.5" />Saving…</> : 'Save Purchase'}
+          <Button type="submit" disabled={saving} className="h-9 px-5 text-xs font-semibold">
+            {saving ? <><Loader2 className="size-3.5 animate-spin" />Saving…</> : 'Save Purchase'}
           </Button>
         </div>
       </div>
 
-      {/* Quick-add product dialog */}
       <ProductQuickAdd
         open={quickAddOpen}
         initialName={quickAddName}

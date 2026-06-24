@@ -245,8 +245,23 @@ export function useNewSale() {
     return product
   }, [supabase])
 
+  const refreshCustomers = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('customers')
+      .select('id, name, phone, email, address, city, credit_limit, opening_balance, is_active')
+      .eq('is_active', true)
+      .neq('name', WALKIN_CUSTOMER_NAME)
+      .order('name')
+    if (error) {
+      toast.error('Failed to reload customers')
+    } else {
+      setCustomers(sortByName((data ?? []) as Customer[]))
+    }
+  }, [supabase])
+
   return {
     customers, products, optionsLoading,
     generateBillNumber, saveSale, quickAddProduct, getOrCreateWalkinCustomer,
+    refreshCustomers,
   }
 }

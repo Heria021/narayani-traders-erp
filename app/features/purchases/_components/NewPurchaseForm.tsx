@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { DatePicker } from '@/components/ui/date-picker'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Loader2, Plus, Trash2, AlertCircle, ChevronDown, Package } from 'lucide-react'
@@ -573,10 +574,9 @@ export function NewPurchaseForm({
 
                   <div className="space-y-1.5">
                     <FieldLabel required>Date</FieldLabel>
-                    <Input
-                      type="date"
+                    <DatePicker
                       value={header.purchase_date}
-                      onChange={e => setHeader(h => ({ ...h, purchase_date: e.target.value }))}
+                      onChange={val => setHeader(h => ({ ...h, purchase_date: val }))}
                     />
                   </div>
                 </div>

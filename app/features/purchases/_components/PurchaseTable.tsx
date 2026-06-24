@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { DatePicker } from '@/components/ui/date-picker'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select, SelectContent, SelectItem, SelectTrigger,
@@ -228,11 +229,17 @@ export function PurchaseTable({
 
           {showCustom && (
             <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-              <Input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
-                className="h-8 w-36 text-[13px] bg-muted/50 rounded-lg" />
+              <DatePicker
+                value={customFrom}
+                onChange={setCustomFrom}
+                className="h-8 w-36 text-[13px] bg-muted/50 rounded-lg"
+              />
               <span className="text-xs text-muted-foreground">to</span>
-              <Input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)}
-                className="h-8 w-36 text-[13px] bg-muted/50 rounded-lg" />
+              <DatePicker
+                value={customTo}
+                onChange={setCustomTo}
+                className="h-8 w-36 text-[13px] bg-muted/50 rounded-lg"
+              />
               <Button size="sm" variant="outline" className="h-8 text-xs rounded-lg"
                 onClick={() => onDateRange('custom', customFrom, customTo)}>
                 Apply

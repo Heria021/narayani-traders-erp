@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { DatePicker } from '@/components/ui/date-picker'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select, SelectContent, SelectItem, SelectTrigger,
@@ -17,6 +18,14 @@ import {
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/table'
 import {
   Search, ChevronUp, ChevronDown, ChevronsUpDown,
   CalendarDays, ShoppingBag, MoreHorizontal, Eye, Trash2, CreditCard,
@@ -74,10 +83,9 @@ function SortableHeader({
   label: string; field?: SortField; current: SortField; dir: SortDir; className?: string
   onSort: (field: SortField) => void
 }) {
-  const cls = cn('h-10 px-3 text-left align-middle text-xs font-medium whitespace-nowrap text-muted-foreground', className)
-  if (!field) return <th className={cls}>{label}</th>
+  if (!field) return <TableHead className={className}>{label}</TableHead>
   return (
-    <th className={cls}>
+    <TableHead className={className}>
       <button
         type="button"
         className="inline-flex items-center gap-1 transition-colors hover:text-foreground"
@@ -86,7 +94,7 @@ function SortableHeader({
         {label}
         <SortIcon field={field} current={current} dir={dir} />
       </button>
-    </th>
+    </TableHead>
   )
 }
 
@@ -105,8 +113,8 @@ function StatusBadge({ status }: { status: PaymentStatus }) {
 
 function SkeletonRow() {
   return (
-    <tr className="border-b border-border/40">
-      <td className="py-3 pl-4 pr-3">
+    <TableRow className="border-b border-border/40 hover:bg-transparent">
+      <TableCell className="py-3 pl-4 pr-3">
         <div className="flex items-center gap-3">
           <Skeleton className="size-9 shrink-0 rounded-lg" />
           <div className="flex flex-col gap-1.5">
@@ -114,16 +122,16 @@ function SkeletonRow() {
             <Skeleton className="h-3 w-20" />
           </div>
         </div>
-      </td>
-      <td className="px-3 py-3"><Skeleton className="h-4 w-28 font-mono" /></td>
-      <td className="px-3 py-3"><Skeleton className="h-4 w-20" /></td>
-      <td className="px-3 py-3 text-right"><Skeleton className="ml-auto h-5 w-14 rounded-full" /></td>
-      <td className="px-3 py-3 text-right"><Skeleton className="ml-auto h-4 w-20" /></td>
-      <td className="px-3 py-3 text-right"><Skeleton className="ml-auto h-4 w-16" /></td>
-      <td className="px-3 py-3 text-right"><Skeleton className="ml-auto h-4 w-16" /></td>
-      <td className="px-3 py-3 text-right"><Skeleton className="ml-auto h-5 w-16 rounded-full" /></td>
-      <td className="py-3 pl-3 pr-4"><Skeleton className="size-7 rounded-md" /></td>
-    </tr>
+      </TableCell>
+      <TableCell className="px-3 py-3"><Skeleton className="h-4 w-28 font-mono" /></TableCell>
+      <TableCell className="px-3 py-3"><Skeleton className="h-4 w-20" /></TableCell>
+      <TableCell className="px-3 py-3 text-right"><Skeleton className="ml-auto h-5 w-14 rounded-full" /></TableCell>
+      <TableCell className="px-3 py-3 text-right"><Skeleton className="ml-auto h-4 w-20" /></TableCell>
+      <TableCell className="px-3 py-3 text-right"><Skeleton className="ml-auto h-4 w-16" /></TableCell>
+      <TableCell className="px-3 py-3 text-right"><Skeleton className="ml-auto h-4 w-16" /></TableCell>
+      <TableCell className="px-3 py-3 text-right"><Skeleton className="ml-auto h-5 w-16 rounded-full" /></TableCell>
+      <TableCell className="py-3 pl-3 pr-4"><Skeleton className="size-7 rounded-md" /></TableCell>
+    </TableRow>
   )
 }
 
@@ -276,11 +284,17 @@ export function SalesTable({
 
           {showCustom && (
             <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-              <Input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
-                className="h-8 w-36 text-[13px] bg-muted/50 rounded-lg" />
+              <DatePicker
+                value={customFrom}
+                onChange={setCustomFrom}
+                className="h-8 w-36 text-[13px] bg-muted/50 rounded-lg"
+              />
               <span className="text-xs text-muted-foreground">to</span>
-              <Input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)}
-                className="h-8 w-36 text-[13px] bg-muted/50 rounded-lg" />
+              <DatePicker
+                value={customTo}
+                onChange={setCustomTo}
+                className="h-8 w-36 text-[13px] bg-muted/50 rounded-lg"
+              />
               <Button size="sm" variant="outline" className="h-8 text-xs rounded-lg"
                 onClick={() => onDateRange('custom', customFrom, customTo)}>
                 Apply
@@ -312,53 +326,53 @@ export function SalesTable({
           </div>
         ) : (
           <div className="min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain [scrollbar-width:thin]">
-            <table className="w-full min-w-[980px] caption-bottom border-separate border-spacing-0 text-sm">
-              <thead className="sticky top-0 z-10 bg-card">
-                <tr className="border-b border-border/60 hover:bg-transparent">
+            <Table className="w-full min-w-[980px] border-separate border-spacing-0">
+              <TableHeader className="sticky top-0 z-10 bg-card">
+                <TableRow className="border-b border-border/60 hover:bg-transparent">
                   {/* Customer */}
-                  <th className="h-10 pl-4 pr-3 text-left align-middle text-xs font-medium whitespace-nowrap text-muted-foreground">
+                  <TableHead className="pl-4 pr-3 text-xs font-medium text-muted-foreground">
                     Customer
-                  </th>
+                  </TableHead>
                   {/* Bill No. */}
-                  <th className="h-10 px-3 text-left align-middle text-xs font-medium whitespace-nowrap text-muted-foreground">
+                  <TableHead className="px-3 text-xs font-medium text-muted-foreground">
                     Bill No.
-                  </th>
+                  </TableHead>
                   {/* Date */}
                   <SortableHeader label="Date"        field="sale_date"   current={sortField} dir={sortDir} onSort={onSort} />
                   {/* Items */}
-                  <th className="h-10 px-3 text-right align-middle text-xs font-medium whitespace-nowrap text-muted-foreground">
+                  <TableHead className="px-3 text-xs font-medium text-muted-foreground text-right">
                     Items
-                  </th>
+                  </TableHead>
                   {/* Grand Total */}
                   <SortableHeader label="Grand Total" field="grand_total" current={sortField} dir={sortDir} className="text-right" onSort={onSort} />
                   {/* Paid */}
-                  <th className="h-10 px-3 text-right align-middle text-xs font-medium whitespace-nowrap text-muted-foreground">
+                  <TableHead className="px-3 text-xs font-medium text-muted-foreground text-right">
                     Paid
-                  </th>
+                  </TableHead>
                   {/* Balance */}
                   <SortableHeader label="Balance"     field="balance_due" current={sortField} dir={sortDir} className="text-right" onSort={onSort} />
                   {/* Status */}
-                  <th className="h-10 px-3 text-right align-middle text-xs font-medium whitespace-nowrap text-muted-foreground">
+                  <TableHead className="px-3 text-xs font-medium text-muted-foreground text-right">
                     Status
-                  </th>
+                  </TableHead>
                   {/* Actions */}
-                  <th className="h-10 w-10 px-3 pr-4" />
-                </tr>
-              </thead>
+                  <TableHead className="w-10 px-3 pr-4" />
+                </TableRow>
+              </TableHeader>
 
-              <tbody>
+              <TableBody>
                 {loading
                   ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
                   : sales.map(s => {
                     const canDelete = s.sale_date === today() && s.amount_paid === 0
                     return (
-                      <tr
+                      <TableRow
                         key={s.id}
                         className="group cursor-pointer border-b border-border/40 transition-colors hover:bg-muted/40"
                         onClick={() => onViewInvoice(s)}
                       >
                         {/* Customer */}
-                        <td className="py-3 pl-4 pr-3 align-middle">
+                        <TableCell className="py-3 pl-4 pr-3 align-middle">
                           <div className="flex items-center gap-2.5">
                             <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-bold text-muted-foreground">
                               {s.customer_name === 'Walk-in'
@@ -374,43 +388,43 @@ export function SalesTable({
                               </p>
                             </div>
                           </div>
-                        </td>
+                        </TableCell>
 
                         {/* Bill No. */}
-                        <td className="px-3 py-3 align-middle">
+                        <TableCell className="px-3 py-3 align-middle">
                           <span className="font-mono text-xs font-semibold text-foreground">
                             {s.invoice_number}
                           </span>
-                        </td>
+                        </TableCell>
 
                         {/* Date */}
-                        <td className="px-3 py-3 align-middle text-sm text-muted-foreground whitespace-nowrap">
+                        <TableCell className="px-3 py-3 align-middle text-sm text-muted-foreground whitespace-nowrap">
                           {fmtDate(s.sale_date)}
-                        </td>
+                        </TableCell>
 
                         {/* Items */}
-                        <td className="px-3 py-3 text-right align-middle">
+                        <TableCell className="px-3 py-3 text-right align-middle">
                           <Badge variant="outline" className="font-medium tabular-nums text-xs">
                             {s.item_count ?? 0}
                           </Badge>
-                        </td>
+                        </TableCell>
 
                         {/* Grand Total */}
-                        <td className="px-3 py-3 text-right align-middle">
+                        <TableCell className="px-3 py-3 text-right align-middle">
                           <span className="text-sm tabular-nums font-semibold text-foreground">
                             {rupee(s.grand_total)}
                           </span>
-                        </td>
+                        </TableCell>
 
                         {/* Paid */}
-                        <td className="px-3 py-3 text-right align-middle">
+                        <TableCell className="px-3 py-3 text-right align-middle">
                           <span className="text-sm tabular-nums text-emerald-600 dark:text-emerald-400 font-medium">
                             {rupee2(s.amount_paid)}
                           </span>
-                        </td>
+                        </TableCell>
 
                         {/* Balance */}
-                        <td className="px-3 py-3 text-right align-middle">
+                        <TableCell className="px-3 py-3 text-right align-middle">
                           {s.balance_due > 0 ? (
                             <span className="text-sm tabular-nums font-semibold text-amber-600 dark:text-amber-400">
                               {rupee2(s.balance_due)}
@@ -418,15 +432,15 @@ export function SalesTable({
                           ) : (
                             <span className="text-sm text-muted-foreground/40">—</span>
                           )}
-                        </td>
+                        </TableCell>
 
                         {/* Status */}
-                        <td className="px-3 py-3 text-right align-middle">
+                        <TableCell className="px-3 py-3 text-right align-middle">
                           <StatusBadge status={s.payment_status} />
-                        </td>
+                        </TableCell>
 
                         {/* Actions */}
-                        <td className="w-10 py-3 pl-3 pr-4 align-middle" onClick={e => e.stopPropagation()}>
+                        <TableCell className="w-10 py-3 pl-3 pr-4 align-middle" onClick={e => e.stopPropagation()}>
                           <DropdownMenu>
                             <DropdownMenuTrigger render={
                               <Button variant="ghost" size="icon-sm" className="size-7 opacity-0 transition-opacity group-hover:opacity-100">
@@ -453,13 +467,13 @@ export function SalesTable({
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     )
                   })
                 }
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
 
