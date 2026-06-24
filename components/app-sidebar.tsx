@@ -18,6 +18,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuShortcut,
@@ -170,25 +171,27 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 side={isMobile ? "bottom" : "right"}
                 sideOffset={4}
               >
-                <DropdownMenuLabel className="text-xs text-muted-foreground">
-                  Workspaces
-                </DropdownMenuLabel>
-                {workspaces.map((ws, index) => (
-                  <DropdownMenuItem
-                    key={ws.id}
-                    onClick={() => router.push(ws.url)}
-                    className="gap-2 p-2 cursor-pointer"
-                  >
-                    <div className="flex size-6 items-center justify-center rounded-md border bg-background">
-                      <ws.logo className="size-3.5 shrink-0 text-foreground" />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="font-medium text-xs text-foreground">{ws.name}</span>
-                      <span className="text-[10px] text-muted-foreground">{ws.plan}</span>
-                    </div>
-                    <DropdownMenuShortcut className="text-[9px]">⌘{index + 1}</DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                ))}
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">
+                    Workspaces
+                  </DropdownMenuLabel>
+                  {workspaces.map((ws, index) => (
+                    <DropdownMenuItem
+                      key={ws.id}
+                      onClick={() => router.push(ws.url)}
+                      className="gap-2 p-2 cursor-pointer"
+                    >
+                      <div className="flex size-6 items-center justify-center rounded-md border bg-background">
+                        <ws.logo className="size-3.5 shrink-0 text-foreground" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-medium text-xs text-foreground">{ws.name}</span>
+                        <span className="text-[10px] text-muted-foreground">{ws.plan}</span>
+                      </div>
+                      <DropdownMenuShortcut className="text-[9px]">⌘{index + 1}</DropdownMenuShortcut>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
           </SidebarMenuItem>
