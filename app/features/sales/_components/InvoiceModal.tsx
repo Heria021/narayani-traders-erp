@@ -2,39 +2,54 @@
 
 import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
-import { Badge } from '@/components/ui/badge'
-import { Printer, X, Building2, Phone, MapPin } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Printer, X } from 'lucide-react'
 import type { SaleWithItems } from './types'
-import { STATUS_CONFIG, PAYMENT_METHOD_LABELS } from './types'
+import { PAYMENT_METHOD_LABELS } from './types'
 
-// ─── Shop constants — replace with settings table in phase 2 ─────────────────
+// ─── Shop constants ───────────────────────────────────────────────────────────
 const SHOP = {
-  name:    'NARAYANI TRADERS',
-  address: 'Jaipur, Rajasthan',
-  phone:   '9XXXXXXXXX',
-  gstin:   'XXXXXXXXXXXXXXX',
-  tagline: 'Thank you for your business!',
+  name1:    'Narayani',
+  name2:    'Traders',
+  tagline:  'Hardware & Building Materials',
+  address:  'Ward No. 20, Aadhar Super Market, PWD Road, Dariba, Bidasar',
+  phone1:   '+91 97823 53866',
+  phone2:   '+91 90229 91101',
+  email:    'narayanitraders011@gmail.com',
+  gstin:    '08AAAPL8767A1ZH',
+  upi:      '9022991101-3@ybl',
+  terms: [
+    'Goods once sold will not be taken back or exchanged without prior approval.',
+    'Payment for Udhaar (credit) bills is due within 30 days of invoice date.',
+    'Interest of 2% per month will be charged on overdue balances.',
+    'All disputes are subject to Bidasar (Churu) jurisdiction only.',
+  ],
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 const rupee = (n: number) =>
-  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2 }).format(n)
+  '₹' + new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 
 const fmtDate = (d: string) =>
   new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
 
-function getWalkinDisplayName(sale: SaleWithItems): string {
-  if (sale.customer_name !== 'Walk-in') return sale.customer_name
-  // extract from notes: "Walk-in: <name>\n..."
+function getWalkinDisplayName(sale: SaleWithItems): { name: string; phone?: string } {
+  if (sale.customer_name !== 'Walk-in') return { name: sale.customer_name }
   if (sale.notes?.startsWith('Walk-in: ')) {
-    const firstLine = sale.notes.split('\n')[0]
-    const extracted = firstLine.replace('Walk-in: ', '').trim()
-    if (extracted) return extracted
+    const extracted = sale.notes.split('\n')[0].replace('Walk-in: ', '').trim()
+    if (extracted) return { name: extracted }
   }
-  return 'Walk-in Customer'
+  return { name: 'Walk-in Customer' }
+}
+
+function getDueDate(sale: SaleWithItems): string | null {
+  if (sale.due_date) return fmtDate(sale.due_date)
+  if (sale.balance_due > 0) {
+    const d = new Date(sale.sale_date)
+    d.setDate(d.getDate() + 30)
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+  return null
 }
 
 // ─── props ────────────────────────────────────────────────────────────────────
@@ -48,7 +63,6 @@ interface Props {
 // ─── InvoiceModal ─────────────────────────────────────────────────────────────
 
 export function InvoiceModal({ open, sale, onClose }: Props) {
-  // Close on Escape
   useEffect(() => {
     if (!open) return
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -56,34 +70,110 @@ export function InvoiceModal({ open, sale, onClose }: Props) {
     return () => document.removeEventListener('keydown', handler)
   }, [open, onClose])
 
-  // Prevent body scroll
   useEffect(() => {
-    if (open) document.body.style.overflow = 'hidden'
-    else document.body.style.overflow = ''
+    document.body.style.overflow = open ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
   }, [open])
 
   if (!open || !sale) return null
 
-  const displayName = getWalkinDisplayName(sale)
-  const statusCfg   = STATUS_CONFIG[sale.payment_status]
+  const customer   = getWalkinDisplayName(sale)
+  const dueDate    = getDueDate(sale)
+  const hasTax     = sale.tax_amount > 0
+  const hasDiscount = sale.discount > 0
+  const hasPaid    = sale.amount_paid > 0
+  const hasBalance = sale.balance_due > 0.001
   const primaryPayment = sale.payments[0]
-  const methodLabel = primaryPayment
+  const paymentMode = primaryPayment
     ? PAYMENT_METHOD_LABELS[primaryPayment.payment_method]
-    : PAYMENT_METHOD_LABELS[sale.amount_paid > 0 ? 'cash' : 'credit']
+    : (sale.amount_paid > 0 ? 'Cash' : 'Udhaar')
+  const refNo = primaryPayment?.reference_number
 
-  function handlePrint() {
-    window.print()
-  }
+  const isUdhaar = hasBalance
+
+  const saleTime = new Date(sale.created_at).toLocaleTimeString('en-IN', {
+    hour: '2-digit', minute: '2-digit', hour12: true,
+  })
 
   return (
     <>
-      {/* Print CSS — hides everything except the invoice */}
+      {/* Print CSS */}
       <style>{`
         @media print {
           body > * { display: none !important; }
-          #invoice-print-root { display: block !important; position: fixed; inset: 0; background: white; z-index: 9999; padding: 24px; }
-          #invoice-print-root .no-print { display: none !important; }
+          #nt-invoice-print-root { display: block !important; }
+        }
+        #nt-invoice-print-root {
+          display: block;
+        }
+
+        /* ── Invoice layout ── */
+        .inv-body { font-family: Arial, sans-serif; color: #1a1612; font-size: 13px; line-height: 1.45; }
+        .inv-content { padding: 1.5rem 1.75rem; }
+
+        /* Header */
+        .inv-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: .75rem; }
+        .inv-shop-name { font-family: 'Syne', Georgia, serif; font-size: 1.3rem; font-weight: 800; color: #1a1612; }
+        .inv-shop-name span { color: #d97706; }
+        .inv-shop-sub { font-size: .65rem; font-weight: 600; color: #6b5e52; text-transform: uppercase; letter-spacing: .04em; }
+        .inv-shop-meta { font-size: .74rem; color: #6b5e52; margin-top: .35rem; line-height: 1.6; }
+        .inv-header-right { text-align: right; }
+        .inv-billno-label { font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: .62rem; font-weight: 600; color: #6b5e52; text-transform: uppercase; letter-spacing: .06em; }
+        .inv-billno-val { font-family: 'JetBrains Mono', 'Courier New', monospace; font-weight: 700; font-size: .9rem; color: #1a1612; margin: .15rem 0; }
+        .inv-gstin { font-size: .7rem; color: #6b5e52; }
+
+        /* Meta strip */
+        .inv-meta { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .4rem; padding: .6rem 0; border-top: 1.5px solid #e2d8cf; border-bottom: 1.5px solid #e2d8cf; margin-bottom: .5rem; }
+        .inv-meta-item { font-size: .82rem; color: #1a1612; }
+        .inv-meta-lbl { font-size: .6rem; font-weight: 700; color: #6b5e52; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .2rem; }
+
+        /* Badge */
+        .inv-badge { display: inline-block; padding: .2rem .55rem; border-radius: 4px; font-size: .72rem; font-weight: 700; }
+        .inv-badge--paid { background: #dcfce7; color: #15803d; }
+        .inv-badge--partial { background: #fef9c3; color: #854d0e; }
+        .inv-badge--due { background: #fee2e2; color: #b91c1c; }
+
+        /* Items table */
+        .inv-table { width: 100%; border-collapse: collapse; margin: .6rem 0; table-layout: fixed; }
+        .inv-table colgroup .col-no  { width: 28px; }
+        .inv-table colgroup .col-qty { width: 70px; }
+        .inv-table colgroup .col-rate{ width: 80px; }
+        .inv-table colgroup .col-amt { width: 88px; }
+        .inv-table th { padding: .4rem .35rem; font-size: .6rem; font-weight: 700; color: #6b5e52; text-transform: uppercase; letter-spacing: .04em; border-bottom: 2px solid #e2d8cf; text-align: left; }
+        .inv-table th.r { text-align: right; }
+        .inv-table td { padding: .45rem .35rem; border-bottom: 1px solid #f0ebe6; font-size: .82rem; color: #1a1612; vertical-align: top; }
+        .inv-table td.r { text-align: right; font-family: 'JetBrains Mono', 'Courier New', monospace; white-space: nowrap; }
+        .inv-table .row-gst-note { display: block; font-size: .68rem; color: #9a8274; margin-top: 2px; }
+        .inv-table .row-box-note { display: block; font-size: .68rem; color: #9a8274; margin-top: 2px; }
+
+        /* Summary */
+        .inv-summary { margin: .6rem 0 0; display: flex; flex-direction: column; align-items: flex-end; }
+        .inv-summary-table { width: 58%; max-width: 320px; min-width: 200px; border-collapse: collapse; }
+        .inv-summary-table td { padding: .3rem .35rem; font-size: .82rem; color: #1a1612; }
+        .inv-summary-table td:last-child { text-align: right; font-family: 'JetBrains Mono', 'Courier New', monospace; font-weight: 600; white-space: nowrap; }
+        .inv-summary-table .tax-line td { color: #6b7280; font-size: .78rem; }
+        .inv-summary-table .disc-line td { color: #059669; }
+        .inv-summary-table .total-line { border-top: 2px solid #1a1612; border-bottom: 1.5px solid #1a1612; }
+        .inv-summary-table .total-line td { font-weight: 800; font-size: .95rem; padding-top: .45rem; padding-bottom: .45rem; }
+        .inv-summary-table .paid-line td { color: #15803d; font-size: .82rem; }
+        .inv-summary-table .balance-line { background: #fff7ed; }
+        .inv-summary-table .balance-line td { color: #c2410c; font-weight: 700; font-size: .88rem; padding: .5rem .35rem; border-radius: 3px; }
+        .inv-summary-table .settled-line td { color: #15803d; font-size: .78rem; }
+        .inv-summary-table .due-date-line td { font-size: .72rem; color: #9a8274; font-style: italic; }
+
+        /* Terms */
+        .inv-terms { margin-top: 1.2rem; padding: .65rem .9rem; background: #faf6f2; border: 1px solid #e2d8cf; border-radius: 5px; }
+        .inv-terms-title { font-size: .65rem; font-weight: 700; text-transform: uppercase; color: #6b5e52; letter-spacing: .05em; margin-bottom: .4rem; }
+        .inv-terms ol { margin: 0; padding-left: 1.1rem; }
+        .inv-terms li { font-size: .72rem; color: #6b5e52; margin-bottom: .2rem; line-height: 1.5; }
+
+        /* Footer strip */
+        .inv-footer-strip { display: flex; justify-content: space-between; gap: 1.5rem; margin-top: .9rem; padding-top: .75rem; border-top: 1.5px solid #e2d8cf; }
+        .inv-footer-block { font-size: .74rem; color: #1a1612; line-height: 1.7; }
+        .inv-footer-tagline { margin-top: .8rem; text-align: center; font-size: .8rem; font-style: italic; color: #9a8274; padding-top: .6rem; border-top: 1px dashed #e2d8cf; }
+
+        @media print {
+          .inv-content { padding: 0; }
         }
       `}</style>
 
@@ -92,17 +182,15 @@ export function InvoiceModal({ open, sale, onClose }: Props) {
         className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
         onClick={e => { if (e.target === e.currentTarget) onClose() }}
       >
-        <div
-          id="invoice-print-root"
-          className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl flex flex-col"
-        >
-          {/* ── Modal actions bar (no-print) ─────────────────────────────────── */}
-          <div className="no-print sticky top-0 z-10 flex items-center justify-between border-b border-border/60 bg-white/95 dark:bg-zinc-900/95 backdrop-blur px-5 py-3">
+        <div className="relative w-full max-w-2xl max-h-[92vh] overflow-hidden bg-white dark:bg-white rounded-2xl shadow-2xl flex flex-col">
+
+          {/* ── Action bar (no-print) ──────────────────────────────────────── */}
+          <div className="no-print flex items-center justify-between border-b border-gray-200 bg-white/95 backdrop-blur px-5 py-3 shrink-0 rounded-t-2xl">
             <div className="flex items-center gap-2">
-              <Badge className={cn('text-xs border', statusCfg.color)}>
-                {statusCfg.label}
-              </Badge>
-              <span className="font-mono text-sm font-semibold text-foreground">
+              <span className={`inline-block px-2.5 py-0.5 rounded text-xs font-bold inv-badge ${isUdhaar ? (hasPaid ? 'inv-badge--partial' : 'inv-badge--due') : 'inv-badge--paid'}`}>
+                {isUdhaar ? (hasPaid ? 'Partial' : 'Udhaar') : '✓ Paid'}
+              </span>
+              <span className="font-mono text-sm font-bold text-gray-800">
                 {sale.invoice_number}
               </span>
             </div>
@@ -110,181 +198,228 @@ export function InvoiceModal({ open, sale, onClose }: Props) {
               <Button
                 variant="default"
                 size="sm"
-                onClick={handlePrint}
+                onClick={() => window.print()}
                 className="h-8 px-3 text-xs gap-1.5"
               >
                 <Printer className="size-3.5" />
-                Print
+                Print / PDF
               </Button>
               <Button
                 variant="ghost"
-                size="icon-sm"
+                size="icon"
                 onClick={onClose}
-                className="size-8 text-muted-foreground"
+                className="size-8 text-gray-400 hover:text-gray-600 hover:bg-gray-100"
               >
                 <X className="size-4" />
               </Button>
             </div>
           </div>
 
-          {/* ── Invoice content ───────────────────────────────────────────────── */}
-          <div className="p-6 sm:p-8 space-y-6">
+          {/* ── Scrollable invoice ─────────────────────────────────────────── */}
+          <div
+            id="nt-invoice-print-root"
+            className="overflow-y-auto overscroll-contain [scrollbar-width:thin] flex-1"
+          >
+            <div className="inv-body">
+              <div className="inv-content">
 
-            {/* Shop Header */}
-            <div className="text-center space-y-1 pb-4 border-b-2 border-foreground/10">
-              <h1 className="text-2xl font-black tracking-tight text-foreground">{SHOP.name}</h1>
-              <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground flex-wrap">
-                <span className="flex items-center gap-1">
-                  <MapPin className="size-3" />{SHOP.address}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Phone className="size-3" />{SHOP.phone}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Building2 className="size-3" />GSTIN: {SHOP.gstin}
-                </span>
-              </div>
-            </div>
-
-            {/* Bill info row */}
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Bill To</p>
-                <div>
-                  <p className="font-bold text-foreground text-base">{displayName}</p>
-                  {sale.customer_name !== 'Walk-in' && (
-                    <p className="text-xs text-muted-foreground mt-0.5">Customer</p>
-                  )}
-                </div>
-              </div>
-              <div className="space-y-2 text-right">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Invoice Details</p>
-                <div className="space-y-0.5">
-                  <p className="font-mono text-sm font-bold text-foreground">{sale.invoice_number}</p>
-                  <p className="text-xs text-muted-foreground">{fmtDate(sale.sale_date)}</p>
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Line items table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[480px]">
-                <thead>
-                  <tr className="border-b border-border/60">
-                    <th className="py-2 pr-3 text-left text-xs font-semibold text-muted-foreground w-8">#</th>
-                    <th className="py-2 pr-3 text-left text-xs font-semibold text-muted-foreground">Product</th>
-                    <th className="py-2 px-3 text-right text-xs font-semibold text-muted-foreground">Qty</th>
-                    <th className="py-2 px-3 text-right text-xs font-semibold text-muted-foreground">Rate</th>
-                    <th className="py-2 px-3 text-right text-xs font-semibold text-muted-foreground">Tax</th>
-                    <th className="py-2 pl-3 text-right text-xs font-semibold text-muted-foreground">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/40">
-                  {sale.items.map((item, idx) => {
-                    const isBox = item.sell_mode === 'box'
-                    const qtyDisplay = isBox
-                      ? `${item.box_count} ${item.box_name ?? 'box'}${(item.box_count ?? 0) > 1 ? 'es' : ''} (${item.quantity} ${item.unit_name})`
-                      : `${item.quantity} ${item.unit_name}`
-
-                    return (
-                      <tr key={item.id}>
-                        <td className="py-2.5 pr-3 align-top text-muted-foreground">{idx + 1}</td>
-                        <td className="py-2.5 pr-3 align-top">
-                          <p className="font-medium text-foreground">{item.product_name}</p>
-                          {isBox && (
-                            <p className="text-[11px] text-muted-foreground mt-0.5">
-                              {item.box_count} {item.box_name ?? 'box'} × {item.units_per_box} {item.unit_name}
-                            </p>
-                          )}
-                        </td>
-                        <td className="py-2.5 px-3 align-top text-right tabular-nums text-muted-foreground whitespace-nowrap">
-                          {qtyDisplay}
-                        </td>
-                        <td className="py-2.5 px-3 align-top text-right tabular-nums text-muted-foreground whitespace-nowrap">
-                          {rupee(item.unit_price)}
-                        </td>
-                        <td className="py-2.5 px-3 align-top text-right tabular-nums text-muted-foreground">
-                          {item.tax_rate}%
-                        </td>
-                        <td className="py-2.5 pl-3 align-top text-right tabular-nums font-semibold text-foreground whitespace-nowrap">
-                          {rupee(item.line_total)}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            <Separator />
-
-            {/* Totals */}
-            <div className="space-y-2">
-              <div className="space-y-1.5 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span className="tabular-nums font-medium">{rupee(sale.subtotal)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">GST</span>
-                  <span className="tabular-nums font-medium">{rupee(sale.tax_amount)}</span>
-                </div>
-                {sale.discount > 0 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Discount</span>
-                    <span className="tabular-nums font-medium text-emerald-600 dark:text-emerald-400">
-                      −{rupee(sale.discount)}
-                    </span>
+                {/* ── Shop header ──────────────────────────────────────────── */}
+                <div className="inv-header">
+                  <div>
+                    <div className="inv-shop-name">
+                      {SHOP.name1} <span>{SHOP.name2}</span>
+                    </div>
+                    <div className="inv-shop-sub">{SHOP.tagline}</div>
+                    <div className="inv-shop-meta">
+                      {SHOP.address}<br />
+                      {SHOP.phone1} &nbsp;·&nbsp; {SHOP.phone2} &nbsp;·&nbsp; {SHOP.email}
+                    </div>
                   </div>
-                )}
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <span className="text-base font-bold text-foreground">Grand Total</span>
-                <span className="text-xl tabular-nums font-black text-foreground">{rupee(sale.grand_total)}</span>
-              </div>
-
-              <div className="mt-2 rounded-xl bg-muted/40 border border-border/40 divide-y divide-border/40 text-sm overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-2.5">
-                  <span className="text-muted-foreground">Amount Paid</span>
-                  <span className="tabular-nums font-semibold text-foreground">{rupee(sale.amount_paid)}</span>
+                  <div className="inv-header-right">
+                    <div className="inv-billno-label">Tax Invoice</div>
+                    <div className="inv-billno-val">{sale.invoice_number}</div>
+                    <div className="inv-gstin">GSTIN: {SHOP.gstin}</div>
+                    {sale.notes && !sale.notes.startsWith('Walk-in: ') && (
+                      <div style={{ fontSize: '.7rem', color: '#6b5e52', marginTop: '.2rem' }}>
+                        Ref: {sale.notes.split('\n').slice(-1)[0]}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center justify-between px-4 py-2.5">
-                  <span className="text-muted-foreground">Balance Due</span>
-                  <span className={cn(
-                    'tabular-nums font-bold',
-                    sale.balance_due > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400',
-                  )}>
-                    {rupee(sale.balance_due)}
-                  </span>
+
+                {/* ── Meta strip ───────────────────────────────────────────── */}
+                <div className="inv-meta">
+                  {/* Bill To */}
+                  <div className="inv-meta-item">
+                    <div className="inv-meta-lbl">Bill To</div>
+                    <strong style={{ fontSize: '.88rem' }}>{customer.name}</strong>
+                    {customer.phone && (
+                      <><br /><span style={{ fontSize: '.74rem', color: '#6b5e52' }}>{customer.phone}</span></>
+                    )}
+                  </div>
+                  {/* Date */}
+                  <div className="inv-meta-item">
+                    <div className="inv-meta-lbl">Date</div>
+                    {fmtDate(sale.sale_date)}<br />
+                    <span style={{ fontSize: '.74rem', color: '#6b5e52' }}>{saleTime}</span>
+                  </div>
+                  {/* Payment */}
+                  <div className="inv-meta-item">
+                    <div className="inv-meta-lbl">Payment</div>
+                    <span className={`inv-badge ${isUdhaar ? (hasPaid ? 'inv-badge--partial' : 'inv-badge--due') : 'inv-badge--paid'}`}>
+                      {isUdhaar
+                        ? (hasPaid ? `Partial · ${rupee(sale.balance_due)} due` : `Udhaar: ${rupee(sale.balance_due)}`)
+                        : '✓ Paid'}
+                    </span>
+                    {isUdhaar && dueDate && (
+                      <><br /><span style={{ fontSize: '.7rem', color: '#b91c1c', marginTop: '3px', display: 'block' }}>Due by {dueDate}</span></>
+                    )}
+                    {refNo && (
+                      <><br /><span style={{ fontSize: '.7rem', color: '#6b5e52', fontFamily: 'monospace' }}>Ref: {refNo}</span></>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Payment info */}
-            <div className="rounded-xl bg-muted/30 border border-border/40 px-4 py-3 flex items-center justify-between text-sm">
-              <div className="space-y-0.5">
-                <p className="text-xs text-muted-foreground">Payment Method</p>
-                <p className="font-semibold text-foreground">{methodLabel}</p>
-                {primaryPayment?.reference_number && (
-                  <p className="text-xs text-muted-foreground font-mono">{primaryPayment.reference_number}</p>
-                )}
-              </div>
-              <Badge className={cn('text-xs border', statusCfg.color)}>
-                {statusCfg.label}
-              </Badge>
-            </div>
+                {/* ── Items table ───────────────────────────────────────────── */}
+                <table className="inv-table">
+                  <colgroup>
+                    <col className="col-no" />
+                    <col />
+                    <col className="col-qty" />
+                    <col className="col-rate" />
+                    <col className="col-amt" />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Product</th>
+                      <th className="r">Qty</th>
+                      <th className="r">Rate</th>
+                      <th className="r">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sale.items.map((item, idx) => {
+                      const isBox = item.sell_mode === 'box'
+                      const lineBase = item.line_total
+                      const gstAmt = lineBase * item.tax_rate / 100
+                      const hasGst = item.tax_rate > 0
 
-            {/* Footer */}
-            <div className="pt-2 text-center border-t border-dashed border-border/40">
-              <p className="text-sm text-muted-foreground italic">{SHOP.tagline}</p>
-            </div>
+                      const qtyDisplay = isBox
+                        ? `${item.box_count} ${item.box_name ?? 'box'}${(item.box_count ?? 0) !== 1 ? 'es' : ''}`
+                        : `${item.quantity % 1 === 0 ? item.quantity : item.quantity.toFixed(3)} ${item.unit_name}`
 
-          </div>
+                      return (
+                        <tr key={item.id}>
+                          <td style={{ color: '#9a8274', fontSize: '.78rem' }}>{idx + 1}.</td>
+                          <td>
+                            {item.product_name}
+                            {isBox && item.units_per_box && (
+                              <span className="row-box-note">
+                                {item.box_count} {item.box_name} × {item.units_per_box} {item.unit_name}
+                                {' '}= {item.quantity} {item.unit_name}
+                              </span>
+                            )}
+                            {hasGst && (
+                              <span className="row-gst-note">
+                                GST {item.tax_rate}%: {rupee(gstAmt)}
+                              </span>
+                            )}
+                          </td>
+                          <td className="r">{qtyDisplay}</td>
+                          <td className="r">{rupee(item.unit_price)}</td>
+                          <td className="r">{rupee(lineBase)}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+
+                {/* ── Summary ───────────────────────────────────────────────── */}
+                <div className="inv-summary">
+                  <table className="inv-summary-table">
+                    <tbody>
+                      {/* Subtotal */}
+                      <tr>
+                        <td>Subtotal</td>
+                        <td>{rupee(sale.subtotal)}</td>
+                      </tr>
+                      {/* GST */}
+                      {hasTax && (
+                        <tr className="tax-line">
+                          <td>GST / Tax</td>
+                          <td>{rupee(sale.tax_amount)}</td>
+                        </tr>
+                      )}
+                      {/* Discount */}
+                      {hasDiscount && (
+                        <tr className="disc-line">
+                          <td>Discount</td>
+                          <td>− {rupee(sale.discount)}</td>
+                        </tr>
+                      )}
+                      {/* Grand Total */}
+                      <tr className="total-line">
+                        <td>Grand Total</td>
+                        <td>{rupee(sale.grand_total)}</td>
+                      </tr>
+                      {/* Amount Paid */}
+                      {hasPaid && (
+                        <tr className="paid-line">
+                          <td>Paid ({paymentMode})</td>
+                          <td>− {rupee(sale.amount_paid)}</td>
+                        </tr>
+                      )}
+                      {/* Balance Due */}
+                      {hasBalance ? (
+                        <>
+                          <tr className="balance-line">
+                            <td>Balance Due</td>
+                            <td>{rupee(sale.balance_due)}</td>
+                          </tr>
+                          {dueDate && (
+                            <tr className="due-date-line">
+                              <td colSpan={2}>Due by {dueDate}</td>
+                            </tr>
+                          )}
+                        </>
+                      ) : hasPaid ? (
+                        <tr className="settled-line">
+                          <td colSpan={2}>✓ Fully Settled</td>
+                        </tr>
+                      ) : null}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* ── Terms & Conditions ────────────────────────────────────── */}
+                <div className="inv-terms">
+                  <div className="inv-terms-title">Terms &amp; Conditions</div>
+                  <ol>
+                    {SHOP.terms.map((t, i) => <li key={i}>{t}</li>)}
+                  </ol>
+                </div>
+
+                {/* ── Footer strip ──────────────────────────────────────────── */}
+                <div className="inv-footer-strip">
+                  <div className="inv-footer-block">
+                    <div className="inv-meta-lbl">Contact Us</div>
+                    📞 {SHOP.phone1} &nbsp;/&nbsp; {SHOP.phone2}<br />
+                    ✉ {SHOP.email}
+                  </div>
+                  <div className="inv-footer-block" style={{ textAlign: 'right' }}>
+                    <div className="inv-meta-lbl">UPI / Quick Pay</div>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#1a1612' }}>{SHOP.upi}</div>
+                    <div style={{ fontSize: '10px', color: '#6b5e52', marginTop: '2px' }}>Scan QR to pay instantly</div>
+                  </div>
+                </div>
+
+                {/* ── Tagline ───────────────────────────────────────────────── */}
+                <div className="inv-footer-tagline">Thank you for your business!</div>
+
+              </div>{/* /inv-content */}
+            </div>{/* /inv-body */}
+          </div>{/* /scrollable */}
         </div>
       </div>
     </>
