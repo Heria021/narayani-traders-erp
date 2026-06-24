@@ -3,7 +3,14 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Separator } from '@/components/ui/separator'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { Calendar, Building2, FileText, Package } from 'lucide-react'
 import type { PurchaseWithItems } from './types'
 
@@ -25,16 +32,31 @@ export function PurchaseDetail({ open, purchase, loading, onClose }: Props) {
     <Sheet open={open} onOpenChange={v => !v && onClose()}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-2xl flex flex-col gap-0 p-0 overflow-hidden"
+        className="w-full sm:max-w-none lg:w-[800px] lg:max-w-[800px] h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)] m-4 rounded-xl border flex flex-col p-0 overflow-hidden shadow-xl"
       >
-        <SheetHeader className="px-6 py-5 border-b border-border/60 shrink-0">
-          <SheetTitle className="text-base font-bold flex items-center gap-2">
-            <Package className="size-4 text-muted-foreground" />
-            {loading || !purchase ? 'Purchase Detail' : purchase.purchase_number}
-          </SheetTitle>
+        {/* ── Header ────────────────────────────────────────────────── */}
+        <SheetHeader className="px-8 py-5 border-b shrink-0">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-col gap-1">
+              <SheetTitle className="text-lg">
+                {loading || !purchase ? 'Purchase Detail' : `Purchase ${purchase.purchase_number}`}
+              </SheetTitle>
+              {!loading && purchase && (
+                <p className="text-xs text-muted-foreground">
+                  View purchase order items, supplier details, and billing summaries.
+                </p>
+              )}
+            </div>
+            {!loading && purchase && (
+              <Badge className="shrink-0 mt-0.5 mr-4 bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-400 border-0 uppercase text-[10px] font-bold tracking-wider">
+                Purchase Order
+              </Badge>
+            )}
+          </div>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto [scrollbar-width:thin]">
+        {/* ── Scrollable Content ──────────────────────────────────────── */}
+        <div className="flex-1 overflow-y-auto [scrollbar-width:thin] px-8 py-6">
           {loading ? (
             <LoadingSkeleton />
           ) : !purchase ? (
@@ -52,144 +74,156 @@ export function PurchaseDetail({ open, purchase, loading, onClose }: Props) {
 
 function LoadingSkeleton() {
   return (
-    <div className="flex flex-col gap-6 px-6 py-5">
-      <div className="space-y-2">
-        <Skeleton className="h-5 w-40" />
-        <Skeleton className="h-4 w-56" />
-        <Skeleton className="h-4 w-32" />
-      </div>
-      <Skeleton className="h-px w-full" />
-      {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-4">
-          <Skeleton className="h-4 flex-1" />
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-4 w-20" />
+    <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-10 w-full" />
         </div>
-      ))}
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-20 w-full" />
+      </div>
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-24" />
+        <div className="border rounded-lg p-2 space-y-2">
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-8 w-full" />
+        </div>
+      </div>
     </div>
   )
 }
 
 function PurchaseContent({ purchase: p }: { purchase: PurchaseWithItems }) {
   return (
-    <div className="flex flex-col gap-6 px-6 py-5">
-
-      {/* ── Header metadata ─────────────────────────────────────────────────── */}
-      <div className="space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-bold text-foreground">{p.purchase_number}</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {p.items.length} product{p.items.length !== 1 ? 's' : ''}
-            </p>
-          </div>
-          <Badge className="shrink-0 text-xs bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-400 border-0">
-            Purchase
-          </Badge>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <MetaItem icon={<Calendar className="size-3.5" />} label="Date" value={p.purchase_date ? fmtDate(p.purchase_date) : '—'} />
-          <MetaItem icon={<Building2 className="size-3.5" />} label="Supplier" value={p.supplier_name} />
-          {p.notes && (
-            <div className="col-span-2">
-              <MetaItem icon={<FileText className="size-3.5" />} label="Notes" value={p.notes} />
+    <div className="space-y-6">
+      {/* ── Metadata Grid ───────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Supplier Info */}
+        <div className="space-y-2">
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Supplier Details</h4>
+          <div className="rounded-lg border bg-muted/30 p-4 space-y-1 min-h-[60px] flex flex-col justify-center">
+            <div className="flex items-center gap-2">
+              <Building2 className="size-4 text-muted-foreground shrink-0" />
+              <p className="text-sm font-semibold text-foreground">{p.supplier_name}</p>
             </div>
-          )}
-        </div>
-      </div>
-
-      <Separator />
-
-      {/* ── Line items ──────────────────────────────────────────────────────── */}
-      <div className="space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Line Items</p>
-
-        <div className="rounded-xl border border-border/60 overflow-hidden">
-          {/* Table header */}
-          <div className="grid grid-cols-[1fr_80px_80px_90px_100px] gap-2 px-4 py-2.5 bg-muted/40 border-b border-border/40">
-            <p className="text-xs font-semibold text-muted-foreground">Product</p>
-            <p className="text-xs font-semibold text-muted-foreground text-center">Mode</p>
-            <p className="text-xs font-semibold text-muted-foreground text-right">Qty</p>
-            <p className="text-xs font-semibold text-muted-foreground text-right">Price</p>
-            <p className="text-xs font-semibold text-muted-foreground text-right">Total</p>
           </div>
+        </div>
 
-          {/* Rows */}
-          {p.items.map((item, idx) => (
-            <div
-              key={item.id}
-              className={`grid grid-cols-[1fr_80px_80px_90px_100px] gap-2 px-4 py-3 items-center ${idx !== p.items.length - 1 ? 'border-b border-border/40' : ''}`}
-            >
-              <div>
-                <p className="text-sm font-medium text-foreground leading-tight">{item.product_name}</p>
-                <p className="text-xs text-muted-foreground">{item.unit_name}</p>
-              </div>
-              <div className="text-center">
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-medium">
-                  {item.buy_mode === 'box' ? `Box×${item.box_count}` : 'Unit'}
-                </Badge>
-              </div>
-              <p className="text-sm tabular-nums text-right text-foreground">
-                {item.quantity.toLocaleString('en-IN')}
-              </p>
-              <p className="text-sm tabular-nums text-right text-muted-foreground">
-                {rupee(item.unit_price)}
-              </p>
-              <p className="text-sm tabular-nums text-right font-medium text-foreground">
-                {rupee(item.line_total)}
-              </p>
+        {/* Reference & Info */}
+        <div className="space-y-2">
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Metadata</h4>
+          <div className="rounded-lg border bg-muted/30 p-4 space-y-2 text-sm min-h-[60px] flex flex-col justify-center">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground flex items-center gap-1.5">
+                <Calendar className="size-3.5" /> Date
+              </span>
+              <span className="font-medium text-foreground">{p.purchase_date ? fmtDate(p.purchase_date) : '—'}</span>
             </div>
-          ))}
+          </div>
+        </div>
+        
+        {/* Notes */}
+        {p.notes && (
+          <div className="md:col-span-2 space-y-2">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Notes</h4>
+            <div className="rounded-lg border bg-muted/30 p-4 flex items-start gap-2">
+              <FileText className="size-4 text-muted-foreground mt-0.5 shrink-0" />
+              <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{p.notes}</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Table with Embedded Totals ───────────────────────────────── */}
+      <div className="space-y-3">
+        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Line Items</h4>
+        <div className="rounded-lg border overflow-hidden">
+          <Table className="w-full">
+            <TableHeader className="bg-muted/40">
+              <TableRow>
+                <TableHead className="pl-4">Product</TableHead>
+                <TableHead className="w-[100px] text-center">Mode</TableHead>
+                <TableHead className="w-[80px] text-right">Qty</TableHead>
+                <TableHead className="w-[100px] text-right">Unit Price</TableHead>
+                <TableHead className="w-[120px] text-right pr-4">Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {p.items.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell className="pl-4">
+                    <div>
+                      <p className="text-sm font-medium text-foreground leading-tight">{item.product_name}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{item.unit_name}</p>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center align-middle">
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-medium uppercase">
+                      {item.buy_mode === 'box' ? `Box × ${item.box_count}` : 'Unit'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums align-middle">
+                    {item.quantity.toLocaleString('en-IN')}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums text-muted-foreground align-middle">
+                    {rupee(item.unit_price)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums font-medium text-foreground pr-4 align-middle">
+                    {rupee(item.line_total)}
+                  </TableCell>
+                </TableRow>
+              ))}
+              
+              {/* Summary Section Rows */}
+              <TableRow className="bg-muted/5 hover:bg-muted/5 border-t border-muted/50">
+                <TableCell colSpan={4} className="text-right font-medium text-muted-foreground align-middle py-3">
+                  Subtotal
+                </TableCell>
+                <TableCell className="text-right font-semibold tabular-nums align-middle py-3 text-foreground pr-4">
+                  {rupee(p.subtotal)}
+                </TableCell>
+              </TableRow>
+
+              <TableRow className="bg-muted/5 hover:bg-muted/5">
+                <TableCell colSpan={4} className="text-right font-medium text-muted-foreground align-middle py-3">
+                  Tax (GST)
+                </TableCell>
+                <TableCell className="text-right font-semibold tabular-nums align-middle py-3 text-foreground pr-4">
+                  {rupee(p.tax_amount)}
+                </TableCell>
+              </TableRow>
+
+              {p.discount_amount > 0 && (
+                <TableRow className="bg-muted/5 hover:bg-muted/5">
+                  <TableCell colSpan={4} className="text-right font-medium text-muted-foreground align-middle py-3">
+                    Discount
+                  </TableCell>
+                  <TableCell className="text-right font-semibold tabular-nums align-middle py-3 text-emerald-600 dark:text-emerald-400 pr-4">
+                    −{rupee(p.discount_amount)}
+                  </TableCell>
+                </TableRow>
+              )}
+
+              <TableRow className="bg-muted/20 hover:bg-muted/20 border-t border-muted-foreground/20">
+                <TableCell colSpan={4} className="text-right font-bold text-foreground align-middle py-4">
+                  Grand Total
+                </TableCell>
+                <TableCell className="text-right text-base font-bold tabular-nums align-middle py-4 text-foreground pr-4">
+                  {rupee(p.grand_total)}
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
         </div>
       </div>
-
-      <Separator />
-
-      {/* ── Totals ──────────────────────────────────────────────────────────── */}
-      <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Totals</p>
-
-        <div className="rounded-xl border border-border/60 overflow-hidden divide-y divide-border/40">
-          <TotalRow label="Subtotal" value={rupee(p.subtotal)} />
-          <TotalRow label="Tax (GST)" value={rupee(p.tax_amount)} />
-          {p.discount_amount > 0 && (
-            <TotalRow label="Discount" value={`−${rupee(p.discount_amount)}`} valueClass="text-emerald-600 dark:text-emerald-400" />
-          )}
-          <TotalRow
-            label="Grand Total"
-            value={rupee(p.grand_total)}
-            emphasis
-          />
-        </div>
-      </div>
-
-    </div>
-  )
-}
-
-function MetaItem({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="flex items-start gap-2">
-      <span className="text-muted-foreground mt-0.5 shrink-0">{icon}</span>
-      <div>
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="text-sm font-medium text-foreground leading-tight">{value}</p>
-      </div>
-    </div>
-  )
-}
-
-function TotalRow({
-  label, value, emphasis = false, valueClass = '',
-}: { label: string; value: string; emphasis?: boolean; valueClass?: string }) {
-  return (
-    <div className={`flex items-center justify-between px-4 py-3 ${emphasis ? 'bg-muted/30' : ''}`}>
-      <p className={`text-sm ${emphasis ? 'font-bold text-foreground' : 'text-muted-foreground'}`}>{label}</p>
-      <p className={`text-sm tabular-nums font-semibold ${valueClass || (emphasis ? 'text-foreground text-base' : 'text-foreground')}`}>
-        {value}
-      </p>
     </div>
   )
 }
