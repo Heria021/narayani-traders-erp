@@ -21,6 +21,10 @@ export default function CustomerDetailPage() {
     payments,
     loading,
     notFound,
+    selectedInvoice,
+    invoiceLoading,
+    fetchInvoiceDetail,
+    setSelectedInvoice,
     buildLedger,
     updateCustomer,
     toggleActive,
@@ -64,22 +68,6 @@ export default function CustomerDetailPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
-      {/* ── Back Header ── */}
-      <div className="flex items-center gap-4 border-b border-border/60 px-6 py-4 shrink-0 bg-muted/10">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => router.push('/features/customers')}
-          className="size-8"
-        >
-          <ArrowLeft className="size-4" />
-        </Button>
-        <div className="space-y-0.5">
-          <h1 className="text-lg font-semibold tracking-tight">Customer Profile</h1>
-          <p className="text-xs text-muted-foreground">Manage profile, ledger balance and invoices</p>
-        </div>
-      </div>
-
       {/* ── Detail Panel ── */}
       <div className="flex-1 min-h-0 overflow-y-auto">
         <CustomerDetail
@@ -92,6 +80,10 @@ export default function CustomerDetailPage() {
           onPayment={() => setPaymentOpen(true)}
           onToggle={toggleActive}
           onDelete={handleDelete}
+          selectedInvoice={selectedInvoice}
+          invoiceLoading={invoiceLoading}
+          onViewInvoice={fetchInvoiceDetail}
+          onCloseInvoice={() => setSelectedInvoice(null)}
         />
       </div>
 

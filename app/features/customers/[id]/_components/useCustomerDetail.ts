@@ -11,6 +11,7 @@ import type {
   CustomerFormValues,
   PaymentFormValues,
 } from '../../_components/types'
+import type { SaleWithItems, SaleItem, PaymentRecord } from '../../../sales/_components/types'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 const num = (v: string | number) => Number(v) || 0
@@ -24,6 +25,80 @@ export function useCustomerDetail(id: string) {
   const [payments,        setPayments]        = useState<Payment[]>([])
   const [loading,          setLoading]          = useState(true)
   const [notFound,         setNotFound]         = useState(false)
+
+  // ── invoice detail state ──────────────────────────────────────────────────
+  const [selectedInvoice, setSelectedInvoice] = useState<SaleWithItems | null>(null)
+  const [invoiceLoading,  setInvoiceLoading]  = useState(false)
+
+  // ── fetch sale detail ─────────────────────────────────────────────────────
+  const fetchInvoiceDetail = useCallback(async (saleId: string) => {
+    setInvoiceLoading(true)
+    const [
+      { data: sale },
+      { data: items },
+      { data: paymentsData },
+    ] = await Promise.all([
+      supabase
+        .from('sales')
+        .select('*, customers(name, phone)')
+        .eq('id', saleId)
+        .single(),
+      supabase
+        .from('sale_items')
+        .select('*, products(name, unit_name, box_name, units_per_box)')
+        .eq('sale_id', saleId)
+        .order('id'),
+      supabase
+        .from('payments')
+        .select('*')
+        .eq('sale_id', saleId)
+        .order('created_at'),
+    ])
+
+    if (!sale) {
+      setInvoiceLoading(false)
+      return
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const enrichedItems: SaleItem[] = (items ?? []).map((i: any) => ({
+      id:           i.id,
+      sale_id:      i.sale_id,
+      product_id:   i.product_id,
+      product_name: i.products?.name ?? '—',
+      unit_name:    i.products?.unit_name ?? 'unit',
+      box_name:     i.products?.box_name ?? null,
+      units_per_box:i.products?.units_per_box ?? null,
+      sell_mode:    i.sell_mode,
+      box_count:    i.box_count,
+      quantity:     i.quantity,
+      unit_price:   i.unit_price,
+      tax_rate:     i.tax_rate,
+      line_total:   i.line_total,
+    }))
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const enrichedPayments: PaymentRecord[] = (paymentsData ?? []).map((p: any) => ({
+      id:               p.id,
+      sale_id:          p.sale_id,
+      customer_id:      p.customer_id,
+      amount:           p.amount,
+      payment_method:   p.payment_method,
+      reference_number: p.reference_number,
+      payment_date:     p.payment_date,
+      note:             p.note,
+      created_at:       p.created_at,
+    }))
+
+    setSelectedInvoice({
+      ...sale,
+      customer_name:  sale.customers?.name ?? 'Unknown',
+      customer_phone: sale.customers?.phone ?? undefined,
+      items:          enrichedItems,
+      payments:       enrichedPayments,
+    })
+    setInvoiceLoading(false)
+  }, [supabase])
 
   // ── fetch everything ────────────────────────────────────────────────────────
   const fetchAll = useCallback(async () => {
@@ -235,6 +310,10 @@ export function useCustomerDetail(id: string) {
     payments,
     loading,
     notFound,
+    selectedInvoice,
+    invoiceLoading,
+    fetchInvoiceDetail,
+    setSelectedInvoice,
     buildLedger,
     updateCustomer,
     toggleActive,

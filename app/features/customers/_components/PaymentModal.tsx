@@ -2,13 +2,18 @@
 
 import { useState, useEffect } from 'react'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
+  InputGroup, InputGroupAddon, InputGroupInput, InputGroupText
+} from '@/components/ui/input-group'
+import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
+import { AlertCircle, Landmark } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { CustomerWithStats, Sale, PaymentFormValues } from './types'
 import { DatePicker } from '@/components/ui/date-picker'
@@ -32,13 +37,29 @@ function rupee(n: number) {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(n)
 }
 
+function Field({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <div className={cn('flex flex-col gap-1.5', className)}>{children}</div>
+}
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <label className="text-xs font-semibold text-foreground/80">
+      {children}
+    </label>
+  )
+}
+
 export function PaymentModal({ open, customer, unpaidSales, onClose, onSubmit }: Props) {
   const [values,  setValues]  = useState<PaymentFormValues>(EMPTY)
   const [errors,  setErrors]  = useState<Partial<Record<keyof PaymentFormValues, string>>>({})
   const [saving,  setSaving]  = useState(false)
 
   useEffect(() => {
-    if (open) { setValues({ ...EMPTY, payment_date: today() }); setErrors({}); setSaving(false) }
+    if (open) {
+      setValues({ ...EMPTY, payment_date: today() })
+      setErrors({})
+      setSaving(false)
+    }
   }, [open])
 
   function set(key: keyof PaymentFormValues, val: string) {
@@ -48,6 +69,7 @@ export function PaymentModal({ open, customer, unpaidSales, onClose, onSubmit }:
 
   const outstanding = customer?.total_outstanding ?? 0
   const amountNum   = Number(values.amount) || 0
+  const remaining   = Math.max(0, outstanding - amountNum)
 
   function validate(): boolean {
     const errs: typeof errors = {}
@@ -68,71 +90,94 @@ export function PaymentModal({ open, customer, unpaidSales, onClose, onSubmit }:
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
-      <DialogContent className="sm:max-w-md rounded-2xl">
-        <DialogHeader>
-          <DialogTitle className="text-lg font-bold">Record Payment</DialogTitle>
-          {customer && (
-            <div className="pt-1 space-y-0.5">
-              <p className="text-sm font-medium text-foreground">{customer.name}</p>
-              <p className="text-sm text-muted-foreground">
-                Outstanding: <span className={cn('font-semibold', outstanding > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600')}>
-                  {rupee(outstanding)}
-                </span>
-              </p>
+      <DialogContent className="sm:max-w-md rounded-2xl p-6">
+        <DialogHeader className="space-y-1">
+          <div className="flex items-center gap-2 text-neutral-900 dark:text-white">
+            <div className="size-8 rounded-lg bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center text-neutral-800 dark:text-neutral-200">
+              <Landmark className="size-4" />
             </div>
-          )}
+            <DialogTitle className="text-lg font-bold">Record Payment</DialogTitle>
+          </div>
+          <DialogDescription className="text-xs">
+            Collect money from customer and record it in ledger.
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 pt-2">
-          {/* Amount */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">Amount <span className="text-red-500">*</span></label>
-            <Input
-              type="number" min="0.01" step="0.01"
-              value={values.amount}
-              onChange={e => set('amount', e.target.value)}
-              placeholder="0.00"
-              className={cn('text-lg font-semibold', errors.amount && 'border-red-400')}
-              autoFocus
-            />
-            {errors.amount && <p className="text-xs text-red-500">{errors.amount}</p>}
-            {amountNum > 0 && amountNum > outstanding && (
-              <p className="text-xs text-amber-600 dark:text-amber-400">
-                ⚠ Amount exceeds outstanding. This will create an advance credit.
+          {/* Amount Input group */}
+          <Field>
+            <FieldLabel>Amount to Transfer</FieldLabel>
+            <InputGroup>
+              <InputGroupAddon>
+                <InputGroupText>₹</InputGroupText>
+              </InputGroupAddon>
+              <InputGroupInput
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={values.amount}
+                onChange={e => set('amount', e.target.value)}
+                placeholder="0.00"
+                className={cn('text-lg font-bold tabular-nums', errors.amount && 'border-destructive')}
+                autoFocus
+              />
+            </InputGroup>
+            {errors.amount && (
+              <p className="text-xs text-destructive flex items-center gap-1 mt-1">
+                <AlertCircle className="size-3 shrink-0" />
+                {errors.amount}
               </p>
             )}
+            {amountNum > outstanding && outstanding > 0 && (
+              <p className="text-[10px] text-amber-600 dark:text-amber-400">
+                ⚠ Amount exceeds outstanding balance. This will result in an advance ledger credit.
+              </p>
+            )}
+          </Field>
+
+          {/* Payment Method */}
+          <div className="grid grid-cols-2 gap-3">
+            <Field>
+              <FieldLabel>Payment Method</FieldLabel>
+              <Select value={values.payment_method} onValueChange={v => set('payment_method', v ?? 'cash')}>
+                <SelectTrigger className="w-full rounded-lg">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="upi">UPI</SelectItem>
+                  <SelectItem value="card">Card</SelectItem>
+                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+
+            <Field>
+              <FieldLabel>Date</FieldLabel>
+              <DatePicker value={values.payment_date} onChange={val => set('payment_date', val)} />
+            </Field>
           </div>
 
-          {/* Method */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">Payment Method <span className="text-red-500">*</span></label>
-            <Select value={values.payment_method} onValueChange={v => set('payment_method', v ?? 'cash')}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cash">Cash</SelectItem>
-                <SelectItem value="upi">UPI</SelectItem>
-                <SelectItem value="card">Card</SelectItem>
-                <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Reference */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">Reference No.</label>
-            <Input value={values.reference_number} onChange={e => set('reference_number', e.target.value)}
-              placeholder="UPI txn ID, cheque no., etc." />
-          </div>
+          {/* Reference No */}
+          <Field>
+            <FieldLabel>Reference Number</FieldLabel>
+            <Input
+              value={values.reference_number}
+              onChange={e => set('reference_number', e.target.value)}
+              placeholder="UPI txn ID, Cheque no, etc."
+              className="rounded-lg"
+            />
+          </Field>
 
           {/* Against Bill */}
           {unpaidSales.length > 0 && (
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium">Against Bill</label>
+            <Field>
+              <FieldLabel>Against Invoice / Bill</FieldLabel>
               <Select value={values.sale_id} onValueChange={v => set('sale_id', v ?? '')}>
-                <SelectTrigger>
-                  <SelectValue placeholder="General payment (not linked to a bill)" />
+                <SelectTrigger className="w-full rounded-lg">
+                  <SelectValue placeholder="General payment (unlinked)" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-xl">
                   <SelectItem value="">General payment</SelectItem>
                   {unpaidSales.map(s => (
                     <SelectItem key={s.id} value={s.id}>
@@ -141,30 +186,52 @@ export function PaymentModal({ open, customer, unpaidSales, onClose, onSubmit }:
                   ))}
                 </SelectContent>
               </Select>
+            </Field>
+          )}
+
+          {/* Note */}
+          <Field>
+            <FieldLabel>Optional Memo Note</FieldLabel>
+            <Input
+              value={values.note}
+              onChange={e => set('note', e.target.value)}
+              placeholder="Memo text..."
+              className="rounded-lg"
+            />
+          </Field>
+
+          {/* Live Calculations Summary Box */}
+          {customer && (
+            <div className="rounded-xl border border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/10 p-3.5 space-y-2 mt-1">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-muted-foreground">Ledger Balance</span>
+                <span className="font-semibold tabular-nums text-neutral-800 dark:text-neutral-300">{rupee(outstanding)}</span>
+              </div>
+              <Separator />
+              <div className="flex justify-between items-center text-xs text-emerald-600 dark:text-emerald-400">
+                <span>Payment Amount</span>
+                <span className="font-bold tabular-nums">− {rupee(amountNum)}</span>
+              </div>
+              <Separator />
+              <div className="flex justify-between items-center text-xs font-bold text-neutral-900 dark:text-white">
+                <span>Remaining Balance</span>
+                <span className="tabular-nums">{rupee(remaining)}</span>
+              </div>
             </div>
           )}
 
-          {/* Date */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">Date <span className="text-red-500">*</span></label>
-            <DatePicker value={values.payment_date} onChange={val => set('payment_date', val)} />
-          </div>
-
-          {/* Note */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">Note</label>
-            <Input value={values.note} onChange={e => set('note', e.target.value)}
-              placeholder="Optional note" />
-          </div>
+          {/* Footer Submit */}
+          <DialogFooter className="pt-2">
+            <Button
+              type="submit"
+              disabled={saving}
+              onClick={handleSubmit}
+              className="w-full bg-black hover:bg-black/90 text-white dark:bg-white dark:text-black dark:hover:bg-white/90 rounded-lg h-10 font-semibold"
+            >
+              {saving ? 'Recording…' : 'Confirm & Save Payment'}
+            </Button>
+          </DialogFooter>
         </form>
-
-        <DialogFooter className="pt-2">
-          <Button variant="outline" type="button" onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button type="submit" disabled={saving} onClick={handleSubmit}
-            className="bg-black hover:bg-black/90 text-white dark:bg-white dark:text-black dark:hover:bg-white/90 rounded-lg px-5">
-            {saving ? 'Saving…' : 'Save Payment'}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
