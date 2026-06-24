@@ -276,15 +276,30 @@ export function usePurchases() {
     fetchPurchases(filters, sortField, sortDir, pg)
   }, [filters, sortField, sortDir, fetchPurchases])
 
-  // ── generate purchase number ──────────────────────────────────────────────────
   const generatePurchaseNumber = useCallback(async (): Promise<string> => {
     const year = new Date().getFullYear()
-    const { count } = await supabase
+    const { data, error } = await supabase
       .from('purchases')
-      .select('id', { count: 'exact', head: true })
-      .gte('purchase_date', `${year}-01-01`)
-    const next = (count ?? 0) + 1
-    return `PO-${year}-${String(next).padStart(3, '0')}`
+      .select('purchase_number')
+      .like('purchase_number', `PO-${year}-%`)
+    
+    if (error) {
+      console.error('Error generating purchase number:', error)
+      toast.error('Failed to check existing purchase numbers: ' + error.message)
+    }
+
+    const existingNumbers = new Set(
+      (data ?? []).map(p => p.purchase_number.trim())
+    )
+
+    let next = 1
+    while (true) {
+      const candidate = `PO-${year}-${String(next).padStart(3, '0')}`
+      if (!existingNumbers.has(candidate)) {
+        return candidate
+      }
+      next++
+    }
   }, [supabase])
 
   // ── save purchase ─────────────────────────────────────────────────────────────

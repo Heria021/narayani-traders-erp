@@ -1,7 +1,6 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Search, Phone, Plus } from 'lucide-react'
@@ -35,52 +34,69 @@ function CardSkeleton() {
 
 export function SupplierList({ suppliers, selectedId, search, loading, onSelect, onSearch, onAdd }: Props) {
   return (
-    <div className="flex h-full flex-col border-r border-border/60">
+    <div className="flex h-full flex-col min-h-0 min-w-0">
 
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3.5 shrink-0 border-b border-border/60">
-        <p className="text-sm font-semibold text-foreground">
-          Suppliers{!loading && <span className="ml-1.5 text-muted-foreground font-normal">({suppliers.length})</span>}
-        </p>
-        <Button size="sm" onClick={onAdd}
-          className="h-7 px-2.5 text-xs bg-black hover:bg-black/90 text-white dark:bg-white dark:text-black rounded-lg">
-          <Plus className="size-3 mr-1" /> Add
-        </Button>
-      </div>
-
-      {/* Search */}
-      <div className="px-3 py-2.5 shrink-0 border-b border-border/60">
+      {/* Search — outside the card */}
+      <div className="shrink-0 pb-2.5">
         <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground/60 pointer-events-none" />
-          <Input
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground/50 pointer-events-none" />
+          <input
             value={search}
             onChange={e => onSearch(e.target.value)}
             placeholder="Search name, phone, GSTIN…"
-            className="pl-8 h-8 text-xs rounded-lg border-border/60"
+            className={cn(
+              'w-full h-8 rounded-lg border border-input bg-transparent pl-9 pr-3 text-sm',
+              'placeholder:text-muted-foreground/50',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:border-ring/40',
+              'transition-colors',
+            )}
           />
         </div>
       </div>
 
-      {/* List */}
-      <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:thin]">
-        {loading ? (
-          Array.from({ length: 5 }).map((_, i) => <CardSkeleton key={i} />)
-        ) : suppliers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-2 text-center px-4">
-            <p className="text-sm font-medium">
-              {search ? 'No suppliers match your search.' : 'No suppliers yet.'}
-            </p>
-            {!search && (
-              <p className="text-xs text-muted-foreground">
-                Add your first supplier to start recording purchases.
-              </p>
+      {/* Card — full-width, scrollable inside, faded top */}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3.5 shrink-0 border-b border-border/60">
+          <p className="text-sm font-semibold text-foreground">
+            Suppliers{!loading && <span className="ml-1.5 text-muted-foreground font-normal">({suppliers.length})</span>}
+          </p>
+          <Button size="sm" onClick={onAdd}
+            className="h-7 px-2.5 text-xs bg-black hover:bg-black/90 text-white dark:bg-white dark:text-black rounded-lg">
+            <Plus className="size-3 mr-1" /> Add
+          </Button>
+        </div>
+
+        {/* List — scrollable with top fade */}
+        <div className="relative min-h-0 flex-1">
+          {/* Top fade overlay */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-0 right-0 top-0 z-10 h-6 bg-gradient-to-b from-card to-transparent"
+          />
+
+          <div className="h-full overflow-y-auto overscroll-contain [scrollbar-width:thin]">
+            {loading ? (
+              Array.from({ length: 5 }).map((_, i) => <CardSkeleton key={i} />)
+            ) : suppliers.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full gap-2 text-center px-4">
+                <p className="text-sm font-medium">
+                  {search ? 'No suppliers match your search.' : 'No suppliers yet.'}
+                </p>
+                {!search && (
+                  <p className="text-xs text-muted-foreground">
+                    Add your first supplier to start recording purchases.
+                  </p>
+                )}
+              </div>
+            ) : (
+              suppliers.map(s => (
+                <SupplierCard key={s.id} supplier={s} selected={s.id === selectedId} onSelect={onSelect} />
+              ))
             )}
           </div>
-        ) : (
-          suppliers.map(s => (
-            <SupplierCard key={s.id} supplier={s} selected={s.id === selectedId} onSelect={onSelect} />
-          ))
-        )}
+        </div>
       </div>
     </div>
   )

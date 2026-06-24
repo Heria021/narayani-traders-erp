@@ -505,8 +505,28 @@ on conflict (id) do nothing;
 
 
 -- =============================================================================
+-- SECTION 9 — INVENTORY PROCEDURES / FUNCTIONS
+-- =============================================================================
+
+create or replace function increment_stock(p_product_id uuid, p_delta numeric)
+returns void
+language plpgsql
+security invoker
+as $$
+begin
+  update products
+  set current_stock = current_stock + p_delta
+  where id = p_product_id;
+end;
+$$;
+
+-- Grant execution to authenticated users
+grant execute on function increment_stock to authenticated;
+
+
+-- =============================================================================
 -- DONE ✓
--- All 10 tables created with:
+-- All 10 tables and functions created with:
 --   • Proper data types and constraints
 --   • Indexes on all FK columns + frequently queried columns
 --   • RLS enabled — single owner policy on every table

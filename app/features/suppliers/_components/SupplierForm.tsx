@@ -11,7 +11,7 @@ import { EMPTY_SUPPLIER_FORM, INDIAN_STATES } from './types'
 
 interface Props {
   open:     boolean
-  supplier: Supplier | null   // null = add mode
+  supplier: Supplier | null
   onClose:  () => void
   onSubmit: (values: SupplierFormValues) => Promise<boolean>
 }
@@ -24,19 +24,19 @@ function FieldRow({ label, required, error, children }: {
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-sm font-medium text-foreground/80">
-        {label}{required && <span className="text-red-500 ml-0.5">*</span>}
+      <label className="text-[13px] text-muted-foreground">
+        {label}
       </label>
       {children}
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && <p className="text-[11px] text-red-500">{error}</p>}
     </div>
   )
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-4">
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</p>
+    <div className="flex flex-col gap-3">
+      <p className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">{title}</p>
       {children}
     </div>
   )
@@ -98,103 +98,165 @@ export function SupplierForm({ open, supplier, onClose, onSubmit }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={v => { if (!v) onClose() }}>
-      <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col gap-0 p-0">
-        <SheetHeader className="px-6 py-5 border-b border-border/60 shrink-0">
-          <SheetTitle className="text-lg font-bold">
-            {isEdit ? `Edit — ${supplier.name}` : 'Add Supplier'}
-          </SheetTitle>
-        </SheetHeader>
+      {/* ── 12px inset on all sides, rounded corners ── */}
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-[640px] flex flex-col gap-0 p-3 bg-transparent shadow-none border-none"
+      >
+        <div className="flex flex-col flex-1 overflow-hidden rounded-xl border border-border/60 bg-background">
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-          <div className="flex flex-col gap-6 px-6 py-5">
+          {/* Header */}
+          <SheetHeader className="px-5 py-4 border-b border-border/60 shrink-0">
+            <SheetTitle className="text-[15px] font-medium">
+              {isEdit ? `Edit — ${supplier.name}` : 'Add Supplier'}
+            </SheetTitle>
+          </SheetHeader>
 
-            {/* ── Basic Info ───────────────────────────────────────────── */}
-            <Section title="Basic Info">
-              <FieldRow label="Name" required error={errors.name}>
-                <Input value={values.name} onChange={e => set('name', e.target.value)}
-                  placeholder="Sharma Stationery Wholesale"
-                  className={cn(errors.name && 'border-red-400')} />
-              </FieldRow>
+          {/* Body */}
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
+            <div className="flex flex-col gap-5 px-5 py-4">
 
-              <FieldRow label="Phone" required error={errors.phone}>
-                <Input value={values.phone} onChange={e => set('phone', e.target.value)}
-                  placeholder="9812345678" maxLength={10}
-                  className={cn(errors.phone && 'border-red-400')} />
-              </FieldRow>
-
-              <FieldRow label="Email">
-                <Input value={values.email} onChange={e => set('email', e.target.value)}
-                  type="email" placeholder="sharma@wholesale.com" />
-              </FieldRow>
-
-              <FieldRow label="GSTIN" error={errors.gstin}>
-                <Input value={values.gstin}
-                  onChange={e => set('gstin', e.target.value.toUpperCase())}
-                  placeholder="08XYZAB1234C1Z2" maxLength={15}
-                  className={cn('font-mono', errors.gstin && 'border-red-400')} />
-              </FieldRow>
-            </Section>
-
-            <Separator />
-
-            {/* ── Address ──────────────────────────────────────────────── */}
-            <Section title="Address">
-              <FieldRow label="Street / Area">
-                <textarea
-                  value={values.address}
-                  onChange={e => set('address', e.target.value)}
-                  rows={2}
-                  placeholder="Shop 12, Market Complex"
-                  className="flex w-full rounded-xl border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
-                />
-              </FieldRow>
-
-              <div className="grid grid-cols-2 gap-3">
-                <FieldRow label="City">
-                  <Input value={values.city} onChange={e => set('city', e.target.value)} placeholder="Jaipur" />
-                </FieldRow>
-                <FieldRow label="Postal Code" error={errors.postal_code}>
-                  <Input value={values.postal_code} onChange={e => set('postal_code', e.target.value)}
-                    placeholder="302001" maxLength={6}
-                    className={cn(errors.postal_code && 'border-red-400')} />
-                </FieldRow>
-              </div>
-
-              <FieldRow label="State">
-                <Input value={values.state} onChange={e => set('state', e.target.value)}
-                  list="sup-states-list" placeholder="Rajasthan" />
-                <datalist id="sup-states-list">
-                  {INDIAN_STATES.map(s => <option key={s} value={s} />)}
-                </datalist>
-              </FieldRow>
-            </Section>
-
-            {/* ── Opening Balance (add only) ────────────────────────────── */}
-            {!isEdit && (
-              <>
-                <Separator />
-                <Section title="Opening Balance">
-                  <FieldRow label="Opening Balance (₹)">
-                    <Input value={values.opening_balance}
-                      onChange={e => set('opening_balance', e.target.value)}
-                      type="number" placeholder="0" />
-                    <p className="text-xs text-muted-foreground">
-                      Amount you owe this supplier from before this system. Positive = you owe them. 0 = fresh start.
-                    </p>
+              {/* Basic Info */}
+              <Section title="Basic info">
+                <div className="flex flex-col gap-3">
+                  <FieldRow label="Name" required error={errors.name}>
+                    <Input
+                      value={values.name}
+                      onChange={e => set('name', e.target.value)}
+                      placeholder="Sharma Stationery Wholesale"
+                      className={cn('bg-muted/50 text-[13px] h-8 rounded-lg', errors.name && 'border-red-400')}
+                    />
                   </FieldRow>
-                </Section>
-              </>
-            )}
 
+                  <FieldRow label="Phone" required error={errors.phone}>
+                    <Input
+                      value={values.phone}
+                      onChange={e => set('phone', e.target.value)}
+                      placeholder="9812345678"
+                      maxLength={10}
+                      className={cn('bg-muted/50 text-[13px] h-8 rounded-lg', errors.phone && 'border-red-400')}
+                    />
+                  </FieldRow>
+
+                  <FieldRow label="Email">
+                    <Input
+                      value={values.email}
+                      onChange={e => set('email', e.target.value)}
+                      type="email"
+                      placeholder="sharma@wholesale.com"
+                      className="bg-muted/50 text-[13px] h-8 rounded-lg"
+                    />
+                  </FieldRow>
+
+                  <FieldRow label="GSTIN" error={errors.gstin}>
+                    <Input
+                      value={values.gstin}
+                      onChange={e => set('gstin', e.target.value.toUpperCase())}
+                      placeholder="08XYZAB1234C1Z2"
+                      maxLength={15}
+                      className={cn('bg-muted/50 text-[13px] h-8 rounded-lg font-mono', errors.gstin && 'border-red-400')}
+                    />
+                  </FieldRow>
+                </div>
+              </Section>
+
+              <Separator />
+
+              {/* Address */}
+              <Section title="Address">
+                <div className="flex flex-col gap-3">
+                  <FieldRow label="Street / Area">
+                    <textarea
+                      value={values.address}
+                      onChange={e => set('address', e.target.value)}
+                      rows={2}
+                      placeholder="Shop 12, Market Complex"
+                      className="flex w-full rounded-lg border border-input bg-muted/50 px-3 py-2 text-[13px] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+                    />
+                  </FieldRow>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <FieldRow label="City">
+                      <Input
+                        value={values.city}
+                        onChange={e => set('city', e.target.value)}
+                        placeholder="Jaipur"
+                        className="bg-muted/50 text-[13px] h-8 rounded-lg"
+                      />
+                    </FieldRow>
+                    <FieldRow label="Postal code" error={errors.postal_code}>
+                      <Input
+                        value={values.postal_code}
+                        onChange={e => set('postal_code', e.target.value)}
+                        placeholder="302001"
+                        maxLength={6}
+                        className={cn('bg-muted/50 text-[13px] h-8 rounded-lg', errors.postal_code && 'border-red-400')}
+                      />
+                    </FieldRow>
+                  </div>
+
+                  <FieldRow label="State">
+                    <Input
+                      value={values.state}
+                      onChange={e => set('state', e.target.value)}
+                      list="sup-states-list"
+                      placeholder="Rajasthan"
+                      className="bg-muted/50 text-[13px] h-8 rounded-lg"
+                    />
+                    <datalist id="sup-states-list">
+                      {INDIAN_STATES.map(s => <option key={s} value={s} />)}
+                    </datalist>
+                  </FieldRow>
+                </div>
+              </Section>
+
+              {/* Opening Balance — add mode only */}
+              {!isEdit && (
+                <>
+                  <Separator />
+                  <Section title="Opening balance">
+                    <div className="flex flex-col gap-3">
+                      <FieldRow label="Opening balance (₹)">
+                        <Input
+                          value={values.opening_balance}
+                          onChange={e => set('opening_balance', e.target.value)}
+                          type="number"
+                          placeholder="0"
+                          className="bg-muted/50 text-[13px] h-8 rounded-lg"
+                        />
+                        <p className="text-[11px] text-muted-foreground">
+                          Amount owed from before this system. Positive = you owe them. 0 = fresh start.
+                        </p>
+                      </FieldRow>
+                    </div>
+                  </Section>
+                </>
+              )}
+
+            </div>
+          </form>
+
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-2 px-5 py-3.5 border-t border-border/60 shrink-0">
+            <Button
+              variant="outline"
+              type="button"
+              onClick={onClose}
+              disabled={saving}
+              className="h-8 px-4 text-[13px] rounded-lg"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={saving}
+              onClick={handleSubmit}
+              className="h-8 px-4 text-[13px] rounded-lg bg-foreground text-background hover:bg-foreground/90"
+            >
+              {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add Supplier'}
+            </Button>
           </div>
-        </form>
 
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border/60 shrink-0">
-          <Button variant="outline" type="button" onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button type="submit" disabled={saving} onClick={handleSubmit}
-            className="bg-black hover:bg-black/90 text-white dark:bg-white dark:text-black dark:hover:bg-white/90 rounded-lg px-5">
-            {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Supplier'}
-          </Button>
         </div>
       </SheetContent>
     </Sheet>

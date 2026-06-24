@@ -1,0 +1,170 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
+import type {
+  SupplierWithStats,
+  Purchase,
+  PurchaseItem,
+  SupplierProduct,
+  SupplierFormValues,
+} from '../../_components/types'
+
+export function useSupplierDetail(id: string) {
+  const supabase = createClient()
+
+  const [supplier,         setSupplier]         = useState<SupplierWithStats | null>(null)
+  const [purchases,        setPurchases]        = useState<Purchase[]>([])
+  const [purchaseItems,    setPurchaseItems]    = useState<PurchaseItem[]>([])
+  const [supplierProducts, setSupplierProducts] = useState<SupplierProduct[]>([])
+  const [loading,          setLoading]          = useState(true)
+  const [notFound,         setNotFound]         = useState(false)
+
+  // ── fetch everything ────────────────────────────────────────────────────────
+  const fetchAll = useCallback(async () => {
+    setLoading(true)
+
+    // 1. Supplier row
+    const { data: sup, error } = await supabase
+      .from('suppliers')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (error || !sup) {
+      setNotFound(true)
+      setLoading(false)
+      return
+    }
+
+    // 2. Aggregate purchases
+    const { data: purch } = await supabase
+      .from('purchases')
+      .select('*')
+      .eq('supplier_id', id)
+      .order('purchase_date', { ascending: false })
+
+    const purchList = (purch ?? []) as Purchase[]
+    const totalPurchased = purchList.reduce((sum, p) => sum + p.grand_total, 0)
+
+    setSupplier({
+      ...sup,
+      total_purchased: totalPurchased,
+      amount_owed:     sup.opening_balance + totalPurchased,
+    })
+
+    // 3. Purchase items
+    const purchIds = purchList.map(p => p.id)
+    let allItems: PurchaseItem[] = []
+
+    if (purchIds.length > 0) {
+      const { data: items } = await supabase
+        .from('purchase_items')
+        .select('*, products(name, unit_name)')
+        .in('purchase_id', purchIds)
+
+      allItems = (items ?? []).map(i => ({
+        id:           i.id,
+        purchase_id:  i.purchase_id,
+        product_id:   i.product_id,
+        quantity:     i.quantity,
+        unit_price:   i.unit_price,
+        total_price:  i.total_price,
+        product_name: (i.products as { name: string; unit_name: string } | null)?.name ?? 'Unknown',
+        unit_name:    (i.products as { name: string; unit_name: string } | null)?.unit_name ?? 'unit',
+      }))
+    }
+
+    setPurchaseItems(allItems)
+
+    // Attach item counts
+    const itemCountMap = new Map<string, number>()
+    for (const item of allItems) {
+      itemCountMap.set(item.purchase_id, (itemCountMap.get(item.purchase_id) ?? 0) + 1)
+    }
+    const purchWithCounts = purchList.map(p => ({ ...p, item_count: itemCountMap.get(p.id) ?? 0 }))
+    setPurchases(purchWithCounts)
+
+    // Per-product summary
+    const productMap = new Map<string, { name: string; unit: string; qty: number; last: string }>()
+    for (const item of allItems) {
+      const purchase = purchList.find(p => p.id === item.purchase_id)
+      const date     = purchase?.purchase_date ?? ''
+      const existing = productMap.get(item.product_id)
+      if (!existing || date > existing.last) {
+        productMap.set(item.product_id, {
+          name: item.product_name ?? 'Unknown',
+          unit: item.unit_name   ?? 'unit',
+          qty:  (existing?.qty ?? 0) + item.quantity,
+          last: date,
+        })
+      } else {
+        existing.qty += item.quantity
+      }
+    }
+
+    setSupplierProducts(
+      Array.from(productMap.entries())
+        .map(([pid, v]) => ({
+          product_id:     pid,
+          product_name:   v.name,
+          unit_name:      v.unit,
+          total_qty:      v.qty,
+          last_purchased: v.last,
+        }))
+        .sort((a, b) => b.last_purchased.localeCompare(a.last_purchased))
+    )
+
+    setLoading(false)
+  }, [supabase, id])
+
+  useEffect(() => { fetchAll() }, [fetchAll])
+
+  // ── update ───────────────────────────────────────────────────────────────────
+  const updateSupplier = useCallback(async (values: SupplierFormValues): Promise<boolean> => {
+    const { error } = await supabase
+      .from('suppliers')
+      .update({
+        name:        values.name.trim(),
+        phone:       values.phone.trim(),
+        email:       values.email.trim()       || null,
+        gstin:       values.gstin.trim()       || null,
+        address:     values.address.trim()     || null,
+        city:        values.city.trim()        || null,
+        state:       values.state.trim()       || null,
+        postal_code: values.postal_code.trim() || null,
+      })
+      .eq('id', id)
+
+    if (error) { toast.error(error.message); return false }
+    toast.success(`${values.name} updated`)
+    await fetchAll()
+    return true
+  }, [supabase, id, fetchAll])
+
+  // ── delete ───────────────────────────────────────────────────────────────────
+  const deleteSupplier = useCallback(async (): Promise<boolean> => {
+    const { count } = await supabase
+      .from('purchases')
+      .select('id', { count: 'exact', head: true })
+      .eq('supplier_id', id)
+
+    if ((count ?? 0) > 0) {
+      toast.error('Supplier has purchase history and cannot be deleted.')
+      return false
+    }
+
+    const { error } = await supabase.from('suppliers').delete().eq('id', id)
+    if (error) { toast.error(error.message); return false }
+    toast.success('Supplier deleted')
+    return true
+  }, [supabase, id])
+
+  return {
+    supplier, purchases, purchaseItems, supplierProducts,
+    loading, notFound,
+    updateSupplier, deleteSupplier,
+    refresh: fetchAll,
+  }
+}
