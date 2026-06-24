@@ -84,7 +84,7 @@ function normalized(value: string | null | undefined) {
 // ─── SupplierSearch ───────────────────────────────────────────────────────────
 
 function SupplierSearch({
-  value, options, onSelect, error,
+  value, options, loading, onSelect, error,
 }: {
   value: Supplier | null
   options: Supplier[]
@@ -124,9 +124,14 @@ function SupplierSearch({
         open={open}
         onOpenChange={setOpen}
         inputValue={value ? value.name : query}
-        onInputValueChange={(q) => {
-          if (value) onSelect(null)
-          setQuery(q)
+        onInputValueChange={(q, details) => {
+          if (details.reason === 'input-change') {
+            if (value) onSelect(null)
+            setQuery(q)
+          } else if (details.reason === 'input-clear' || details.reason === 'clear-press') {
+            onSelect(null)
+            setQuery('')
+          }
         }}
       >
         <ComboboxInput
@@ -197,22 +202,16 @@ function ProductSearch({
 
   if (value) {
     return (
-      <div className="flex h-10 items-center gap-2 rounded-lg border bg-muted/30 px-3">
-        <Package className="size-3.5 shrink-0 text-muted-foreground" />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium leading-4 text-foreground">{value.name}</p>
-          <p className="truncate text-[11px] leading-4 text-muted-foreground">
-            {value.unit_name} · {rupee(value.purchase_price)}
-          </p>
-        </div>
+      <div className="flex h-9 items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-1">
+        <span className="truncate text-sm font-medium text-foreground">{value.name}</span>
         <Button
           type="button"
           variant="ghost"
           size="icon-xs"
           onClick={() => { onSelect(null); setQuery('') }}
-          className="shrink-0 text-muted-foreground"
+          className="shrink-0 text-muted-foreground size-6"
         >
-          <X className="size-3.5" />
+          <X className="size-3" />
         </Button>
       </div>
     )
@@ -318,7 +317,7 @@ function LineItemRow({
 
   return (
     <TableRow className="group">
-      <TableCell className="min-w-[220px] align-middle">
+      <TableCell className="min-w-[220px] pl-4 align-middle">
         <ProductSearch
           value={row.product}
           options={products}
@@ -403,7 +402,7 @@ function LineItemRow({
         </span>
       </TableCell>
 
-      <TableCell className="w-10 align-middle">
+      <TableCell className="w-10 pr-4 align-middle">
         <Button
           type="button"
           variant="ghost"
@@ -539,195 +538,220 @@ export default function NewPurchasePage() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain [scrollbar-width:thin] p-4 space-y-4">
+    <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden h-full">
+      <div className="flex-1 min-h-0 p-4 md:p-6 flex flex-col overflow-hidden">
+        <div className="w-full grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-stretch flex-1 min-h-0">
+          
+          {/* Left Column: Line Items (takes 2 cols on desktop) */}
+          <div className="space-y-6 lg:col-span-2 order-2 lg:order-1 flex flex-col lg:h-full lg:min-h-0">
+            <Card className="overflow-hidden shadow-sm flex flex-col lg:h-full lg:min-h-0">
+              <CardHeader className="flex flex-row items-center justify-between border-b pb-4 shrink-0 gap-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">
+                    <Package className="size-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-sm font-semibold text-foreground">Line Items</CardTitle>
+                      {validRows.length > 0 && (
+                        <Badge variant="secondary" className="h-4 px-1.5 text-[10px] font-semibold">
+                          {validRows.length} {validRows.length === 1 ? 'item' : 'items'}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">Select products, quantities, and unit prices.</p>
+                  </div>
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={addRow} className="h-8 px-3 text-xs font-semibold">
+                  <Plus className="size-3.5 mr-1" />Add Row
+                </Button>
+              </CardHeader>
 
-        {/* ── Purchase Details ──────────────────────────────────────────────── */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              <Building2 className="size-3.5 text-muted-foreground/60" />
-              Purchase Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FieldGroup>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field data-invalid={!!headerErrors.purchase_number}>
-                  <FieldLabel htmlFor="purchase_number">Purchase Number </FieldLabel>
-                  <Input
-                    id="purchase_number"
-                    value={header.purchase_number}
-                    onChange={e => {
-                      setHeader(h => ({ ...h, purchase_number: e.target.value }))
-                      setHeaderErrors(e2 => ({ ...e2, purchase_number: undefined }))
-                    }}
-                    placeholder="PO-2025-001"
-                    className="font-mono"
-                    aria-invalid={!!headerErrors.purchase_number}
-                  />
-                  {headerErrors.purchase_number && (
-                    <FieldError>{headerErrors.purchase_number}</FieldError>
-                  )}
-                </Field>
+              <CardContent className="p-0 flex-1 min-h-0 overflow-y-auto [scrollbar-width:thin]">
+                <div className="overflow-x-auto [scrollbar-width:thin] w-full">
+                  <Table className="min-w-[760px] w-full">
+                    <TableHeader className="sticky top-0 bg-background z-10 shadow-xs">
+                      <TableRow>
+                        <TableHead className="min-w-[220px] pl-4">Product</TableHead>
+                        <TableHead className="w-[140px]">Mode</TableHead>
+                        <TableHead className="w-[90px]">Qty</TableHead>
+                        <TableHead className="w-[130px]">Unit Price</TableHead>
+                        <TableHead className="w-[110px] text-right">Tax %</TableHead>
+                        <TableHead className="w-[120px] text-right">Total</TableHead>
+                        <TableHead className="w-10 pr-4" />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {rows.map(row => (
+                        <LineItemRow
+                          key={row.id}
+                          row={row}
+                          products={products}
+                          optionsLoading={optionsLoading}
+                          usedProductIds={usedProductIds}
+                          onUpdate={updateRow}
+                          onRemove={removeRow}
+                          onQuickAdd={openQuickAdd}
+                        />
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-                <Field>
-                  <FieldLabel htmlFor="purchase_date">
-                    <CalendarDays className="size-3" />Date 
-                  </FieldLabel>
-                  <DatePicker
-                    value={header.purchase_date}
-                    onChange={val => setHeader(h => ({ ...h, purchase_date: val }))}
-                  />
-                </Field>
-              </div>
+          {/* Right Column: Details & Summary (takes 1 col on desktop) */}
+          <div className="space-y-6 lg:col-span-1 order-1 lg:order-2 flex flex-col lg:h-full lg:min-h-0 justify-between">
+            {/* Purchase Details Card */}
+            <Card className="shadow-sm flex-1 flex flex-col min-h-0 overflow-hidden">
+              <CardHeader className="pb-4 shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">
+                    <Building2 className="size-4" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-sm font-semibold text-foreground">Purchase Details</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">Supplier, date, and reference settings.</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4 flex-1 min-h-0 overflow-y-auto pb-6">
+                <FieldGroup className="gap-4 h-full flex flex-col">
+                  <div className="grid grid-cols-2 gap-4 shrink-0">
+                    <Field data-invalid={!!headerErrors.purchase_number}>
+                      <FieldLabel htmlFor="purchase_number">Purchase Number</FieldLabel>
+                      <Input
+                        id="purchase_number"
+                        value={header.purchase_number}
+                        onChange={e => {
+                          setHeader(h => ({ ...h, purchase_number: e.target.value }))
+                          setHeaderErrors(e2 => ({ ...e2, purchase_number: undefined }))
+                        }}
+                        placeholder="PO-2025-001"
+                        className="font-mono text-sm"
+                        aria-invalid={!!headerErrors.purchase_number}
+                      />
+                      {headerErrors.purchase_number && (
+                        <FieldError>{headerErrors.purchase_number}</FieldError>
+                      )}
+                    </Field>
 
-              <Field>
-                <FieldLabel>Supplier </FieldLabel>
-                <SupplierSearch
-                  value={selectedSupplier}
-                  options={suppliers}
-                  loading={optionsLoading}
-                  onSelect={s => {
-                    setSelectedSupplier(s)
-                    setHeader(h => ({ ...h, supplier_id: s?.id ?? '' }))
-                    setHeaderErrors(e => ({ ...e, supplier_id: undefined }))
-                  }}
-                  error={headerErrors.supplier_id}
-                />
-              </Field>
+                    <Field>
+                      <FieldLabel htmlFor="purchase_date">Date</FieldLabel>
+                      <DatePicker
+                        value={header.purchase_date}
+                        onChange={val => setHeader(h => ({ ...h, purchase_date: val }))}
+                      />
+                    </Field>
+                  </div>
 
-              <Field>
-                <FieldLabel htmlFor="notes">
-                  <FileText className="size-3" />Notes
-                </FieldLabel>
-                <Textarea
-                  id="notes"
-                  value={header.notes}
-                  onChange={e => setHeader(h => ({ ...h, notes: e.target.value }))}
-                  rows={2}
-                  placeholder="e.g. Festival restock, urgent order…"
-                  className="resize-none"
-                />
-              </Field>
-            </FieldGroup>
-          </CardContent>
-        </Card>
-
-        {/* ── Line Items ─────────────────────────────────────────────────────── */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              <Package className="size-3.5 text-muted-foreground/60" />
-              Line Items
-              {validRows.length > 0 && (
-                <Badge variant="outline" className="h-4 px-1.5 text-[10px]">
-                  {validRows.length}
-                </Badge>
-              )}
-            </CardTitle>
-            <CardFooter className="p-0">
-              <Button type="button" variant="outline" size="sm" onClick={addRow} className="h-7 px-2.5 text-xs">
-                <Plus className="size-3" />Add Row
-              </Button>
-            </CardFooter>
-          </CardHeader>
-
-          <CardContent className="px-0">
-            <div className="overflow-x-auto [scrollbar-width:thin]">
-              <Table className="min-w-[760px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-[220px] pl-4">Product</TableHead>
-                    <TableHead className="w-[140px]">Mode</TableHead>
-                    <TableHead className="w-[90px]">Qty</TableHead>
-                    <TableHead className="w-[130px]">Unit Price</TableHead>
-                    <TableHead className="w-[110px] text-right">Tax %</TableHead>
-                    <TableHead className="w-[120px] text-right">Total</TableHead>
-                    <TableHead className="w-10 pr-4" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rows.map(row => (
-                    <LineItemRow
-                      key={row.id}
-                      row={row}
-                      products={products}
-                      optionsLoading={optionsLoading}
-                      usedProductIds={usedProductIds}
-                      onUpdate={updateRow}
-                      onRemove={removeRow}
-                      onQuickAdd={openQuickAdd}
+                  <Field className="shrink-0">
+                    <FieldLabel>Supplier</FieldLabel>
+                    <SupplierSearch
+                      value={selectedSupplier}
+                      options={suppliers}
+                      loading={optionsLoading}
+                      onSelect={s => {
+                        setSelectedSupplier(s)
+                        setHeader(h => ({ ...h, supplier_id: s?.id ?? '' }))
+                        setHeaderErrors(e => ({ ...e, supplier_id: undefined }))
+                      }}
+                      error={headerErrors.supplier_id}
                     />
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+                  </Field>
 
-        {/* ── Totals ─────────────────────────────────────────────────────────── */}
-        <Card>
-          <CardContent className="divide-y p-0">
-            <div className="flex items-center justify-between px-5 py-3">
-              <p className="text-sm text-muted-foreground">Subtotal</p>
-              <p className="text-sm font-medium tabular-nums">{rupee(subtotal)}</p>
-            </div>
-            <div className="flex items-center justify-between px-5 py-3">
-              <p className="text-sm text-muted-foreground">Tax (GST)</p>
-              <p className="text-sm font-medium tabular-nums">{rupee(taxAmount)}</p>
-            </div>
-            <div className="flex items-center justify-between gap-4 px-5 py-3">
-              <div className="flex items-center gap-3">
-                <p className="text-sm text-muted-foreground">Discount</p>
-                <ButtonGroup className="h-6">
-                  <Button
-                    type="button"
-                    variant={discountMode === 'flat' ? 'default' : 'outline'}
-                    size="xs"
-                    onClick={() => setDiscountMode('flat')}
-                    className="h-full px-2.5 text-xs font-semibold"
-                  >
-                    ₹
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={discountMode === 'percent' ? 'default' : 'outline'}
-                    size="xs"
-                    onClick={() => setDiscountMode('percent')}
-                    className="h-full px-2.5 text-xs font-semibold"
-                  >
-                    %
-                  </Button>
-                </ButtonGroup>
-              </div>
-              <div className="flex items-center gap-3">
-                <InputGroup className="h-8 w-28">
-                  <InputGroupAddon>
-                    <InputGroupText>{discountMode === 'flat' ? '₹' : '%'}</InputGroupText>
-                  </InputGroupAddon>
-                  <InputGroupInput
-                    type="number" min="0" step="0.01"
-                    value={discount}
-                    onChange={e => setDiscount(e.target.value)}
-                    placeholder="0"
-                  />
-                </InputGroup>
-                <p className="w-28 text-right text-sm font-medium tabular-nums text-emerald-600 dark:text-emerald-400">
-                  {discountVal > 0 ? `−${rupee(discountVal)}` : '—'}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center justify-between bg-muted/30 px-5 py-4">
-              <p className="text-sm font-bold text-foreground">Grand Total</p>
-              <p className="text-2xl font-bold tabular-nums tracking-tight text-foreground">
-                {rupee(grandTotal)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+                  <Field className="flex-1 flex flex-col min-h-[140px]">
+                    <FieldLabel htmlFor="notes">Notes</FieldLabel>
+                    <div className="flex-1 flex flex-col min-h-0">
+                      <Textarea
+                        id="notes"
+                        value={header.notes}
+                        onChange={e => setHeader(h => ({ ...h, notes: e.target.value }))}
+                        placeholder="Optional remarks, terms, or conditions..."
+                        className="resize-none flex-1 min-h-0 text-sm h-full"
+                      />
+                    </div>
+                  </Field>
+                </FieldGroup>
+              </CardContent>
+            </Card>
 
-        <div className="h-4" />
+            {/* Totals & Summary Card */}
+            <Card className="overflow-hidden shadow-sm shrink-0 border border-border">
+              <CardHeader className="pb-3 border-b bg-muted/10">
+                <div className="flex items-center gap-2">
+                  <FileText className="size-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-semibold text-foreground">Summary</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="divide-y p-0">
+                <div className="flex items-center justify-between px-5 py-3 text-sm">
+                  <span className="text-muted-foreground font-medium">Subtotal</span>
+                  <span className="font-medium tabular-nums text-foreground">{rupee(subtotal)}</span>
+                </div>
+                <div className="flex items-center justify-between px-5 py-3 text-sm">
+                  <span className="text-muted-foreground font-medium">Tax (GST)</span>
+                  <span className="font-medium tabular-nums text-foreground">{rupee(taxAmount)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-4 px-5 py-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground font-medium">Discount</span>
+                    <ButtonGroup className="h-6 shrink-0">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="xs"
+                        onClick={() => setDiscountMode('flat')}
+                        className={cn(
+                          "h-full px-2 text-[10px] font-semibold border-r-0 rounded-r-none",
+                          discountMode === 'flat' ? 'bg-accent text-accent-foreground border-primary font-bold' : 'text-muted-foreground'
+                        )}
+                      >
+                        ₹
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="xs"
+                        onClick={() => setDiscountMode('percent')}
+                        className={cn(
+                          "h-full px-2 text-[10px] font-semibold rounded-l-none",
+                          discountMode === 'percent' ? 'bg-accent text-accent-foreground border-primary font-bold' : 'text-muted-foreground'
+                        )}
+                      >
+                        %
+                      </Button>
+                    </ButtonGroup>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <InputGroup className="w-24 shrink-0">
+                      <InputGroupAddon>
+                        <InputGroupText className="text-xs">{discountMode === 'flat' ? '₹' : '%'}</InputGroupText>
+                      </InputGroupAddon>
+                      <InputGroupInput
+                        type="number" min="0" step="0.01"
+                        value={discount}
+                        onChange={e => setDiscount(e.target.value)}
+                        placeholder="0"
+                        className="text-xs"
+                      />
+                    </InputGroup>
+                    <span className="w-24 text-right font-medium tabular-nums text-emerald-600 dark:text-emerald-400">
+                      {discountVal > 0 ? `−${rupee(discountVal)}` : rupee(0)}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between bg-muted/20 px-5 py-4 border-t">
+                  <span className="text-lg font-bold text-foreground">Grand Total</span>
+                  <span className="text-lg font-bold tabular-nums text-foreground">
+                    {rupee(grandTotal)}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
 
       {/* ── Sticky footer ─────────────────────────────────────────────────────── */}

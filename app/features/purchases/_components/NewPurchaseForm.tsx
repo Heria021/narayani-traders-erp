@@ -540,7 +540,7 @@ export function NewPurchaseForm({
       <Sheet open={open} onOpenChange={v => !v && onClose()}>
         <SheetContent
           side="right"
-          className="w-full lg:w-[900px] lg:max-w-[900px] h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)] m-4 rounded-xl border flex flex-col p-0 overflow-hidden"
+          className="w-full sm:max-w-none lg:w-[900px] lg:max-w-[900px] h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)] m-4 rounded-xl border flex flex-col p-0 overflow-hidden"
         >
           <SheetHeader className="px-6 py-5 border-b border-border/60 shrink-0">
             <SheetTitle className="text-base font-bold">New Purchase</SheetTitle>

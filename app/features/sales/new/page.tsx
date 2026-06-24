@@ -104,7 +104,7 @@ const REFERENCE_METHODS: PaymentMethod[] = ['upi', 'card', 'bank_transfer']
 // ─── CustomerSearch ───────────────────────────────────────────────────────────
 
 function CustomerSearch({
-  value, options, onSelect, onAddCustomerClick,
+  value, options, loading, onSelect, onAddCustomerClick,
 }: {
   value: Customer | null
   options: Customer[]
@@ -142,9 +142,14 @@ function CustomerSearch({
       open={open}
       onOpenChange={setOpen}
       inputValue={value ? value.name : query}
-      onInputValueChange={(q) => {
-        if (value) onSelect(null)
-        setQuery(q)
+      onInputValueChange={(q, details) => {
+        if (details.reason === 'input-change') {
+          if (value) onSelect(null)
+          setQuery(q)
+        } else if (details.reason === 'input-clear' || details.reason === 'clear-press') {
+          onSelect(null)
+          setQuery('')
+        }
       }}
     >
       <ComboboxInput
