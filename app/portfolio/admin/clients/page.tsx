@@ -435,7 +435,10 @@ export default function ClientsManagerPage() {
 
       {/* ── Drawer 1: Add Client Sheet ── */}
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
-        <SheetContent className="w-full sm:max-w-[460px] rounded-l-xl border-l shadow-2xl p-0 flex flex-col h-full bg-card overflow-hidden">
+        <SheetContent
+          side="right"
+          className="w-full sm:max-w-none lg:w-[500px] lg:max-w-[500px] h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)] m-4 rounded-xl border flex flex-col p-0 overflow-hidden shadow-xl bg-card"
+        >
           <SheetHeader className="px-6 py-5 border-b shrink-0 bg-muted/20">
             <SheetTitle className="flex items-center gap-1.5 text-base font-bold">
               <Users className="size-4.5 text-violet-500" />
@@ -545,7 +548,10 @@ export default function ClientsManagerPage() {
 
       {/* ── Drawer 2: Client Profile details sheet ── */}
       <Sheet open={detailOpen} onOpenChange={setDetailOpen}>
-        <SheetContent className="w-full sm:max-w-[480px] rounded-l-xl border-l shadow-2xl p-0 flex flex-col h-full bg-card overflow-hidden">
+        <SheetContent
+          side="right"
+          className="w-full sm:max-w-none lg:w-[500px] lg:max-w-[500px] h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)] m-4 rounded-xl border flex flex-col p-0 overflow-hidden shadow-xl bg-card"
+        >
           
           {activeDetailClient && (
             <>
