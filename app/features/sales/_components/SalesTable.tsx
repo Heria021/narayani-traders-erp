@@ -3,12 +3,8 @@
 import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { DatePicker } from '@/components/ui/date-picker'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Select, SelectContent, SelectItem, SelectTrigger,
-} from '@/components/ui/select'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -27,9 +23,8 @@ import {
   TableCell,
 } from '@/components/ui/table'
 import {
-  Search, ChevronUp, ChevronDown, ChevronsUpDown,
-  CalendarDays, ShoppingBag, MoreHorizontal, Eye, Trash2, CreditCard,
-  Filter,
+  Search, ShoppingBag, MoreHorizontal, Eye, Trash2, CreditCard,
+  ChevronUp, ChevronDown, ChevronsUpDown,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Sale, SaleFilters, SortField, SortDir, PaymentStatus } from './types'
@@ -47,6 +42,39 @@ const fmtDate = (d: string) =>
   new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
 
 const today = () => new Date().toISOString().slice(0, 10)
+
+// ─── sort icon & header ───────────────────────────────────────────────────────
+
+function SortIcon({ field, current, dir }: { field: SortField; current: SortField; dir: SortDir }) {
+  if (field !== current) return <ChevronsUpDown className="size-3 text-muted-foreground/40" />
+  return dir === 'desc'
+    ? <ChevronDown className="size-3 text-foreground" />
+    : <ChevronUp   className="size-3 text-foreground" />
+}
+
+function SortableHeader({
+  label, field, current, dir, className, onSort,
+}: {
+  label: string; field?: SortField; current: SortField; dir: SortDir; className?: string
+  onSort: (field: SortField) => void
+}) {
+  if (!field) return <TableHead className={cn("bg-card", className)}>{label}</TableHead>
+  return (
+    <TableHead className={cn("bg-card", className)}>
+      <button
+        type="button"
+        className={cn(
+          "inline-flex items-center gap-1 transition-colors hover:text-foreground",
+          className?.includes('text-right') && "w-full justify-end"
+        )}
+        onClick={() => onSort(field)}
+      >
+        {label}
+        <SortIcon field={field} current={current} dir={dir} />
+      </button>
+    </TableHead>
+  )
+}
 
 // ─── props ────────────────────────────────────────────────────────────────────
 
@@ -68,35 +96,7 @@ interface Props {
   onDelete:        (sale: Sale) => Promise<boolean>
 }
 
-// ─── sort icon ────────────────────────────────────────────────────────────────
 
-function SortIcon({ field, current, dir }: { field: SortField; current: SortField; dir: SortDir }) {
-  if (field !== current) return <ChevronsUpDown className="size-3 text-muted-foreground/40" />
-  return dir === 'desc'
-    ? <ChevronDown className="size-3 text-foreground" />
-    : <ChevronUp   className="size-3 text-foreground" />
-}
-
-function SortableHeader({
-  label, field, current, dir, className, onSort,
-}: {
-  label: string; field?: SortField; current: SortField; dir: SortDir; className?: string
-  onSort: (field: SortField) => void
-}) {
-  if (!field) return <TableHead className={className}>{label}</TableHead>
-  return (
-    <TableHead className={className}>
-      <button
-        type="button"
-        className="inline-flex items-center gap-1 transition-colors hover:text-foreground"
-        onClick={() => onSort(field)}
-      >
-        {label}
-        <SortIcon field={field} current={current} dir={dir} />
-      </button>
-    </TableHead>
-  )
-}
 
 // ─── status badge ─────────────────────────────────────────────────────────────
 
@@ -109,31 +109,7 @@ function StatusBadge({ status }: { status: PaymentStatus }) {
   )
 }
 
-// ─── skeleton row ─────────────────────────────────────────────────────────────
 
-function SkeletonRow() {
-  return (
-    <TableRow className="border-b border-border/40 hover:bg-transparent">
-      <TableCell className="py-3 pl-4 pr-3">
-        <div className="flex items-center gap-3">
-          <Skeleton className="size-9 shrink-0 rounded-lg" />
-          <div className="flex flex-col gap-1.5">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-3 w-20" />
-          </div>
-        </div>
-      </TableCell>
-      <TableCell className="px-3 py-3"><Skeleton className="h-4 w-28 font-mono" /></TableCell>
-      <TableCell className="px-3 py-3"><Skeleton className="h-4 w-20" /></TableCell>
-      <TableCell className="px-3 py-3 text-right"><Skeleton className="ml-auto h-5 w-14 rounded-full" /></TableCell>
-      <TableCell className="px-3 py-3 text-right"><Skeleton className="ml-auto h-4 w-20" /></TableCell>
-      <TableCell className="px-3 py-3 text-right"><Skeleton className="ml-auto h-4 w-16" /></TableCell>
-      <TableCell className="px-3 py-3 text-right"><Skeleton className="ml-auto h-4 w-16" /></TableCell>
-      <TableCell className="px-3 py-3 text-right"><Skeleton className="ml-auto h-5 w-16 rounded-full" /></TableCell>
-      <TableCell className="py-3 pl-3 pr-4"><Skeleton className="size-7 rounded-md" /></TableCell>
-    </TableRow>
-  )
-}
 
 // ─── delete confirm ───────────────────────────────────────────────────────────
 
@@ -218,94 +194,107 @@ export function SalesTable({
   ]
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card">
+    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card">
 
-        {/* ── Toolbar ──────────────────────────────────────────────────────────── */}
-        <div className="flex shrink-0 flex-col gap-3 border-b px-4 py-2.5 sm:flex-row sm:items-center sm:flex-wrap">
-          {/* Search */}
-          <div className="relative min-w-0 shrink-0 sm:w-[min(380px,42vw)]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground/50 pointer-events-none" />
-            <Input
-              value={filters.search}
-              onChange={e => onSearch(e.target.value)}
-              placeholder="Search bill no. or customer…"
-              className="h-8 pl-8"
-            />
-          </div>
-
-          <div className="hidden h-5 w-px shrink-0 bg-border/60 sm:block" />
-
-          {/* Status filter */}
-          <div className="flex items-center gap-1.5">
-            <Filter className="size-3.5 text-muted-foreground/60 shrink-0" />
-            <Select
-              value={filters.status}
-              onValueChange={v => onStatusChange(v as SaleFilters['status'])}
-            >
-              <SelectTrigger className="h-8 w-32 rounded-lg border-border/60 text-xs">
-                <span>
-                  {statusOptions.find(o => o.value === filters.status)?.label}
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                {statusOptions.map(o => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Date filter */}
-          <div className="flex items-center gap-1.5">
-            <CalendarDays className="size-3.5 text-muted-foreground/60 shrink-0" />
-            <Select
-              value={filters.dateRange}
-              onValueChange={v => handleDateFilter(v as SaleFilters['dateRange'])}
-            >
-              <SelectTrigger className="h-8 w-36 rounded-lg border-border/60 text-xs">
-                <span>
-                  {filters.dateRange === 'all'    && 'All time'}
-                  {filters.dateRange === 'today'  && 'Today'}
-                  {filters.dateRange === 'week'   && 'This Week'}
-                  {filters.dateRange === 'month'  && 'This Month'}
-                  {filters.dateRange === 'custom' && 'Custom'}
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All time</SelectItem>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="week">This Week</SelectItem>
-                <SelectItem value="month">This Month</SelectItem>
-                <SelectItem value="custom">Custom range…</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {showCustom && (
-            <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-              <DatePicker
-                value={customFrom}
-                onChange={setCustomFrom}
-                className="h-8 w-36 text-[13px] bg-muted/50 rounded-lg"
+        {/* ── Toolbar: Search & Status (Row 1), Date Filters (Row 2) ────────────────── */}
+        <div className="flex shrink-0 flex-col gap-3 border-b px-4 py-2.5">
+          {/* Row 1: Search & Status */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            {/* Search */}
+            <div className="relative min-w-0 shrink-0 sm:w-[min(320px,40vw)]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground/50 pointer-events-none" />
+              <input
+                value={filters.search}
+                onChange={e => onSearch(e.target.value)}
+                placeholder="Search invoice number or customer..."
+                className={cn(
+                  'w-full h-8 rounded-lg border border-input bg-transparent pl-9 pr-3 text-sm',
+                  'placeholder:text-muted-foreground/50',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:border-ring/40',
+                  'transition-colors',
+                )}
               />
-              <span className="text-xs text-muted-foreground">to</span>
-              <DatePicker
-                value={customTo}
-                onChange={setCustomTo}
-                className="h-8 w-36 text-[13px] bg-muted/50 rounded-lg"
-              />
-              <Button size="sm" variant="outline" className="h-8 text-xs rounded-lg"
-                onClick={() => onDateRange('custom', customFrom, customTo)}>
-                Apply
-              </Button>
             </div>
-          )}
+
+            {/* Status Pills */}
+            <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+              {statusOptions.map(st => {
+                const isActive = filters.status === st.value
+                return (
+                  <button
+                    key={st.value}
+                    onClick={() => onStatusChange(st.value)}
+                    className={cn(
+                      'shrink-0 px-2.5 h-7 rounded-full text-xs font-medium border transition-all duration-150 whitespace-nowrap',
+                      isActive
+                        ? 'bg-foreground text-background border-foreground shadow-sm'
+                        : 'bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground',
+                    )}
+                  >
+                    {st.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="h-px w-full bg-border/40" />
+
+          {/* Row 2: Date Filters */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+              {[
+                { value: 'all', label: 'All time' },
+                { value: 'today', label: 'Today' },
+                { value: 'week', label: 'This Week' },
+                { value: 'month', label: 'This Month' },
+                { value: 'custom', label: 'Custom range' },
+              ].map(dt => {
+                const isActive = filters.dateRange === dt.value
+                return (
+                  <button
+                    key={dt.value}
+                    onClick={() => handleDateFilter(dt.value as SaleFilters['dateRange'])}
+                    className={cn(
+                      'shrink-0 px-2.5 h-7 rounded-full text-xs font-medium border transition-all duration-150 whitespace-nowrap',
+                      isActive
+                        ? 'bg-foreground text-background border-foreground shadow-sm'
+                        : 'bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground',
+                    )}
+                  >
+                    {dt.label}
+                  </button>
+                )
+              })}
+            </div>
+
+            {showCustom && (
+              <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+                <DatePicker
+                  value={customFrom}
+                  onChange={setCustomFrom}
+                  className="h-8 w-36 text-[13px] bg-muted/50 rounded-lg"
+                />
+                <span className="text-xs text-muted-foreground">to</span>
+                <DatePicker
+                  value={customTo}
+                  onChange={setCustomTo}
+                  className="h-8 w-36 text-[13px] bg-muted/50 rounded-lg"
+                />
+                <Button size="sm" variant="outline" className="h-8 text-xs rounded-lg"
+                  onClick={() => onDateRange('custom', customFrom, customTo)}>
+                  Apply
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* ── Empty state ───────────────────────────────────────────────────────── */}
+        {/* ── Table Viewport ────────────────────────────────────────────────────── */}
         {isEmpty ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center text-muted-foreground">
+          <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center text-muted-foreground py-20">
             <ShoppingBag className="size-8 opacity-20" />
             <p className="text-sm font-medium text-foreground">
               {filters.search
@@ -326,124 +315,145 @@ export function SalesTable({
           </div>
         ) : (
           <div className="min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain [scrollbar-width:thin]">
-            <Table className="w-full min-w-[980px] border-separate border-spacing-0">
-              <TableHeader className="sticky top-0 z-10 bg-card">
-                <TableRow className="border-b border-border/60 hover:bg-transparent">
-                  {/* Customer */}
-                  <TableHead className="pl-4 pr-3 text-xs font-medium text-muted-foreground">
-                    Customer
-                  </TableHead>
-                  {/* Bill No. */}
-                  <TableHead className="px-3 text-xs font-medium text-muted-foreground">
-                    Bill No.
-                  </TableHead>
-                  {/* Date */}
-                  <SortableHeader label="Date"        field="sale_date"   current={sortField} dir={sortDir} onSort={onSort} />
-                  {/* Items */}
-                  <TableHead className="px-3 text-xs font-medium text-muted-foreground text-right">
+            <Table className="w-full min-w-[900px] border-separate border-spacing-0 text-sm">
+              <TableHeader className="bg-card shrink-0 sticky top-0 z-10">
+                <TableRow className="hover:bg-transparent">
+                  <SortableHeader
+                    label="Invoice Details"
+                    field="sale_date"
+                    current={sortField}
+                    dir={sortDir}
+                    onSort={onSort}
+                    className="pl-4 py-2 text-left font-semibold text-xs text-muted-foreground border-b border-border/40"
+                  />
+                  <TableHead className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card">
                     Items
                   </TableHead>
-                  {/* Grand Total */}
-                  <SortableHeader label="Grand Total" field="grand_total" current={sortField} dir={sortDir} className="text-right" onSort={onSort} />
-                  {/* Paid */}
-                  <TableHead className="px-3 text-xs font-medium text-muted-foreground text-right">
+                  <SortableHeader
+                    label="Grand Total"
+                    field="grand_total"
+                    current={sortField}
+                    dir={sortDir}
+                    onSort={onSort}
+                    className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40"
+                  />
+                  <TableHead className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card">
                     Paid
                   </TableHead>
-                  {/* Balance */}
-                  <SortableHeader label="Balance"     field="balance_due" current={sortField} dir={sortDir} className="text-right" onSort={onSort} />
-                  {/* Status */}
-                  <TableHead className="px-3 text-xs font-medium text-muted-foreground text-right">
+                  <SortableHeader
+                    label="Balance"
+                    field="balance_due"
+                    current={sortField}
+                    dir={sortDir}
+                    onSort={onSort}
+                    className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40"
+                  />
+                  <TableHead className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card">
                     Status
                   </TableHead>
-                  {/* Actions */}
-                  <TableHead className="w-10 px-3 pr-4" />
+                  <TableHead className="w-10 pl-3 pr-4 py-2 text-right border-b border-border/40 bg-card" />
                 </TableRow>
               </TableHeader>
-
               <TableBody>
-                {loading
-                  ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
-                  : sales.map(s => {
+                {loading ? (
+                  Array.from({ length: 7 }).map((_, i) => (
+                    <TableRow key={i} className="hover:bg-transparent border-b">
+                      <TableCell className="py-3 pl-4">
+                        <div className="flex items-center gap-3">
+                          <Skeleton className="size-10 rounded-lg shrink-0" />
+                          <div className="flex flex-col gap-1.5">
+                            <Skeleton className="h-4 w-36" />
+                            <div className="flex items-center gap-2">
+                              <Skeleton className="h-3 w-16" />
+                              <Skeleton className="h-3 w-12" />
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-3 py-3 text-right"><Skeleton className="ml-auto h-5 w-14 rounded-md" /></TableCell>
+                      <TableCell className="px-3 py-3 text-right"><Skeleton className="ml-auto h-4 w-20" /></TableCell>
+                      <TableCell className="px-3 py-3 text-right"><Skeleton className="ml-auto h-4 w-16" /></TableCell>
+                      <TableCell className="px-3 py-3 text-right"><Skeleton className="ml-auto h-4 w-16" /></TableCell>
+                      <TableCell className="px-3 py-3 text-right"><Skeleton className="ml-auto h-5 w-16 rounded-full" /></TableCell>
+                      <TableCell className="py-3 pl-3 pr-4"><Skeleton className="size-7 rounded-md ml-auto" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  sales.map(s => {
                     const canDelete = s.sale_date === today() && s.amount_paid === 0
                     return (
                       <TableRow
                         key={s.id}
-                        className="group cursor-pointer border-b border-border/40 transition-colors hover:bg-muted/40"
+                        className="group cursor-pointer border-b transition-colors hover:bg-muted/40"
                         onClick={() => onViewInvoice(s)}
                       >
-                        {/* Customer */}
-                        <TableCell className="py-3 pl-4 pr-3 align-middle">
-                          <div className="flex items-center gap-2.5">
-                            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-bold text-muted-foreground">
+                        {/* Col 1: Invoice Details */}
+                        <TableCell className="py-3 pl-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-bold text-muted-foreground">
                               {s.customer_name === 'Walk-in'
                                 ? '?'
                                 : s.customer_name.charAt(0).toUpperCase()}
                             </div>
-                            <div className="min-w-0">
-                              <p className="max-w-[160px] truncate text-sm font-medium text-foreground leading-snug">
+                            <div className="flex flex-col gap-0.5">
+                              <span className="font-semibold text-foreground text-sm leading-tight">
                                 {s.customer_name}
-                              </p>
-                              <p className="text-[11px] text-muted-foreground">
-                                {fmtDate(s.sale_date)}
-                              </p>
+                              </span>
+                              <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground leading-none">
+                                <span className="font-mono bg-muted/60 px-1 rounded font-medium">
+                                  {s.invoice_number}
+                                </span>
+                                <span className="text-muted-foreground/30">•</span>
+                                <span>
+                                  {fmtDate(s.sale_date)}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </TableCell>
 
-                        {/* Bill No. */}
-                        <TableCell className="px-3 py-3 align-middle">
-                          <span className="font-mono text-xs font-semibold text-foreground">
-                            {s.invoice_number}
-                          </span>
-                        </TableCell>
-
-                        {/* Date */}
-                        <TableCell className="px-3 py-3 align-middle text-sm text-muted-foreground whitespace-nowrap">
-                          {fmtDate(s.sale_date)}
-                        </TableCell>
-
-                        {/* Items */}
+                        {/* Col 2: Items count */}
                         <TableCell className="px-3 py-3 text-right align-middle">
                           <Badge variant="outline" className="font-medium tabular-nums text-xs">
-                            {s.item_count ?? 0}
+                            {s.item_count ?? 0} {(s.item_count ?? 0) === 1 ? 'item' : 'items'}
                           </Badge>
                         </TableCell>
 
-                        {/* Grand Total */}
+                        {/* Col 3: Grand Total */}
                         <TableCell className="px-3 py-3 text-right align-middle">
                           <span className="text-sm tabular-nums font-semibold text-foreground">
                             {rupee(s.grand_total)}
                           </span>
                         </TableCell>
 
-                        {/* Paid */}
+                        {/* Col 4: Paid */}
                         <TableCell className="px-3 py-3 text-right align-middle">
                           <span className="text-sm tabular-nums text-emerald-600 dark:text-emerald-400 font-medium">
                             {rupee2(s.amount_paid)}
                           </span>
                         </TableCell>
 
-                        {/* Balance */}
+                        {/* Col 5: Balance */}
                         <TableCell className="px-3 py-3 text-right align-middle">
                           {s.balance_due > 0 ? (
                             <span className="text-sm tabular-nums font-semibold text-amber-600 dark:text-amber-400">
                               {rupee2(s.balance_due)}
                             </span>
                           ) : (
-                            <span className="text-sm text-muted-foreground/40">—</span>
+                            <span className="text-sm text-muted-foreground/30">—</span>
                           )}
                         </TableCell>
 
-                        {/* Status */}
+                        {/* Col 6: Status */}
                         <TableCell className="px-3 py-3 text-right align-middle">
                           <StatusBadge status={s.payment_status} />
                         </TableCell>
 
-                        {/* Actions */}
-                        <TableCell className="w-10 py-3 pl-3 pr-4 align-middle" onClick={e => e.stopPropagation()}>
+                        {/* Col 7: Actions */}
+                        <TableCell className="w-10 py-3 pl-3 pr-4 align-middle text-right" onClick={e => e.stopPropagation()}>
                           <DropdownMenu>
                             <DropdownMenuTrigger render={
-                              <Button variant="ghost" size="icon-sm" className="size-7 opacity-0 transition-opacity group-hover:opacity-100">
+                              <Button variant="ghost" size="icon-sm" className="size-7 opacity-0 transition-opacity group-hover:opacity-100 ml-auto">
                                 <MoreHorizontal className="size-4" />
                               </Button>
                             } />
@@ -471,7 +481,7 @@ export function SalesTable({
                       </TableRow>
                     )
                   })
-                }
+                )}
               </TableBody>
             </Table>
           </div>
