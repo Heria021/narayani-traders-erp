@@ -101,7 +101,7 @@ const portfolioNavMain = [
     icon: <UsersIcon />,
   },
   {
-    title: "Website Curation",
+    title: "Showcase",
     url: "/portfolio/website",
     icon: <ImageIcon />,
   },

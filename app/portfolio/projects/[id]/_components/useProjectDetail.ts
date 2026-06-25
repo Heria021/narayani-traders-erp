@@ -370,11 +370,11 @@ export function useProjectDetail(projectId: string) {
         }
       }
 
-      toast.success('Public website curation settings saved')
+      toast.success('Public showcase settings saved')
       await fetchData()
       return true
     } catch (err: any) {
-      toast.error(err.message || 'Failed to save curation settings')
+      toast.error(err.message || 'Failed to save showcase settings')
       return false
     }
   }

@@ -199,7 +199,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 className="h-8 px-3 text-xs font-medium gap-1.5"
               >
                 <Globe className="size-3.5 text-muted-foreground" />
-                Website
+                Showcase
               </Button>
             </div>
           </div>

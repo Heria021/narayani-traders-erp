@@ -90,7 +90,7 @@ export function WebsiteConfigSheet({
               <Globe className="size-4 text-indigo-500" />
             </div>
             <div>
-              <SheetTitle className="text-base font-bold leading-tight">Public Website Config</SheetTitle>
+              <SheetTitle className="text-base font-bold leading-tight">Public Showcase Config</SheetTitle>
               <SheetDescription className="text-xs">Control how this project appears on the portfolio website</SheetDescription>
             </div>
           </div>
