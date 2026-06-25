@@ -108,13 +108,13 @@ export function StockDetailDrawer({
       case 'purchase':
         return (
           <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-0 text-[10px] font-medium flex items-center gap-1 w-fit">
-            <ArrowUpRight className="size-3" /> Purchase
+            <ArrowUpRight className="size-3" /> PR
           </Badge>
         )
       case 'sale':
         return (
           <Badge className="bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-400 border-0 text-[10px] font-medium flex items-center gap-1 w-fit">
-            <ArrowDownLeft className="size-3" /> Sale
+            <ArrowDownLeft className="size-3" /> MR
           </Badge>
         )
       case 'damage':
@@ -163,10 +163,10 @@ export function StockDetailDrawer({
           </div>
         </SheetHeader>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto [scrollbar-width:thin] bg-background">
+        {/* Content - Non-scrollable outer container to support full-height nested scroll */}
+        <div className="flex-1 flex flex-col overflow-hidden bg-background">
           {loading || !item ? (
-            <div className="px-8 py-6 space-y-6">
+            <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6 [scrollbar-width:thin]">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {[1, 2, 3, 4].map(i => (
                   <Skeleton key={i} className="h-20 w-full rounded-lg" />
@@ -180,9 +180,9 @@ export function StockDetailDrawer({
               </div>
             </div>
           ) : (
-            <div className="px-8 py-6 space-y-6">
-              {/* Product Stock Summary Cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="flex-1 flex flex-col overflow-hidden px-8 py-6 space-y-6">
+              {/* Product Stock Summary Cards (shrink-0) */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 shrink-0">
                 <div className="rounded-lg border bg-muted/20 p-4 space-y-1">
                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Current Stock</span>
                   <div className="flex flex-col">
@@ -198,7 +198,7 @@ export function StockDetailDrawer({
                 </div>
 
                 <div className="rounded-lg border bg-muted/20 p-4 space-y-1">
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Unit Cost</span>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">PR (Purchase Rate)</span>
                   <div className="flex flex-col">
                     <span className="text-lg font-bold tabular-nums text-foreground">
                       {rupee(item.unit_cost)}
@@ -224,7 +224,7 @@ export function StockDetailDrawer({
                 </div>
 
                 <div className="rounded-lg border bg-muted/20 p-4 space-y-1">
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Selling Price</span>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">MR (Market Rate)</span>
                   <div className="flex flex-col">
                     <span className="text-lg font-bold tabular-nums text-foreground">
                       {rupee(item.selling_price)}
@@ -238,9 +238,9 @@ export function StockDetailDrawer({
                 </div>
               </div>
 
-              {/* Movement History Section */}
-              <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              {/* Movement History Section (flex-1 and overflow-hidden to stretch and hold table) */}
+              <div className="flex-1 min-h-0 flex flex-col overflow-hidden space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
                   <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Stock Movement History</h3>
                   
                   {/* Movement Tabs */}
@@ -259,7 +259,7 @@ export function StockDetailDrawer({
                       onClick={() => setActiveTab('purchase')}
                       className="h-7 text-[11px] px-2.5 rounded-md font-medium"
                     >
-                      Purchases
+                      PR (Purchases)
                     </Button>
                     <Button
                       variant={activeTab === 'sale' ? 'secondary' : 'ghost'}
@@ -267,7 +267,7 @@ export function StockDetailDrawer({
                       onClick={() => setActiveTab('sale')}
                       className="h-7 text-[11px] px-2.5 rounded-md font-medium"
                     >
-                      Sales
+                      MR (Sales)
                     </Button>
                     <Button
                       variant={activeTab === 'adjustment' ? 'secondary' : 'ghost'}
@@ -288,9 +288,10 @@ export function StockDetailDrawer({
                   </div>
                 </div>
 
-                <div className="border rounded-lg overflow-hidden bg-card">
-                  <Table>
-                    <TableHeader className="bg-muted/40">
+                {/* Scrollable Table Viewport */}
+                <div className="flex-1 min-h-0 overflow-auto border rounded-lg bg-card [scrollbar-width:thin]">
+                  <Table className="relative w-full">
+                    <TableHeader className="bg-muted/40 sticky top-0 z-10 backdrop-blur-xs">
                       <TableRow>
                         <TableHead className="pl-4 py-2">Date & Time</TableHead>
                         <TableHead className="py-2">Type</TableHead>
@@ -372,3 +373,4 @@ export function StockDetailDrawer({
     </Sheet>
   )
 }
+
