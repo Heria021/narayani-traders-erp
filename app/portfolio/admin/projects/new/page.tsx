@@ -97,6 +97,17 @@ export default function NewProjectPage() {
   const [prodCost,      setProdCost]      = useState('')
   const [addingProduct, setAddingProduct] = useState(false)
 
+  // ── Auto-select client if ID is passed in the URL search params ──
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const clientParam = params.get('clientId')
+      if (clientParam) {
+        setClientId(clientParam)
+      }
+    }
+  }, [])
+
   // ── Auto-calc default negotiated fee based on SQFT rates ──
   useEffect(() => {
     const area = Number(areaSqft) || 0
@@ -230,17 +241,6 @@ export default function NewProjectPage() {
       
       {/* ── Header ── */}
       <div className="flex flex-col gap-2 shrink-0 border-b pb-4">
-        <div>
-          <Button
-            onClick={() => router.push('/portfolio/admin/projects')}
-            variant="ghost"
-            size="sm"
-            className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground gap-1 -ml-2"
-          >
-            <ArrowLeft className="size-3.5" />
-            Back to Dashboard
-          </Button>
-        </div>
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground flex items-center gap-2">
             Create Studio Project
@@ -252,7 +252,7 @@ export default function NewProjectPage() {
       </div>
 
       {/* ── Main Form Layout ── */}
-      <form onSubmit={handleProjectSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-6xl mt-2">
+      <form onSubmit={handleProjectSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full mt-2">
         
         {/* Left Columns: Inputs */}
         <div className="lg:col-span-2 space-y-6">

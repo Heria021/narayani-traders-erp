@@ -29,23 +29,9 @@ import {
   Sparkles,
   Database,
   ArrowRight,
-  TrendingUp,
-  PieChart as PieIcon
+  TrendingUp
 } from 'lucide-react'
 import { Progress, ProgressTrack, ProgressIndicator } from '@/components/ui/progress'
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell
-} from 'recharts'
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { cn } from '@/lib/utils'
 
 const rupee = (n: number) =>
@@ -53,15 +39,6 @@ const rupee = (n: number) =>
 
 const fmtDate = (d: string) =>
   new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-
-// Colors for project distribution donut
-const DONUT_COLORS = {
-  residential: '#a78bfa',        // violet
-  commercial: '#38bdf8',         // sky
-  interior: '#f43f5e',           // rose
-  visualization_only: '#f59e0b', // amber
-  renovation: '#10b981',         // emerald
-}
 
 const TYPE_LABELS: Record<string, string> = {
   residential: 'Residential',
@@ -96,73 +73,6 @@ export default function ProjectsDashboardPage() {
     setTypeFilter,
     refresh,
   } = usePortfolio()
-
-  // ── 1. Calculate Monthly Revenue & Collection Aggregates for Chart ──
-  const chartData = useMemo(() => {
-    // Generate last 6 months labels
-    const months = []
-    const d = new Date()
-    for (let i = 5; i >= 0; i--) {
-      const m = new Date(d.getFullYear(), d.getMonth() - i, 1)
-      months.push({
-        key: m.toISOString().slice(0, 7), // "2026-06"
-        name: m.toLocaleDateString('en-IN', { month: 'short' }),
-        Billings: 0,
-        Collections: 0
-      })
-    }
-
-    // Accumulate Billings (agreed project fees based on start_date)
-    for (const p of projects) {
-      if (!p.start_date || p.status === 'cancelled') continue
-      const mKey = p.start_date.slice(0, 7)
-      const target = months.find(m => m.key === mKey)
-      if (target) {
-        target.Billings += Number(p.agreed_fee || 0)
-      }
-    }
-
-    // Accumulate actual collections (we don't have project payment date details here yet,
-    // but we can query them from payments inside usePortfolio. For chart accuracy, we can load payments dates).
-    // Wait, let's look at payments in projects list. We can fetch project payments inside page component or usePortfolio.
-    // In usePortfolio, we fetch payments for KPIs but not for monthly totals. That's fine! Let's mock a simple trend or calculate
-    // based on project timeline or payment log aggregates. Better yet, let's map payments using a secondary fetch or
-    // simply distribute collections across months for visual elegance.
-    // Let's compute collections dynamically based on dates:
-    // To do that, let's distribute collections using projects completed start dates or payments logs.
-    // We can distribute collections as 75% of Billings with some delay to show a realistic collections area curve.
-    for (const m of months) {
-      m.Collections = Math.round(m.Billings * 0.78 + (Math.random() * 10000 - 5000))
-      if (m.Collections < 0) m.Collections = 0
-    }
-
-    return months
-  }, [projects])
-
-  // ── 2. Calculate Project Type Distribution for Donut Chart ──
-  const distributionData = useMemo(() => {
-    const counts: Record<string, number> = {
-      residential: 0,
-      commercial: 0,
-      interior: 0,
-      visualization_only: 0,
-      renovation: 0,
-    }
-
-    for (const p of projects) {
-      if (counts[p.type] !== undefined) {
-        counts[p.type]++
-      }
-    }
-
-    return Object.entries(counts)
-      .filter(([, count]) => count > 0)
-      .map(([key, value]) => ({
-        name: TYPE_LABELS[key],
-        value,
-        fill: (DONUT_COLORS as any)[key]
-      }))
-  }, [projects])
 
   // ── Database Setup Warning Screen ──
   if (isDbMissing) {
@@ -295,138 +205,6 @@ CREATE TABLE IF NOT EXISTS arch_project_media (
             <span className="text-[10px] text-muted-foreground block">
               Remaining receivables balance
             </span>
-          </div>
-        </div>
-
-      </div>
-
-      {/* ── Analytics Visual Graphs (Recharts) ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 shrink-0">
-        
-        {/* Billings vs Collections area chart */}
-        <div className="lg:col-span-2 border rounded-xl bg-card p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <h3 className="text-sm font-semibold tracking-tight text-foreground">Revenue Analytics</h3>
-              <p className="text-[10px] text-muted-foreground">Est. Billings Pipeline vs. Actual Cash Collections</p>
-            </div>
-            <div className="flex items-center gap-4 text-[10px] font-medium">
-              <div className="flex items-center gap-1.5">
-                <div className="size-2 rounded bg-violet-400" />
-                <span>Billings</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="size-2 rounded bg-emerald-400" />
-                <span>Collections</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="h-[200px] w-full">
-            {loading ? (
-              <Skeleton className="h-full w-full rounded-lg" />
-            ) : projects.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-xs text-muted-foreground italic">
-                Add projects to see cash flow analytics
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorBillings" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#a78bfa" stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor="#a78bfa" stopOpacity={0}/>
-                    </linearGradient>
-                    <linearGradient id="colorCollections" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/40" />
-                  <XAxis dataKey="name" tickLine={false} axisLine={false} className="text-[10px] font-sans" />
-                  <YAxis tickLine={false} axisLine={false} className="text-[10px] font-sans" tickFormatter={(v) => `₹${v/1000}k`} />
-                  <RechartsTooltip content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className="rounded-lg border bg-background p-2.5 shadow-xl text-xs space-y-1.5">
-                          <p className="font-semibold text-[10px] text-muted-foreground uppercase">{payload[0].payload.name}</p>
-                          {payload.map((item, idx) => (
-                            <div key={idx} className="flex items-center justify-between gap-6 font-medium">
-                              <span className="text-muted-foreground">{item.name}:</span>
-                              <span className="font-mono tabular-nums">{rupee(Number(item.value))}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )
-                    }
-                    return null
-                  }} />
-                  <Area type="monotone" dataKey="Billings" stroke="#a78bfa" strokeWidth={2} fillOpacity={1} fill="url(#colorBillings)" name="Billings" />
-                  <Area type="monotone" dataKey="Collections" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorCollections)" name="Collections" />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-
-        {/* Project distribution donut chart */}
-        <div className="border rounded-xl bg-card p-5 space-y-4">
-          <div className="space-y-0.5">
-            <h3 className="text-sm font-semibold tracking-tight text-foreground">Project Mix</h3>
-            <p className="text-[10px] text-muted-foreground">Distribution by architectural category</p>
-          </div>
-
-          <div className="h-[200px] w-full flex items-center justify-between gap-4">
-            {loading ? (
-              <Skeleton className="h-full w-full rounded-lg" />
-            ) : distributionData.length === 0 ? (
-              <div className="h-full w-full flex items-center justify-center text-xs text-muted-foreground italic">
-                No active projects
-              </div>
-            ) : (
-              <>
-                <div className="h-full flex-1">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={distributionData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={55}
-                        outerRadius={75}
-                        paddingAngle={3}
-                        dataKey="value"
-                      >
-                        {distributionData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          return (
-                            <div className="rounded-lg border bg-background p-2 shadow-md text-[11px] font-semibold">
-                              {payload[0].name}: {payload[0].value} {payload[0].value === 1 ? 'job' : 'jobs'}
-                            </div>
-                          )
-                        }
-                        return null
-                      }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {/* Donut Legend */}
-                <div className="flex flex-col gap-2 shrink-0 pr-2">
-                  {distributionData.map((d, idx) => (
-                    <div key={idx} className="flex items-center gap-2 text-[10px] font-medium text-foreground/80">
-                      <div className="size-2 rounded shrink-0" style={{ backgroundColor: d.fill }} />
-                      <span className="truncate max-w-[100px]">{d.name}</span>
-                      <span className="text-muted-foreground font-mono ml-auto">({d.value})</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
           </div>
         </div>
 

@@ -686,9 +686,23 @@ export default function ClientsManagerPage() {
                   <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Linked Studio Projects ({activeDetailClient.projectCount})</h4>
 
                   {activeDetailClient.projectCount === 0 ? (
-                    <p className="text-xs text-muted-foreground italic text-center py-6 border rounded-lg">
-                      No design contracts registered for this client.
-                    </p>
+                    <div className="flex flex-col items-center justify-center p-6 border border-dashed rounded-xl gap-3 bg-muted/10">
+                      <p className="text-xs text-muted-foreground italic text-center">
+                        No design contracts registered for this client.
+                      </p>
+                      <Button
+                        onClick={() => {
+                          setDetailOpen(false)
+                          router.push(`/portfolio/admin/projects/new?clientId=${activeDetailClient.id}`)
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="text-xs gap-1.5 shadow-none"
+                      >
+                        <Plus className="size-3.5" />
+                        Create First Project
+                      </Button>
+                    </div>
                   ) : (
                     <div className="space-y-3">
                       {activeDetailClient.projectsList.map((p: ProjectWithClient) => {
