@@ -21,7 +21,9 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetDescription,
 } from '@/components/ui/sheet'
+import { Separator } from '@/components/ui/separator'
 import {
   Search,
   Plus,
@@ -433,116 +435,166 @@ export default function ClientsManagerPage() {
         )}
       </div>
 
-      {/* ── Drawer 1: Add Client Sheet ── */}
       <Sheet open={addOpen} onOpenChange={setAddOpen}>
         <SheetContent
           side="right"
           className="w-full sm:max-w-none lg:w-[500px] lg:max-w-[500px] h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)] m-4 rounded-xl border flex flex-col p-0 overflow-hidden shadow-xl bg-card"
         >
-          <SheetHeader className="px-6 py-5 border-b shrink-0 bg-muted/20">
-            <SheetTitle className="flex items-center gap-1.5 text-base font-bold">
-              <Users className="size-4.5 text-violet-500" />
-              Register New Client
-            </SheetTitle>
+          <SheetHeader className="px-8 py-5 border-b border-border/60 shrink-0">
+            <div className="flex flex-col gap-1">
+              <SheetTitle className="text-lg">Add Client</SheetTitle>
+              <SheetDescription>
+                Register a new client master account in your studio directory.
+              </SheetDescription>
+            </div>
           </SheetHeader>
           
-          <form onSubmit={handleAddSubmit} className="flex-1 flex flex-col min-h-0">
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 [scrollbar-width:thin]">
-              <Field>
-                <Label required>Client Full Name</Label>
-                <Input
-                  placeholder="e.g. Narendra Modi"
-                  value={cName}
-                  onChange={(e) => setCName(e.target.value)}
-                  className="rounded-lg shadow-none"
-                  required
-                />
-              </Field>
+          <form onSubmit={handleAddSubmit} className="flex-1 overflow-y-auto">
+            <div className="flex flex-col gap-6 px-8 py-4">
 
-              <div className="grid grid-cols-2 gap-4">
-                <Field>
-                  <Label required>Phone Number</Label>
-                  <Input
-                    placeholder="e.g. 98765 43210"
-                    value={cPhone}
-                    onChange={(e) => setCPhone(e.target.value)}
-                    className="rounded-lg shadow-none"
-                    required
-                  />
-                </Field>
-                <Field>
-                  <Label>GSTIN</Label>
-                  <Input
-                    placeholder="e.g. 08AAAAA1111A1Z1"
-                    value={cGstin}
-                    onChange={(e) => setCGstin(e.target.value)}
-                    className="rounded-lg shadow-none"
-                  />
-                </Field>
+              {/* Basic Info Section */}
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <h3 className="text-sm font-semibold text-foreground">Basic Info</h3>
+                  <p className="text-xs text-muted-foreground">General details and contact channels.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Field>
+                    <Label required>Client Full Name</Label>
+                    <Input
+                      placeholder="e.g. Narendra Modi"
+                      value={cName}
+                      onChange={(e) => setCName(e.target.value)}
+                      className="rounded-lg shadow-none"
+                      required
+                    />
+                  </Field>
+
+                  <Field>
+                    <Label required>Phone Number</Label>
+                    <Input
+                      placeholder="e.g. 9876543210"
+                      value={cPhone}
+                      onChange={(e) => setCPhone(e.target.value)}
+                      className="rounded-lg shadow-none"
+                      maxLength={10}
+                      required
+                    />
+                  </Field>
+
+                  <Field>
+                    <Label>Email Address</Label>
+                    <Input
+                      placeholder="e.g. name@clientmail.com"
+                      value={cEmail}
+                      onChange={(e) => setCEmail(e.target.value)}
+                      type="email"
+                      className="rounded-lg shadow-none"
+                    />
+                  </Field>
+
+                  <Field>
+                    <Label>GSTIN</Label>
+                    <Input
+                      placeholder="e.g. 08AAAAA1111A1Z1"
+                      value={cGstin}
+                      onChange={(e) => setCGstin(e.target.value)}
+                      className="rounded-lg shadow-none font-mono uppercase"
+                      maxLength={15}
+                    />
+                  </Field>
+                </div>
               </div>
 
-              <Field>
-                <Label>Email Address</Label>
-                <Input
-                  placeholder="e.g. name@clientmail.com"
-                  value={cEmail}
-                  onChange={(e) => setCEmail(e.target.value)}
-                  type="email"
-                  className="rounded-lg shadow-none"
-                />
-              </Field>
+              <Separator />
 
-              <Field>
-                <Label>Billing / Site Address</Label>
-                <Input
-                  placeholder="Street details, layout, area"
-                  value={cAddress}
-                  onChange={(e) => setCAddress(e.target.value)}
-                  className="rounded-lg shadow-none"
-                />
-              </Field>
+              {/* Address & Location Section */}
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <h3 className="text-sm font-semibold text-foreground">Address & Location</h3>
+                  <p className="text-xs text-muted-foreground">Billing address and project site location.</p>
+                </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <Field>
-                  <Label>City</Label>
-                  <Input
-                    placeholder="e.g. Jaipur"
-                    value={cCity}
-                    onChange={(e) => setCCity(e.target.value)}
-                    className="rounded-lg shadow-none"
-                  />
-                </Field>
-                <Field>
-                  <Label>State</Label>
-                  <Input
-                    placeholder="e.g. Rajasthan"
-                    value={cState}
-                    onChange={(e) => setCState(e.target.value)}
-                    className="rounded-lg shadow-none"
-                  />
-                </Field>
+                <div className="grid grid-cols-1 gap-4">
+                  <Field>
+                    <Label>Billing / Site Address</Label>
+                    <Input
+                      placeholder="Street details, layout, area"
+                      value={cAddress}
+                      onChange={(e) => setCAddress(e.target.value)}
+                      className="rounded-lg shadow-none"
+                    />
+                  </Field>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Field>
+                    <Label>City</Label>
+                    <Input
+                      placeholder="e.g. Jaipur"
+                      value={cCity}
+                      onChange={(e) => setCCity(e.target.value)}
+                      className="rounded-lg shadow-none"
+                    />
+                  </Field>
+
+                  <Field>
+                    <Label>State</Label>
+                    <Input
+                      placeholder="e.g. Rajasthan"
+                      value={cState}
+                      onChange={(e) => setCState(e.target.value)}
+                      className="rounded-lg shadow-none"
+                    />
+                  </Field>
+                </div>
               </div>
 
-              <Field>
-                <Label>Client Preferences & Referral Source</Label>
-                <Textarea
-                  placeholder="Mention referral sources, design style notes, personal choices..."
-                  value={cNotes}
-                  onChange={(e) => setCNotes(e.target.value)}
-                  className="rounded-lg min-h-[90px] [scrollbar-width:thin]"
-                />
-              </Field>
-            </div>
+              <Separator />
 
-            <div className="border-t p-4 shrink-0 bg-muted/10 flex justify-end gap-3">
-              <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={submitting}>
-                {submitting ? 'Registering...' : 'Register Client'}
-              </Button>
+              {/* Notes Section */}
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <h3 className="text-sm font-semibold text-foreground">Preferences & Referral</h3>
+                  <p className="text-xs text-muted-foreground">Style preferences and referral notes.</p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
+                  <Field>
+                    <Label>Notes & Specifications</Label>
+                    <Textarea
+                      placeholder="Mention referral sources, design style notes, personal choices..."
+                      value={cNotes}
+                      onChange={(e) => setCNotes(e.target.value)}
+                      className="rounded-lg min-h-[90px] [scrollbar-width:thin]"
+                    />
+                  </Field>
+                </div>
+              </div>
+
             </div>
           </form>
+
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-2 px-8 py-4 border-t border-border/60 shrink-0 bg-muted/10">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setAddOpen(false)}
+              disabled={submitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={submitting}
+              onClick={handleAddSubmit}
+              className="bg-foreground text-background hover:bg-foreground/90 font-semibold"
+            >
+              {submitting ? 'Saving…' : 'Add Client'}
+            </Button>
+          </div>
         </SheetContent>
       </Sheet>
 
