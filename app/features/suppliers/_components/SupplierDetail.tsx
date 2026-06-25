@@ -14,9 +14,9 @@ import {
 } from '@/components/ui/dropdown-menu'
 import {
   Phone, Mail, MapPin, Building2,
-  Pencil, Trash2, MoreHorizontal,
+  Pencil, Trash2, MoreHorizontal, CreditCard,
 } from 'lucide-react'
-import type { SupplierWithStats, Purchase, SupplierProduct } from './types'
+import type { SupplierWithStats, Purchase, SupplierProduct, SupplierPayment } from './types'
 
 const rupee = (n: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(n)
@@ -28,14 +28,16 @@ interface Props {
   supplier:         SupplierWithStats | null
   purchases:        Purchase[]
   supplierProducts: SupplierProduct[]
+  payments:         SupplierPayment[]
   loading:          boolean
   onEdit:           () => void
   onDelete:         () => void
+  onRecordPayment:  () => void
   onViewPurchase:   (purchaseId: string) => void
 }
 
-export function SupplierDetail({ supplier, purchases, supplierProducts, loading, onEdit, onDelete, onViewPurchase }: Props) {
-  const [activeTab, setActiveTab] = useState<'purchases' | 'products'>('purchases')
+export function SupplierDetail({ supplier, purchases, supplierProducts, payments, loading, onEdit, onDelete, onRecordPayment, onViewPurchase }: Props) {
+  const [activeTab, setActiveTab] = useState<'purchases' | 'products' | 'payments'>('purchases')
 
   if (!supplier) {
     return (
@@ -87,6 +89,9 @@ export function SupplierDetail({ supplier, purchases, supplierProducts, loading,
 
           {/* Actions */}
           <div className="flex items-center gap-2 shrink-0">
+            <Button variant="outline" size="sm" onClick={onRecordPayment} className="h-9 px-4 text-sm font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300">
+              <CreditCard className="size-4 mr-2" /> Record Payment
+            </Button>
             <Button variant="outline" size="sm" onClick={onEdit} className="h-9 px-4 text-sm font-medium">
               <Pencil className="size-4 mr-2" /> Edit Profile
             </Button>
@@ -134,7 +139,7 @@ export function SupplierDetail({ supplier, purchases, supplierProducts, loading,
         ))}
       </div>
 
-      {/* ── Bottom Section: Purchases & Products Card ── */}
+      {/* ── Bottom Section: Purchases, Products & Payments Card ── */}
       <div className="flex-1 min-h-0 border rounded-xl bg-card flex flex-col overflow-hidden shadow-sm">
         {/* Custom Tab selectors */}
         <div className="flex flex-wrap items-center gap-2 border-b px-6 py-3 shrink-0 bg-muted/20">
@@ -152,6 +157,13 @@ export function SupplierDetail({ supplier, purchases, supplierProducts, loading,
           >
             Products ({supplierProducts.length})
           </Button>
+          <Button
+            variant={activeTab === 'payments' ? 'default' : 'ghost'}
+            onClick={() => setActiveTab('payments')}
+            className="h-8 px-3 text-xs font-medium shadow-none rounded-lg"
+          >
+            Payments ({payments.length})
+          </Button>
         </div>
 
         {/* Tables area with internal scrolling */}
@@ -164,6 +176,11 @@ export function SupplierDetail({ supplier, purchases, supplierProducts, loading,
           {activeTab === 'products' && (
             loading ? <TableSkeleton cols={3} /> : supplierProducts.length === 0 ? <EmptyState message="No products purchased from this supplier yet." /> : (
               <ProductsTable supplierProducts={supplierProducts} />
+            )
+          )}
+          {activeTab === 'payments' && (
+            loading ? <TableSkeleton cols={5} /> : payments.length === 0 ? <EmptyState message="No payments recorded for this supplier yet." /> : (
+              <PaymentsTable payments={payments} />
             )
           )}
         </div>
@@ -271,6 +288,57 @@ function ProductsTable({ supplierProducts }: { supplierProducts: SupplierProduct
             </TableCell>
             <TableCell className="py-3 px-3 text-left align-middle text-xs text-muted-foreground">
               {sp.last_purchased ? fmtDate(sp.last_purchased) : '—'}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  )
+}
+
+function PaymentsTable({ payments }: { payments: SupplierPayment[] }) {
+  return (
+    <Table className="w-full border-separate border-spacing-0 text-sm">
+      <TableHeader className="bg-card shrink-0 sticky top-0 z-10">
+        <TableRow className="hover:bg-transparent">
+          <TableHead className="pl-4 py-2 text-left font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Date</TableHead>
+          <TableHead className="px-3 py-2 text-left font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Method / Reference</TableHead>
+          <TableHead className="px-3 py-2 text-left font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Linked Purchase</TableHead>
+          <TableHead className="px-3 py-2 text-left font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Note</TableHead>
+          <TableHead className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10 pr-4">Amount</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {payments.map(p => (
+          <TableRow
+            key={p.id}
+            className="border-b border-border/40 hover:bg-muted/40 transition-colors"
+          >
+            <TableCell className="py-3 pl-4 text-xs text-muted-foreground align-middle">
+              {fmtDate(p.payment_date)}
+            </TableCell>
+            <TableCell className="py-3 px-3 align-middle text-xs">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-foreground capitalize font-medium">{p.payment_method.replace('_', ' ')}</span>
+                {p.reference_number && (
+                  <span className="text-[10px] text-muted-foreground font-mono">{p.reference_number}</span>
+                )}
+              </div>
+            </TableCell>
+            <TableCell className="py-3 px-3 text-xs align-middle font-medium">
+              {p.purchase_number ? (
+                <span className="font-mono bg-muted/60 px-1.5 py-0.5 rounded font-medium text-xs">
+                  {p.purchase_number}
+                </span>
+              ) : (
+                <span className="text-muted-foreground/40 text-xs">General Payment</span>
+              )}
+            </TableCell>
+            <TableCell className="py-3 px-3 text-xs align-middle text-muted-foreground">
+              {p.note || <span className="text-muted-foreground/30">—</span>}
+            </TableCell>
+            <TableCell className="py-3 px-3 text-right tabular-nums font-semibold text-xs align-middle text-foreground pr-4">
+              {rupee(p.amount)}
             </TableCell>
           </TableRow>
         ))}

@@ -10,6 +10,8 @@ import type {
   PurchaseItem,
   SupplierProduct,
   SupplierFormValues,
+  SupplierPayment,
+  SupplierPaymentFormValues,
 } from '../../_components/types'
 import type { PurchaseWithItems } from '../../../purchases/_components/types'
 
@@ -20,6 +22,7 @@ export function useSupplierDetail(id: string) {
   const [purchases,        setPurchases]        = useState<Purchase[]>([])
   const [purchaseItems,    setPurchaseItems]    = useState<PurchaseItem[]>([])
   const [supplierProducts, setSupplierProducts] = useState<SupplierProduct[]>([])
+  const [payments,         setPayments]         = useState<SupplierPayment[]>([])
   const [loading,          setLoading]          = useState(true)
   const [notFound,         setNotFound]         = useState(false)
 
@@ -44,7 +47,30 @@ export function useSupplierDetail(id: string) {
       return
     }
 
-    // 2. Aggregate purchases
+    // 2. Fetch payments
+    const { data: payRows } = await supabase
+      .from('supplier_payments')
+      .select('*, purchases(purchase_number)')
+      .eq('supplier_id', id)
+      .order('payment_date', { ascending: false })
+
+    const paymentsList = (payRows ?? []).map(p => ({
+      id: p.id,
+      supplier_id: p.supplier_id,
+      purchase_id: p.purchase_id,
+      amount: Number(p.amount),
+      payment_method: p.payment_method,
+      reference_number: p.reference_number,
+      payment_date: p.payment_date,
+      note: p.note,
+      created_at: p.created_at,
+      purchase_number: p.purchases?.purchase_number ?? null
+    })) as SupplierPayment[]
+
+    setPayments(paymentsList)
+    const totalPaid = paymentsList.reduce((sum, p) => sum + p.amount, 0)
+
+    // 3. Aggregate purchases
     const { data: purch } = await supabase
       .from('purchases')
       .select('*')
@@ -57,10 +83,10 @@ export function useSupplierDetail(id: string) {
     setSupplier({
       ...sup,
       total_purchased: totalPurchased,
-      amount_owed:     sup.opening_balance + totalPurchased,
+      amount_owed:     sup.opening_balance + totalPurchased - totalPaid,
     })
 
-    // 3. Purchase items
+    // 4. Purchase items
     const purchIds = purchList.map(p => p.id)
     let allItems: PurchaseItem[] = []
 
@@ -225,12 +251,43 @@ export function useSupplierDetail(id: string) {
     return true
   }, [supabase, id])
 
+  // ── record payment ──────────────────────────────────────────────────────────
+  const recordPayment = useCallback(async (values: SupplierPaymentFormValues): Promise<boolean> => {
+    const amountNum = Number(values.amount)
+    if (isNaN(amountNum) || amountNum <= 0) {
+      toast.error('Enter a valid payment amount')
+      return false
+    }
+
+    const { error } = await supabase
+      .from('supplier_payments')
+      .insert({
+        supplier_id: id,
+        purchase_id: values.purchase_id || null,
+        amount: amountNum,
+        payment_method: values.payment_method,
+        reference_number: values.reference_number.trim() || null,
+        payment_date: values.payment_date,
+        note: values.note.trim() || null,
+      })
+
+    if (error) {
+      toast.error(error.message)
+      return false
+    }
+
+    toast.success('Supplier payment recorded successfully')
+    await fetchAll()
+    return true
+  }, [supabase, id, fetchAll])
+
   return {
-    supplier, purchases, purchaseItems, supplierProducts,
+    supplier, purchases, purchaseItems, supplierProducts, payments,
     loading, notFound,
     selectedPurchase, purchaseLoading,
     fetchPurchaseDetail, setSelectedPurchase,
-    updateSupplier, deleteSupplier,
+    updateSupplier, deleteSupplier, recordPayment,
     refresh: fetchAll,
   }
 }
+

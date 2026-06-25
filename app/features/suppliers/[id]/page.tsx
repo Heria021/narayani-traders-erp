@@ -7,6 +7,7 @@ import { ArrowLeft } from 'lucide-react'
 import { useSupplierDetail } from './_components/useSupplierDetail'
 import { SupplierDetail } from '../_components/SupplierDetail'
 import { SupplierForm } from '../_components/SupplierForm'
+import { SupplierPaymentSheet } from '../_components/SupplierPaymentSheet'
 import type { SupplierFormValues } from '../_components/types'
 import { useBreadcrumb } from '@/components/app-shell'
 import { PurchaseDetail } from '../../purchases/_components/PurchaseDetail'
@@ -20,6 +21,7 @@ export default function SupplierDetailPage() {
     supplier,
     purchases,
     supplierProducts,
+    payments,
     loading,
     notFound,
     selectedPurchase,
@@ -28,9 +30,11 @@ export default function SupplierDetailPage() {
     setSelectedPurchase,
     updateSupplier,
     deleteSupplier,
+    recordPayment,
   } = useSupplierDetail(id)
 
   const [formOpen, setFormOpen] = useState(false)
+  const [paymentOpen, setPaymentOpen] = useState(false)
   const { setCustomTitle } = useBreadcrumb()
 
   // Set the custom breadcrumb title when the supplier data load is complete
@@ -72,9 +76,11 @@ export default function SupplierDetailPage() {
           supplier={supplier}
           purchases={purchases}
           supplierProducts={supplierProducts}
+          payments={payments}
           loading={loading}
           onEdit={() => setFormOpen(true)}
           onDelete={handleDelete}
+          onRecordPayment={() => setPaymentOpen(true)}
           onViewPurchase={fetchPurchaseDetail}
         />
       </div>
@@ -87,6 +93,15 @@ export default function SupplierDetailPage() {
         onSubmit={handleSubmit}
       />
 
+      {/* ── Supplier Payment Sheet ── */}
+      <SupplierPaymentSheet
+        open={paymentOpen}
+        supplier={supplier}
+        purchases={purchases}
+        onClose={() => setPaymentOpen(false)}
+        onSubmit={recordPayment}
+      />
+
       {/* ── Purchase Detail Sheet Drawer ── */}
       <PurchaseDetail
         open={!!selectedPurchase}
@@ -97,3 +112,4 @@ export default function SupplierDetailPage() {
     </div>
   )
 }
+

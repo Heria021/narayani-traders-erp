@@ -83,3 +83,26 @@ export const INDIAN_STATES = [
   'Uttar Pradesh','Uttarakhand','West Bengal',
   'Delhi','Jammu & Kashmir','Ladakh','Puducherry',
 ]
+
+export interface SupplierPayment {
+  id:               string
+  supplier_id:      string
+  purchase_id:      string | null
+  amount:           number
+  payment_method:   'cash' | 'upi' | 'card' | 'bank_transfer'
+  reference_number: string | null
+  payment_date:     string
+  note:             string | null
+  created_at:       string
+  purchase_number?: string | null // joined/linked purchase number
+}
+
+export interface SupplierPaymentFormValues {
+  amount:           string
+  payment_method:   'cash' | 'upi' | 'card' | 'bank_transfer'
+  reference_number: string
+  purchase_id:      string
+  payment_date:     string
+  note:             string
+}
+

@@ -536,3 +536,48 @@ grant execute on function increment_stock to authenticated;
 --   • Profile auto-created on auth sign-up
 --   • Owner profile seeded
 -- =============================================================================
+
+
+-- New Table Added
+
+-- =============================================================================
+-- SUPPLIER PAYMENTS
+-- Payments YOU make to suppliers — mirrors `payments` (customer side).
+-- Can be linked to a specific purchase, or recorded as a standalone advance.
+-- =============================================================================
+
+create table supplier_payments (
+  id               uuid           primary key default gen_random_uuid(),
+  supplier_id      uuid           not null references suppliers (id),
+  purchase_id      uuid           references purchases (id),   -- null = advance payment (no specific PO)
+
+  amount           numeric(12,2)  not null check (amount > 0),
+  payment_method   payment_method not null,
+  reference_number text,          -- UPI txn ID, cheque number, NEFT ref, etc.
+  payment_date     date           not null default current_date,
+  note             text,
+
+  created_at       timestamptz    not null default now()
+);
+
+comment on table  supplier_payments              is 'Payments made to suppliers (outgoing). Mirrors `payments` table.';
+comment on column supplier_payments.purchase_id  is 'Null for advance payments not yet applied to a specific purchase order.';
+
+
+-- ── Indexes ──────────────────────────────────────────────────────────────────
+create index idx_supplier_payments_supplier_id  on supplier_payments (supplier_id);
+create index idx_supplier_payments_purchase_id  on supplier_payments (purchase_id);
+create index idx_supplier_payments_payment_date on supplier_payments (payment_date desc);
+
+
+-- ── RLS ──────────────────────────────────────────────────────────────────────
+alter table supplier_payments enable row level security;
+
+create policy "owner_all" on supplier_payments
+  for all to authenticated
+  using (is_owner())
+  with check (is_owner());
+
+
+-- ── Data API grant (required since April 2026) ──────────────────────────────
+grant select, insert, update, delete on supplier_payments to authenticated;
