@@ -220,7 +220,6 @@ export function useProjects() {
             file_url: coverUrl,
             public_id: publicId,
             caption: 'Cover Image',
-            phase: 'after',
             sort_order: 0
           })
 
@@ -321,7 +320,6 @@ export function useProjects() {
               file_url: coverUrl,
               public_id: publicId,
               caption: 'Cover Image',
-              phase: 'after',
               sort_order: 0
             })
 

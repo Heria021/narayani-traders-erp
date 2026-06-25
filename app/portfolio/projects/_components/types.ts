@@ -26,7 +26,6 @@ export interface ProjectMedia {
   file_url: string
   public_id: string | null
   caption: string | null
-  phase: 'before' | 'during' | 'after' | null
   sort_order: number
   created_at: string
 }
