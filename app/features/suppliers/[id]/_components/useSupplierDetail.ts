@@ -13,6 +13,7 @@ import type {
   SupplierPayment,
   SupplierPaymentFormValues,
 } from '../../_components/types'
+import { mapBalanceRow, type SupplierBalanceRow } from '../../_components/balances'
 import type { PurchaseWithItems } from '../../../purchases/_components/types'
 
 export function useSupplierDetail(id: string) {
@@ -34,9 +35,9 @@ export function useSupplierDetail(id: string) {
   const fetchAll = useCallback(async () => {
     setLoading(true)
 
-    // 1. Supplier row
+    // 1. Supplier row + balances from view
     const { data: sup, error } = await supabase
-      .from('suppliers')
+      .from('supplier_balances')
       .select('*')
       .eq('id', id)
       .single()
@@ -46,6 +47,8 @@ export function useSupplierDetail(id: string) {
       setLoading(false)
       return
     }
+
+    setSupplier(mapBalanceRow(sup as SupplierBalanceRow))
 
     // 2. Fetch payments
     const { data: payRows } = await supabase
@@ -68,9 +71,8 @@ export function useSupplierDetail(id: string) {
     })) as SupplierPayment[]
 
     setPayments(paymentsList)
-    const totalPaid = paymentsList.reduce((sum, p) => sum + p.amount, 0)
 
-    // 3. Aggregate purchases
+    // 3. Purchases
     const { data: purch } = await supabase
       .from('purchases')
       .select('*')
@@ -78,13 +80,6 @@ export function useSupplierDetail(id: string) {
       .order('purchase_date', { ascending: false })
 
     const purchList = (purch ?? []) as Purchase[]
-    const totalPurchased = purchList.reduce((sum, p) => sum + p.grand_total, 0)
-
-    setSupplier({
-      ...sup,
-      total_purchased: totalPurchased,
-      amount_owed:     sup.opening_balance + totalPurchased - totalPaid,
-    })
 
     // 4. Purchase items
     const purchIds = purchList.map(p => p.id)
@@ -102,7 +97,7 @@ export function useSupplierDetail(id: string) {
         product_id:   i.product_id,
         quantity:     i.quantity,
         unit_price:   i.unit_price,
-        total_price:  i.total_price,
+        line_total:   i.line_total,
         product_name: (i.products as { name: string; unit_name: string } | null)?.name ?? 'Unknown',
         unit_name:    (i.products as { name: string; unit_name: string } | null)?.unit_name ?? 'unit',
       }))
@@ -235,13 +230,13 @@ export function useSupplierDetail(id: string) {
 
   // ── delete ───────────────────────────────────────────────────────────────────
   const deleteSupplier = useCallback(async (): Promise<boolean> => {
-    const { count } = await supabase
-      .from('purchases')
-      .select('id', { count: 'exact', head: true })
-      .eq('supplier_id', id)
+    const [{ count: purchCount }, { count: payCount }] = await Promise.all([
+      supabase.from('purchases').select('id', { count: 'exact', head: true }).eq('supplier_id', id),
+      supabase.from('supplier_payments').select('id', { count: 'exact', head: true }).eq('supplier_id', id),
+    ])
 
-    if ((count ?? 0) > 0) {
-      toast.error('Supplier has purchase history and cannot be deleted.')
+    if ((purchCount ?? 0) > 0 || (payCount ?? 0) > 0) {
+      toast.error('Supplier has purchase or payment history and cannot be deleted.')
       return false
     }
 

@@ -67,14 +67,19 @@ export function PaymentModal({ open, customer, unpaidSales, onClose, onSubmit }:
     if (errors[key]) setErrors(e => ({ ...e, [key]: undefined }))
   }
 
-  const outstanding = customer?.total_outstanding ?? 0
-  const amountNum   = Number(values.amount) || 0
-  const remaining   = Math.max(0, outstanding - amountNum)
+  const netOwed = customer?.total_outstanding ?? 0
+  const amountNum = Number(values.amount) || 0
+  const linkedSale = values.sale_id
+    ? unpaidSales.find(s => s.id === values.sale_id) ?? null
+    : null
+  const remaining = netOwed - amountNum
 
   function validate(): boolean {
     const errs: typeof errors = {}
     if (!values.amount || amountNum <= 0) errs.amount = 'Enter a valid amount'
-    if (amountNum > outstanding + 1) errs.amount = `Exceeds outstanding balance (${rupee(outstanding)})`
+    if (linkedSale && amountNum > linkedSale.balance_due + 0.001) {
+      errs.amount = `Cannot exceed invoice balance (${rupee(linkedSale.balance_due)})`
+    }
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -128,9 +133,9 @@ export function PaymentModal({ open, customer, unpaidSales, onClose, onSubmit }:
                 {errors.amount}
               </p>
             )}
-            {amountNum > outstanding && outstanding > 0 && (
+            {!linkedSale && amountNum > Math.max(0, netOwed) && (
               <p className="text-[10px] text-amber-600 dark:text-amber-400">
-                ⚠ Amount exceeds outstanding balance. This will result in an advance ledger credit.
+                Amount exceeds net owed — excess will be recorded as advance credit on the ledger.
               </p>
             )}
           </Field>
@@ -181,7 +186,7 @@ export function PaymentModal({ open, customer, unpaidSales, onClose, onSubmit }:
                   <SelectItem value="">General payment</SelectItem>
                   {unpaidSales.map(s => (
                     <SelectItem key={s.id} value={s.id}>
-                      {s.bill_number ?? `Sale #${s.id.slice(0, 6)}`} — {rupee(s.balance_due)} due
+                      {s.invoice_number} — {rupee(s.balance_due)} due
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -205,7 +210,7 @@ export function PaymentModal({ open, customer, unpaidSales, onClose, onSubmit }:
             <div className="rounded-xl border border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/10 p-3.5 space-y-2 mt-1">
               <div className="flex justify-between items-center text-xs">
                 <span className="text-muted-foreground">Ledger Balance</span>
-                <span className="font-semibold tabular-nums text-neutral-800 dark:text-neutral-300">{rupee(outstanding)}</span>
+                <span className="font-semibold tabular-nums text-neutral-800 dark:text-neutral-300">{rupee(netOwed)}</span>
               </div>
               <Separator />
               <div className="flex justify-between items-center text-xs text-emerald-600 dark:text-emerald-400">
@@ -215,7 +220,7 @@ export function PaymentModal({ open, customer, unpaidSales, onClose, onSubmit }:
               <Separator />
               <div className="flex justify-between items-center text-xs font-bold text-neutral-900 dark:text-white">
                 <span>Remaining Balance</span>
-                <span className="tabular-nums">{rupee(remaining)}</span>
+                <span className="tabular-nums">{remaining <= 0 ? rupee(0) : rupee(remaining)}</span>
               </div>
             </div>
           )}

@@ -9,6 +9,7 @@ import {
   type PurchaseItem, type SupplierProduct, type SupplierKpi,
   type SupplierFormValues,
 } from './types'
+import { mapBalanceRow, sumPositiveAmountOwed, type SupplierBalanceRow } from './balances'
 
 // ─── hook ─────────────────────────────────────────────────────────────────────
 export function useSuppliers() {
@@ -35,16 +36,15 @@ export function useSuppliers() {
   // ── fetch KPIs ───────────────────────────────────────────────────────────────
   const fetchKpi = useCallback(async () => {
     setKpiLoading(true)
-    const [{ data: sups }, { data: purch }] = await Promise.all([
-      supabase.from('suppliers').select('opening_balance'),
-      supabase.from('purchases').select('grand_total'),
-    ])
-    const totalPurchased = (purch ?? []).reduce((sum, p) => sum + p.grand_total, 0)
-    const amountOwed     = (sups  ?? []).reduce((sum, s) => sum + s.opening_balance, 0) + totalPurchased
+    const { data: rows } = await supabase
+      .from('supplier_balances')
+      .select('amount_owed, total_purchased')
+
+    const balances = rows ?? []
     setKpi({
-      total_count:     (sups ?? []).length,
-      total_purchased: totalPurchased,
-      amount_owed:     amountOwed,
+      total_count:     balances.length,
+      total_purchased: balances.reduce((sum, r) => sum + r.total_purchased, 0),
+      amount_owed:     sumPositiveAmountOwed(balances),
     })
     setKpiLoading(false)
   }, [supabase])
@@ -53,24 +53,14 @@ export function useSuppliers() {
   const fetchSuppliers = useCallback(async (s: string = search) => {
     setLoading(true)
 
-    const { data: sups, error } = await supabase.from('suppliers').select('*').order('name')
-    if (error || !sups) { console.error(error); setLoading(false); return }
+    const { data: rows, error } = await supabase
+      .from('supplier_balances')
+      .select('*')
+      .order('name')
 
-    // Aggregate purchases per supplier
-    const { data: purch } = await supabase.from('purchases').select('supplier_id, grand_total')
-    const purchMap = new Map<string, number>()
-    for (const p of purch ?? []) {
-      purchMap.set(p.supplier_id, (purchMap.get(p.supplier_id) ?? 0) + p.grand_total)
-    }
+    if (error || !rows) { console.error(error); setLoading(false); return }
 
-    let enriched: SupplierWithStats[] = sups.map(sup => {
-      const totalPurchased = purchMap.get(sup.id) ?? 0
-      return {
-        ...sup,
-        total_purchased: totalPurchased,
-        amount_owed:     sup.opening_balance + totalPurchased,
-      }
-    })
+    let enriched: SupplierWithStats[] = (rows as SupplierBalanceRow[]).map(mapBalanceRow)
 
     // Client-side search
     if (s.trim()) {
@@ -115,7 +105,7 @@ export function useSuppliers() {
         product_id:   i.product_id,
         quantity:     i.quantity,
         unit_price:   i.unit_price,
-        total_price:  i.total_price,
+        line_total:   i.line_total,
         product_name: (i.products as { name: string; unit_name: string } | null)?.name ?? 'Unknown',
         unit_name:    (i.products as { name: string; unit_name: string } | null)?.unit_name ?? 'unit',
       }))
@@ -227,13 +217,13 @@ export function useSuppliers() {
   }, [supabase, fetchSuppliers])
 
   const deleteSupplier = useCallback(async (supplier: SupplierWithStats): Promise<boolean> => {
-    const { count } = await supabase
-      .from('purchases')
-      .select('id', { count: 'exact', head: true })
-      .eq('supplier_id', supplier.id)
+    const [{ count: purchCount }, { count: payCount }] = await Promise.all([
+      supabase.from('purchases').select('id', { count: 'exact', head: true }).eq('supplier_id', supplier.id),
+      supabase.from('supplier_payments').select('id', { count: 'exact', head: true }).eq('supplier_id', supplier.id),
+    ])
 
-    if ((count ?? 0) > 0) {
-      toast.error('Supplier has purchase history and cannot be deleted.')
+    if ((purchCount ?? 0) > 0 || (payCount ?? 0) > 0) {
+      toast.error('Supplier has purchase or payment history and cannot be deleted.')
       return false
     }
 

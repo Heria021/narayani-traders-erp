@@ -16,8 +16,9 @@ export interface Supplier {
 }
 
 export interface SupplierWithStats extends Supplier {
-  total_purchased: number   // SUM(purchases.grand_total)
-  amount_owed:     number   // opening_balance + total_purchased
+  total_purchased: number   // from supplier_balances view
+  total_paid:      number   // from supplier_balances view
+  amount_owed:     number   // from supplier_balances view: opening_balance + total_purchased − total_paid
 }
 
 export interface Purchase {
@@ -37,7 +38,7 @@ export interface PurchaseItem {
   product_id:   string
   quantity:     number
   unit_price:   number
-  total_price:  number
+  line_total:   number
   product_name?: string   // joined
   unit_name?:    string   // joined
 }

@@ -9,6 +9,7 @@ import { CustomerDetail } from '../_components/CustomerDetail'
 import { CustomerForm } from '../_components/CustomerForm'
 import { PaymentModal } from '../_components/PaymentModal'
 import { useBreadcrumb } from '@/components/app-shell'
+import { customerDisplayName } from '../_components/ledger'
 
 export default function CustomerDetailPage() {
   const params = useParams()
@@ -39,7 +40,7 @@ export default function CustomerDetailPage() {
   // Set the custom breadcrumb title to customer's name when loaded
   useEffect(() => {
     if (customer?.name) {
-      setCustomTitle(customer.name)
+      setCustomTitle(customerDisplayName(customer.name))
     }
   }, [customer, setCustomTitle])
 

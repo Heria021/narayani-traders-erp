@@ -25,12 +25,14 @@ import {
   PowerOff, Trash2, UserCheck
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { customerDisplayName, isWalkinCustomer } from './_components/ledger'
 
 const rupee = (n: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n)
 
 function getInitials(name: string) {
-  const parts = name.split(/\s+/).filter(Boolean)
+  const display = customerDisplayName(name)
+  const parts = display.split(/\s+/).filter(Boolean)
   if (parts.length === 0) return '?'
   if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase()
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
@@ -246,10 +248,12 @@ export default function CustomersPage() {
               <TableBody>
                 {customers.map(c => {
                   const limit = c.credit_limit ?? 0
-                  const outstanding = c.total_outstanding
+                  const outstanding = Math.max(0, c.total_outstanding)
                   const overLimit = limit > 0 && outstanding >= limit
                   const nearLimit = limit > 0 && outstanding >= limit * 0.8
                   const location = [c.city, c.state].filter(Boolean).join(', ')
+                  const walkin = isWalkinCustomer(c.name)
+                  const displayName = customerDisplayName(c.name)
 
                   return (
                     <TableRow
@@ -265,7 +269,7 @@ export default function CustomersPage() {
                           </div>
                           <div className="flex flex-col gap-0.5">
                             <span className="font-semibold text-foreground text-sm leading-tight transition-colors group-hover:text-black dark:group-hover:text-white">
-                              {c.name}
+                              {displayName}
                             </span>
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground leading-none mt-0.5">
                               {c.phone && (
@@ -342,10 +346,10 @@ export default function CustomersPage() {
                             <DropdownMenuItem onClick={() => openPayment(c.id)}>
                               <CreditCard className="size-4 mr-2" /> Record Payment
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openEdit(c.id)}>
+                            <DropdownMenuItem onClick={() => openEdit(c.id)} disabled={walkin}>
                               <Pencil className="size-4 mr-2" /> Edit Profile
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => toggleActive(c)}>
+                            <DropdownMenuItem onClick={() => toggleActive(c)} disabled={walkin}>
                               {c.is_active ? (
                                 <><PowerOff className="size-4 mr-2" /> Deactivate</>
                               ) : (
@@ -353,7 +357,7 @@ export default function CustomersPage() {
                               )}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem variant="destructive" onClick={() => deleteCustomer(c)}>
+                            <DropdownMenuItem variant="destructive" onClick={() => deleteCustomer(c)} disabled={walkin}>
                               <Trash2 className="size-4 mr-2" /> Delete Customer
                             </DropdownMenuItem>
                           </DropdownMenuContent>

@@ -8,6 +8,7 @@ import {
   type LedgerEntry, type CustomerKpi, type CustomerFormValues,
   type PaymentFormValues, type CustomerFilter, EMPTY_CUSTOMER_FORM,
 } from './types'
+import { computeNetOwed, isWalkinCustomer, customerDisplayName } from './ledger'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 const num = (v: string | number) => Number(v) || 0
@@ -43,16 +44,33 @@ export function useCustomers() {
       { data: salesData },
       { data: paymentsData },
     ] = await Promise.all([
-      supabase.from('customers').select('is_active'),
-      supabase.from('sales').select('balance_due, payment_status'),
-      supabase.from('payments').select('amount'),
+      supabase.from('customers').select('id, is_active, opening_balance'),
+      supabase.from('sales').select('customer_id, grand_total'),
+      supabase.from('payments').select('customer_id, amount'),
     ])
+
+    const billedMap = new Map<string, number>()
+    for (const s of salesData ?? []) {
+      billedMap.set(s.customer_id, (billedMap.get(s.customer_id) ?? 0) + s.grand_total)
+    }
+    const paidMap = new Map<string, number>()
+    for (const p of paymentsData ?? []) {
+      paidMap.set(p.customer_id, (paidMap.get(p.customer_id) ?? 0) + p.amount)
+    }
+
+    let totalOutstanding = 0
+    for (const c of custs ?? []) {
+      const net = computeNetOwed(
+        c.opening_balance,
+        billedMap.get(c.id) ?? 0,
+        paidMap.get(c.id) ?? 0,
+      )
+      if (net > 0) totalOutstanding += net
+    }
 
     setKpi({
       total_active:      (custs ?? []).filter(c => c.is_active).length,
-      total_outstanding: (salesData ?? [])
-        .filter(s => s.payment_status !== 'paid')
-        .reduce((sum, s) => sum + s.balance_due, 0),
+      total_outstanding: totalOutstanding,
       total_collected:   (paymentsData ?? []).reduce((sum, p) => sum + p.amount, 0),
     })
     setKpiLoading(false)
@@ -76,19 +94,16 @@ export function useCustomers() {
     // Aggregate outstanding per customer from sales table
     const { data: salesAgg } = await supabase
       .from('sales')
-      .select('customer_id, grand_total, amount_paid, balance_due, payment_status')
+      .select('customer_id, grand_total')
 
     // Aggregate total payments per customer
     const { data: payAgg } = await supabase
       .from('payments')
       .select('customer_id, amount')
 
-    const salesMap = new Map<string, { billed: number; outstanding: number }>()
+    const salesMap = new Map<string, number>()
     for (const s of salesAgg ?? []) {
-      const cur = salesMap.get(s.customer_id) ?? { billed: 0, outstanding: 0 }
-      cur.billed += s.grand_total
-      if (s.payment_status !== 'paid') cur.outstanding += s.balance_due
-      salesMap.set(s.customer_id, cur)
+      salesMap.set(s.customer_id, (salesMap.get(s.customer_id) ?? 0) + s.grand_total)
     }
 
     const payMap = new Map<string, number>()
@@ -96,17 +111,22 @@ export function useCustomers() {
       payMap.set(p.customer_id, (payMap.get(p.customer_id) ?? 0) + p.amount)
     }
 
-    let enriched: CustomerWithStats[] = custs.map(c => ({
-      ...c,
-      total_outstanding: salesMap.get(c.id)?.outstanding ?? 0,
-      total_billed:      salesMap.get(c.id)?.billed      ?? 0,
-      total_paid:        payMap.get(c.id)                ?? 0,
-    }))
+    let enriched: CustomerWithStats[] = custs.map(c => {
+      const totalBilled = salesMap.get(c.id) ?? 0
+      const totalPaid = payMap.get(c.id) ?? 0
+      return {
+        ...c,
+        total_billed:      totalBilled,
+        total_paid:        totalPaid,
+        total_outstanding: computeNetOwed(c.opening_balance, totalBilled, totalPaid),
+      }
+    })
 
     // Apply search
     if (s.trim()) {
       const q = s.toLowerCase()
       enriched = enriched.filter(c =>
+        customerDisplayName(c.name).toLowerCase().includes(q) ||
         c.name.toLowerCase().includes(q) ||
         (c.phone ?? '').includes(q) ||
         (c.gstin ?? '').toLowerCase().includes(q)
@@ -116,7 +136,7 @@ export function useCustomers() {
     // Apply filter
     if (f === 'active')      enriched = enriched.filter(c => c.is_active)
     if (f === 'inactive')    enriched = enriched.filter(c => !c.is_active)
-    if (f === 'outstanding') enriched = enriched.filter(c => c.total_outstanding > 0)
+    if (f === 'outstanding') enriched = enriched.filter(c => c.total_outstanding > 0.001)
 
     setCustomers(enriched)
     setLoading(false)
@@ -181,11 +201,11 @@ export function useCustomers() {
     }
 
     // Payments
-    const billMap = new Map(sales.map(s => [s.id, s.bill_number ?? undefined]))
+    const invoiceMap = new Map(sales.map(s => [s.id, s.invoice_number]))
     for (const p of payments) {
       entries.push({
         kind: 'payment', date: p.payment_date, amount: p.amount, payment: p,
-        bill_number: p.sale_id ? billMap.get(p.sale_id) : undefined,
+        invoice_number: p.sale_id ? invoiceMap.get(p.sale_id) : undefined,
       })
     }
 
@@ -223,6 +243,11 @@ export function useCustomers() {
   }, [supabase, fetchCustomers, fetchKpi])
 
   const updateCustomer = useCallback(async (id: string, values: CustomerFormValues): Promise<boolean> => {
+    const target = customers.find(c => c.id === id)
+    if (target && isWalkinCustomer(target.name)) {
+      toast.error('The walk-in account cannot be edited.')
+      return false
+    }
     const { error } = await supabase
       .from('customers')
       .update({
@@ -243,9 +268,13 @@ export function useCustomers() {
     toast.success(`${values.name} updated`)
     await fetchCustomers()
     return true
-  }, [supabase, fetchCustomers])
+  }, [supabase, fetchCustomers, customers])
 
   const toggleActive = useCallback(async (customer: CustomerWithStats) => {
+    if (isWalkinCustomer(customer.name)) {
+      toast.error('The walk-in account cannot be deactivated.')
+      return
+    }
     const next = !customer.is_active
     const { error } = await supabase
       .from('customers')
@@ -257,6 +286,10 @@ export function useCustomers() {
   }, [supabase, fetchCustomers, fetchKpi])
 
   const deleteCustomer = useCallback(async (customer: CustomerWithStats): Promise<boolean> => {
+    if (isWalkinCustomer(customer.name)) {
+      toast.error('The walk-in account cannot be deleted.')
+      return false
+    }
     const [{ count: sCount }, { count: pCount }] = await Promise.all([
       supabase.from('sales').select('id', { count: 'exact', head: true }).eq('customer_id', customer.id),
       supabase.from('payments').select('id', { count: 'exact', head: true }).eq('customer_id', customer.id),

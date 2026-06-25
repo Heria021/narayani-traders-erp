@@ -67,13 +67,14 @@ export function SupplierPaymentSheet({ open, supplier, purchases, onClose, onSub
     if (errors[key]) setErrors(e => ({ ...e, [key]: undefined }))
   }
 
-  const outstanding = supplier?.amount_owed ?? 0
-  const amountNum   = Number(values.amount) || 0
-  const remaining   = Math.max(0, outstanding - amountNum)
+  const amountOwed = supplier?.amount_owed ?? 0
+  const amountNum  = Number(values.amount) || 0
+  const remaining  = amountOwed - amountNum
 
   function validate(): boolean {
     const errs: typeof errors = {}
     if (!values.amount || amountNum <= 0) errs.amount = 'Enter a valid amount'
+    if (!values.payment_method) errs.payment_method = 'Select a payment method'
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -131,6 +132,11 @@ export function SupplierPaymentSheet({ open, supplier, purchases, onClose, onSub
                 <p className="text-xs text-destructive flex items-center gap-1 mt-1">
                   <AlertCircle className="size-3 shrink-0" />
                   {errors.amount}
+                </p>
+              )}
+              {amountNum > Math.max(0, amountOwed) && (
+                <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">
+                  Payment exceeds amount owed — excess will be recorded as advance credit.
                 </p>
               )}
             </Field>
@@ -205,7 +211,7 @@ export function SupplierPaymentSheet({ open, supplier, purchases, onClose, onSub
               <div className="rounded-xl border border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/10 p-3.5 space-y-2">
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-muted-foreground">Amount Owed</span>
-                  <span className="font-semibold tabular-nums text-neutral-800 dark:text-neutral-300">{rupee(outstanding)}</span>
+                  <span className="font-semibold tabular-nums text-neutral-800 dark:text-neutral-300">{rupee(amountOwed)}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between items-center text-xs text-amber-600 dark:text-amber-400">
@@ -215,7 +221,7 @@ export function SupplierPaymentSheet({ open, supplier, purchases, onClose, onSub
                 <Separator />
                 <div className="flex justify-between items-center text-xs font-bold text-neutral-900 dark:text-white">
                   <span>Remaining Balance</span>
-                  <span className="tabular-nums">{rupee(remaining)}</span>
+                  <span className="tabular-nums">{remaining <= 0 ? rupee(0) : rupee(remaining)}</span>
                 </div>
               </div>
             )}

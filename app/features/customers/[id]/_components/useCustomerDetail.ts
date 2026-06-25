@@ -11,6 +11,7 @@ import type {
   CustomerFormValues,
   PaymentFormValues,
 } from '../../_components/types'
+import { computeNetOwed, isWalkinCustomer } from '../../_components/ledger'
 import type { SaleWithItems, SaleItem, PaymentRecord } from '../../../sales/_components/types'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -135,16 +136,13 @@ export function useCustomerDetail(id: string) {
     const paymentsList = (paymentsData ?? []) as Payment[]
 
     const totalBilled = salesList.reduce((sum, s) => sum + s.grand_total, 0)
-    const totalOutstanding = salesList
-      .filter(s => s.payment_status !== 'paid')
-      .reduce((sum, s) => sum + s.balance_due, 0)
     const totalPaid = paymentsList.reduce((sum, p) => sum + p.amount, 0)
 
     setCustomer({
       ...cust,
       total_billed:      totalBilled,
-      total_outstanding: totalOutstanding,
       total_paid:        totalPaid,
+      total_outstanding: computeNetOwed(cust.opening_balance, totalBilled, totalPaid),
     })
 
     setSales(salesList)
@@ -176,14 +174,14 @@ export function useCustomerDetail(id: string) {
     }
 
     // Payments
-    const billMap = new Map(sales.map(s => [s.id, s.bill_number ?? undefined]))
+    const invoiceMap = new Map(sales.map(s => [s.id, s.invoice_number]))
     for (const p of payments) {
       entries.push({
         kind: 'payment',
         date: p.payment_date,
         amount: p.amount,
         payment: p,
-        bill_number: p.sale_id ? billMap.get(p.sale_id) : undefined,
+        invoice_number: p.sale_id ? invoiceMap.get(p.sale_id) : undefined,
       })
     }
 
@@ -194,6 +192,10 @@ export function useCustomerDetail(id: string) {
 
   // ── update ───────────────────────────────────────────────────────────────────
   const updateCustomer = useCallback(async (values: CustomerFormValues): Promise<boolean> => {
+    if (customer && isWalkinCustomer(customer.name)) {
+      toast.error('The walk-in account cannot be edited.')
+      return false
+    }
     const { error } = await supabase
       .from('customers')
       .update({
@@ -222,6 +224,10 @@ export function useCustomerDetail(id: string) {
   // ── toggle active ────────────────────────────────────────────────────────────
   const toggleActive = useCallback(async () => {
     if (!customer) return
+    if (isWalkinCustomer(customer.name)) {
+      toast.error('The walk-in account cannot be deactivated.')
+      return
+    }
     const next = !customer.is_active
     const { error } = await supabase
       .from('customers')
@@ -238,6 +244,10 @@ export function useCustomerDetail(id: string) {
 
   // ── delete ───────────────────────────────────────────────────────────────────
   const deleteCustomer = useCallback(async (): Promise<boolean> => {
+    if (customer && isWalkinCustomer(customer.name)) {
+      toast.error('The walk-in account cannot be deleted.')
+      return false
+    }
     const [{ count: sCount }, { count: pCount }] = await Promise.all([
       supabase.from('sales').select('id', { count: 'exact', head: true }).eq('customer_id', id),
       supabase.from('payments').select('id', { count: 'exact', head: true }).eq('customer_id', id),

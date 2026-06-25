@@ -331,7 +331,7 @@ function PaymentsTable({ payments }: { payments: SupplierPayment[] }) {
                   {p.purchase_number}
                 </span>
               ) : (
-                <span className="text-muted-foreground/40 text-xs">General Payment</span>
+                <span className="text-muted-foreground/40 text-xs">Advance</span>
               )}
             </TableCell>
             <TableCell className="py-3 px-3 text-xs align-middle text-muted-foreground">

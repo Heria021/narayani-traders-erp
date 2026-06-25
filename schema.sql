@@ -581,3 +581,45 @@ create policy "owner_all" on supplier_payments
 
 -- ── Data API grant (required since April 2026) ──────────────────────────────
 grant select, insert, update, delete on supplier_payments to authenticated;
+
+
+-- =============================================================================
+-- SUPPLIER BALANCES (view)
+-- Single source of truth for payables per supplier.
+-- amount_owed = opening_balance + total_purchased − total_paid
+--   +ve = you owe the supplier · −ve = advance credit (you overpaid)
+-- =============================================================================
+
+create or replace view supplier_balances as
+select
+  s.id,
+  s.name,
+  s.phone,
+  s.email,
+  s.address,
+  s.city,
+  s.state,
+  s.postal_code,
+  s.gstin,
+  s.opening_balance,
+  s.created_at,
+  s.updated_at,
+  coalesce(p.total_purchased, 0)::numeric(12, 2) as total_purchased,
+  coalesce(sp.total_paid, 0)::numeric(12, 2)    as total_paid,
+  (s.opening_balance + coalesce(p.total_purchased, 0) - coalesce(sp.total_paid, 0))::numeric(12, 2) as amount_owed
+from suppliers s
+left join (
+  select supplier_id, sum(grand_total) as total_purchased
+  from purchases
+  group by supplier_id
+) p on p.supplier_id = s.id
+left join (
+  select supplier_id, sum(amount) as total_paid
+  from supplier_payments
+  group by supplier_id
+) sp on sp.supplier_id = s.id;
+
+comment on view supplier_balances is
+  'Payables per supplier. amount_owed = opening_balance + total_purchased − total_paid.';
+
+grant select on supplier_balances to authenticated;

@@ -22,6 +22,7 @@ import {
 import type { CustomerWithStats, Sale, Payment, LedgerEntry } from './types'
 import type { SaleWithItems } from '../../sales/_components/types'
 import { InvoiceDetailSheet } from './InvoiceDetailSheet'
+import { customerDisplayName, isWalkinCustomer } from './ledger'
 
 const rupee = (n: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(n)
@@ -68,8 +69,8 @@ export function CustomerDetail({
   }
 
   const limit = customer.credit_limit ?? 0
-  const netOwed = customer.opening_balance + customer.total_billed - customer.total_paid
-  const creditUsedPct = limit > 0 ? Math.min(100, (netOwed / limit) * 100) : 0
+  const netOwed = customer.total_outstanding
+  const creditUsedPct = limit > 0 ? Math.min(100, (Math.max(0, netOwed) / limit) * 100) : 0
 
   const creditBarColor =
     creditUsedPct >= 90 ? 'bg-red-500' :
@@ -85,7 +86,7 @@ export function CustomerDetail({
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-semibold tracking-tight flex items-center flex-wrap gap-2">
-                {customer.name}
+                {customerDisplayName(customer.name)}
                 <Badge variant={customer.is_active ? 'default' : 'secondary'} className="text-[10px] font-semibold uppercase tracking-wider">
                   {customer.is_active ? 'Active' : 'Inactive'}
                 </Badge>
@@ -117,7 +118,7 @@ export function CustomerDetail({
             <Button size="sm" onClick={onPayment} className="h-9 px-4 text-sm font-medium">
               <CreditCard className="size-4 mr-2" /> Record Payment
             </Button>
-            <Button variant="outline" size="sm" onClick={onEdit} className="h-9 px-4 text-sm font-medium">
+            <Button variant="outline" size="sm" onClick={onEdit} disabled={isWalkinCustomer(customer.name)} className="h-9 px-4 text-sm font-medium">
               <Pencil className="size-4 mr-2" /> Edit Profile
             </Button>
             <DropdownMenu>
@@ -127,15 +128,19 @@ export function CustomerDetail({
                 </Button>
               } />
               <DropdownMenuContent className="w-[200px]" align="end">
-                <DropdownMenuItem onClick={onToggle}>
-                  {customer.is_active
-                    ? <><PowerOff className="size-4 mr-2" /> Deactivate</>
-                    : <><Power className="size-4 mr-2" /> Activate</>}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive" onClick={onDelete}>
-                  <Trash2 className="size-4 mr-2" /> Delete Customer
-                </DropdownMenuItem>
+                {!isWalkinCustomer(customer.name) && (
+                  <DropdownMenuItem onClick={onToggle}>
+                    {customer.is_active
+                      ? <><PowerOff className="size-4 mr-2" /> Deactivate</>
+                      : <><Power className="size-4 mr-2" /> Activate</>}
+                  </DropdownMenuItem>
+                )}
+                {!isWalkinCustomer(customer.name) && <DropdownMenuSeparator />}
+                {!isWalkinCustomer(customer.name) && (
+                  <DropdownMenuItem variant="destructive" onClick={onDelete}>
+                    <Trash2 className="size-4 mr-2" /> Delete Customer
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -266,7 +271,7 @@ function LedgerSkeleton() {
 function LedgerTable({
   entries, customer, onViewInvoice,
 }: { entries: LedgerEntry[]; customer: CustomerWithStats; onViewInvoice: (saleId: string) => void }) {
-  const netOwed = customer.opening_balance + customer.total_billed - customer.total_paid
+  const netOwed = customer.total_outstanding
   let runningBalance = netOwed
 
   return (
@@ -285,6 +290,7 @@ function LedgerTable({
           const balance = runningBalance
           if (entry.kind === 'invoice') runningBalance -= entry.amount
           else if (entry.kind === 'payment') runningBalance += entry.amount
+          else if (entry.kind === 'opening') runningBalance -= entry.amount
 
           const isInvoice = entry.kind === 'invoice'
 
@@ -305,7 +311,7 @@ function LedgerTable({
                 {entry.kind === 'opening' && <Badge variant="outline" className="text-[10px] font-semibold">Opening</Badge>}
               </TableCell>
               <TableCell className="font-mono text-xs text-muted-foreground">
-                {entry.kind === 'invoice' && (entry.sale.bill_number ?? `#${entry.sale.id.slice(0, 6)}`)}
+                {entry.kind === 'invoice' && entry.sale.invoice_number}
                 {entry.kind === 'payment' && (entry.payment.reference_number ?? `${entry.payment.payment_method.toUpperCase()}`)}
                 {entry.kind === 'opening' && '—'}
               </TableCell>
@@ -376,7 +382,7 @@ function InvoicesTable({
               className="cursor-pointer hover:bg-muted/30"
               onClick={() => onViewInvoice(s.id)}
             >
-              <TableCell className="font-mono text-xs font-medium">{s.bill_number ?? `#${s.id.slice(0, 6)}`}</TableCell>
+              <TableCell className="font-mono text-xs font-medium">{s.invoice_number}</TableCell>
               <TableCell className="text-xs text-muted-foreground">{fmtDate(s.sale_date)}</TableCell>
               <TableCell className="text-right font-medium tabular-nums text-xs">{rupee(s.grand_total)}</TableCell>
               <TableCell className="text-right tabular-nums text-emerald-600 dark:text-emerald-400 text-xs">{rupee(s.amount_paid)}</TableCell>
@@ -396,7 +402,7 @@ function InvoicesTable({
 }
 
 function PaymentsTable({ payments, sales }: { payments: Payment[]; sales: Sale[] }) {
-  const billMap = new Map(sales.map(s => [s.id, s.bill_number ?? `#${s.id.slice(0, 6)}`]))
+  const invoiceMap = new Map(sales.map(s => [s.id, s.invoice_number]))
   return (
     <Table>
       <TableHeader>
@@ -416,7 +422,7 @@ function PaymentsTable({ payments, sales }: { payments: Payment[]; sales: Sale[]
             <TableCell className="text-right font-semibold tabular-nums text-emerald-600 dark:text-emerald-400 text-xs">{rupee(p.amount)}</TableCell>
             <TableCell className="text-xs font-medium capitalize">{p.payment_method.replace('_', ' ')}</TableCell>
             <TableCell className="font-mono text-xs text-muted-foreground">{p.reference_number ?? '—'}</TableCell>
-            <TableCell className="font-mono text-xs">{p.sale_id ? billMap.get(p.sale_id) ?? '—' : '—'}</TableCell>
+            <TableCell className="font-mono text-xs">{p.sale_id ? invoiceMap.get(p.sale_id) ?? '—' : 'Advance'}</TableCell>
             <TableCell className="text-xs text-muted-foreground">{p.note ?? '—'}</TableCell>
           </TableRow>
         ))}
