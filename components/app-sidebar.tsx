@@ -92,23 +92,18 @@ const erpNavMain = [
 const portfolioNavMain = [
   {
     title: "Projects",
-    url: "/portfolio/admin/projects",
+    url: "/portfolio/projects",
     icon: <BriefcaseIcon />,
   },
   {
     title: "Clients",
-    url: "/portfolio/admin/clients",
+    url: "/portfolio/clients",
     icon: <UsersIcon />,
   },
   {
-    title: "Media Library",
-    url: "/portfolio/admin/media",
+    title: "Website Curation",
+    url: "/portfolio/website",
     icon: <ImageIcon />,
-  },
-  {
-    title: "Studio Settings",
-    url: "/portfolio/admin/settings",
-    icon: <SettingsIcon />,
   },
 ]
 
@@ -131,7 +126,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       name: "Studio Workspace",
       plan: "Portfolio Admin",
       logo: PaletteIcon,
-      url: "/portfolio/admin/projects",
+      url: "/portfolio/projects",
       id: "portfolio",
     },
   ]

@@ -27,11 +27,11 @@ const routeTitles: Record<string, string> = {
   "/features/inventory": "Inventory",
   "/features/customers": "Customers",
   "/features/suppliers": "Suppliers",
-  "/portfolio/admin/projects": "Projects Manager",
-  "/portfolio/admin/projects/new": "New Project",
-  "/portfolio/admin/clients": "Clients Manager",
-  "/portfolio/admin/media": "Media Library",
-  "/portfolio/admin/settings": "Studio Settings",
+  "/portfolio/projects": "Projects Manager",
+  "/portfolio/projects/new": "New Project",
+  "/portfolio/clients": "Clients Manager",
+  "/portfolio/clients/new": "New Client",
+  "/portfolio/website": "Website Curation",
 }
 
 function getRouteTitle(pathname: string) {
@@ -94,7 +94,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href={isPortfolio ? "/portfolio/admin/projects" : "/features"}>
+                  <BreadcrumbLink href={isPortfolio ? "/portfolio/projects" : "/features"}>
                     {isPortfolio ? "Studio Workspace" : "Narayani Traders"}
                   </BreadcrumbLink>
                 </BreadcrumbItem>

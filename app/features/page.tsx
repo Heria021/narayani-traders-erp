@@ -130,6 +130,7 @@ export default function DashboardPage() {
                     variant="outline"
                     className="w-full justify-between"
                     render={<Link href={module.href} />}
+                    nativeButton={false}
                   >
                     Open
                     <ArrowRightIcon className="size-4" />

@@ -1,189 +1,151 @@
 -- ============================================================
--- NARAYANI TRADERS + HARIOM STUDIO
--- Architecture CRM Tables
+-- HARIOM STUDIO — Portfolio CRM
+-- Clean schema: record-keeping + public curation
+-- 7 tables, no workflow/status/phases
 -- Run in Supabase SQL Editor
 -- ============================================================
 
 
 -- ── 1. CLIENTS ───────────────────────────────────────────────
+-- People your brother has worked with.
+-- A project must belong to a client.
 
 CREATE TABLE arch_clients (
-  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name          TEXT NOT NULL,
-  phone         TEXT NOT NULL,
-  email         TEXT,
-  address       TEXT,
-  city          TEXT,
-  state         TEXT,
-  gstin         TEXT,
-  notes         TEXT,                        -- referral source, personal notes
-  created_at    TIMESTAMPTZ DEFAULT NOW(),
-  updated_at    TIMESTAMPTZ DEFAULT NOW()
+  id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  name        TEXT        NOT NULL,
+  phone       TEXT        NOT NULL,
+  email       TEXT,
+  city        TEXT,
+  state       TEXT,
+  gstin       TEXT,
+  notes       TEXT,       -- referral source, personal notes, anything private
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
 
 -- ── 2. PROJECTS ──────────────────────────────────────────────
+-- One row per completed project. Filled in one shot after handover.
+-- No status, no phases — just the factual record.
 
 CREATE TABLE arch_projects (
-  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  client_id           UUID NOT NULL REFERENCES arch_clients(id),
+  id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id           UUID        NOT NULL REFERENCES arch_clients(id),
 
-  title               TEXT NOT NULL,
-  project_number      TEXT UNIQUE NOT NULL,  -- PROJ-2024-001 (auto from app)
-
-  type                TEXT NOT NULL
+  -- Identity
+  title               TEXT        NOT NULL,
+  type                TEXT        NOT NULL
                         CHECK (type IN (
                           'residential',
                           'commercial',
                           'interior',
                           'visualization_only',
-                          'renovation'
+                          'renovation',
+                          'other'
                         )),
 
-  location            TEXT,                  -- site address
+  -- Location
   city                TEXT,
   state               TEXT,
 
+  -- Scale
   area_sqft           NUMERIC(10,2),
+  floors              INTEGER,               -- total number of floors
+
+  -- Scope summary (BHK-style, e.g. "3BHK", "4BHK + Study")
+  configuration       TEXT,
+
+  -- Finance
   rate_per_sqft       NUMERIC(10,2),
-  base_fee            NUMERIC(10,2),         -- area × rate (auto-calc in app)
   agreed_fee          NUMERIC(10,2),         -- final negotiated number
 
-  status              TEXT NOT NULL DEFAULT 'inquiry'
-                        CHECK (status IN (
-                          'inquiry',
-                          'quoted',
-                          'active',
-                          'on_hold',
-                          'completed',
-                          'cancelled'
-                        )),
-
+  -- Dates (just record facts, no forecasting)
+  year_completed      INTEGER,               -- e.g. 2024
   start_date          DATE,
-  estimated_end_date  DATE,
-  actual_end_date     DATE,
+  completion_date     DATE,
 
-  scope_notes         TEXT,                  -- client brief, visible on docs
-  internal_notes      TEXT,                  -- private, never on documents
-
-  is_published        BOOLEAN DEFAULT FALSE, -- push to public portfolio
+  -- Content
+  description         TEXT,                  -- design approach, scope summary
+  internal_notes      TEXT,                  -- private, never shown publicly
+  client_testimonial  TEXT,                  -- optional quote from client
 
   created_at          TIMESTAMPTZ DEFAULT NOW(),
   updated_at          TIMESTAMPTZ DEFAULT NOW()
 );
 
 
--- ── 3. PROJECT SERVICES ──────────────────────────────────────
--- Which services are included in this project
--- Created automatically when project is created
--- Owner toggles on/off per project
+-- ── 3. PROJECT MEDIA ─────────────────────────────────────────
+-- All photos/files attached to a project.
+-- phase tag lets you label before/during/after without a workflow.
 
-CREATE TABLE arch_project_services (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id      UUID NOT NULL REFERENCES arch_projects(id) ON DELETE CASCADE,
+CREATE TABLE arch_project_media (
+  id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id  UUID        NOT NULL REFERENCES arch_projects(id) ON DELETE CASCADE,
 
-  service_type    TEXT NOT NULL
-                    CHECK (service_type IN (
-                      'design_drawings',
-                      'visualization_3d',
-                      'construction_supervision',
-                      'interior_design',
-                      'renovation'
-                    )),
+  file_url    TEXT        NOT NULL,          -- Supabase Storage public URL
+  public_id   TEXT,                          -- Storage path/key for deletion
+  caption     TEXT,                          -- optional label per photo
 
-  is_included     BOOLEAN DEFAULT TRUE,
-  fee_for_service NUMERIC(10,2),             -- fee allocated to this service
-  notes           TEXT,                      -- e.g. "exterior only, no interior"
+  phase       TEXT        CHECK (phase IN (
+                'before',
+                'during',
+                'after'
+              )),                            -- nullable — just a tag, not a workflow
 
-  created_at      TIMESTAMPTZ DEFAULT NOW()
+  sort_order  INTEGER     DEFAULT 0,         -- order within the project media pool
+
+  created_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
 
--- ── 4. PROJECT PHASES ────────────────────────────────────────
--- Individual work phases within each service
--- Can be removed if client doesn't need them
-
-CREATE TABLE arch_project_phases (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id      UUID NOT NULL REFERENCES arch_projects(id) ON DELETE CASCADE,
-  service_id      UUID NOT NULL REFERENCES arch_project_services(id) ON DELETE CASCADE,
-
-  name            TEXT NOT NULL,             -- "Concept Floor Plan", "Foundation"
-  description     TEXT,
-  phase_order     INTEGER NOT NULL,          -- sequence within service
-
-  status          TEXT NOT NULL DEFAULT 'pending'
-                    CHECK (status IN (
-                      'pending',
-                      'in_progress',
-                      'review',
-                      'revision',
-                      'completed'
-                    )),
-
-  is_included     BOOLEAN DEFAULT TRUE,      -- false = removed from scope
-
-  started_at      DATE,
-  completed_at    DATE,
-  notes           TEXT,                      -- revision notes, client feedback
-
-  created_at      TIMESTAMPTZ DEFAULT NOW(),
-  updated_at      TIMESTAMPTZ DEFAULT NOW()
-);
-
-
--- ── 5. PROJECT EXTRAS ────────────────────────────────────────
--- Scope changes mid-project
--- Additions, removals, extra revisions
--- Every change logged here with fee impact
+-- ── 4. PROJECT EXTRAS ────────────────────────────────────────
+-- Scope changes after the project was agreed.
+-- Additions, removals, extra revisions — each with a fee impact.
 
 CREATE TABLE arch_project_extras (
-  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id          UUID NOT NULL REFERENCES arch_projects(id) ON DELETE CASCADE,
+  id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id          UUID        NOT NULL REFERENCES arch_projects(id) ON DELETE CASCADE,
 
-  type                TEXT NOT NULL
+  type                TEXT        NOT NULL
                         CHECK (type IN (
                           'addition',    -- client asked for extra work
-                          'removal',     -- client removed something
+                          'removal',     -- scope item removed
                           'revision'     -- extra revision beyond agreed rounds
                         )),
 
-  description         TEXT NOT NULL,         -- "Kitchen render added"
+  description         TEXT        NOT NULL,  -- e.g. "Added kitchen 3D render"
   fee_impact          NUMERIC(10,2) DEFAULT 0,
                                              -- positive = extra charge
                                              -- negative = deduction
-                                             -- zero = no financial impact
+                                             -- zero = no financial change
 
-  approved_by_client  BOOLEAN DEFAULT FALSE,
-  date                DATE NOT NULL DEFAULT CURRENT_DATE,
+  approved_by_client  BOOLEAN     DEFAULT FALSE,
+  date                DATE        NOT NULL DEFAULT CURRENT_DATE,
   notes               TEXT,
 
   created_at          TIMESTAMPTZ DEFAULT NOW()
 );
 
 
--- ── 6. PROJECT PAYMENTS ──────────────────────────────────────
--- All payments received for a project
--- Optionally linked to a specific phase
+-- ── 5. PROJECT PAYMENTS ──────────────────────────────────────
+-- Every payment received for a project.
+-- No phase_id link — payments hang directly off projects.
 
 CREATE TABLE arch_project_payments (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id      UUID NOT NULL REFERENCES arch_projects(id) ON DELETE CASCADE,
-  phase_id        UUID REFERENCES arch_project_phases(id),
-                                             -- nullable: advance has no phase
+  id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id      UUID        NOT NULL REFERENCES arch_projects(id) ON DELETE CASCADE,
 
-  payment_number  TEXT UNIQUE NOT NULL,      -- PAY-2024-001 (auto from app)
-
-  type            TEXT NOT NULL
+  type            TEXT        NOT NULL
                     CHECK (type IN (
                       'advance',
                       'milestone',
                       'final',
-                      'extra'                -- payment for an extra/revision
+                      'extra'            -- payment for a specific extra/revision
                     )),
 
   amount          NUMERIC(10,2) NOT NULL CHECK (amount > 0),
-  method          TEXT NOT NULL
+
+  method          TEXT        NOT NULL
                     CHECK (method IN (
                       'cash',
                       'upi',
@@ -191,11 +153,53 @@ CREATE TABLE arch_project_payments (
                       'cheque'
                     )),
 
-  reference       TEXT,                      -- UPI txn id, cheque number
-  payment_date    DATE NOT NULL DEFAULT CURRENT_DATE,
-  note            TEXT,
+  reference       TEXT,                      -- UPI txn ID, cheque number, etc.
+  payment_date    DATE        NOT NULL DEFAULT CURRENT_DATE,
+  note            TEXT,                      -- e.g. "advance before site visit"
 
   created_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+
+-- ── 6. PUBLIC LISTINGS ───────────────────────────────────────
+-- Curated subset of projects chosen for the public portfolio website.
+-- One row per project maximum (unique constraint on project_id).
+-- Your brother creates this separately, not at project-logging time.
+
+CREATE TABLE arch_public_listings (
+  id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id          UUID        NOT NULL UNIQUE
+                                    REFERENCES arch_projects(id) ON DELETE CASCADE,
+
+  -- Public-facing content (can differ from internal project record)
+  slug                TEXT        NOT NULL UNIQUE,   -- URL: /projects/modern-villa-jaipur
+  public_title        TEXT,                          -- defaults to project.title in app
+  public_description  TEXT,                          -- defaults to project.description in app
+
+  cover_media_id      UUID        REFERENCES arch_project_media(id)
+                                    ON DELETE SET NULL,
+                                             -- which photo is the thumbnail/hero
+
+  is_featured         BOOLEAN     DEFAULT FALSE,     -- show on homepage
+  sort_order          INTEGER     DEFAULT 0,          -- order in /projects grid
+
+  created_at          TIMESTAMPTZ DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ DEFAULT NOW()
+);
+
+
+-- ── 7. PUBLIC LISTING MEDIA ──────────────────────────────────
+-- Which photos from arch_project_media appear on the public listing,
+-- and in what order. A curated subset of the full media pool.
+
+CREATE TABLE arch_public_listing_media (
+  id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  public_listing_id   UUID        NOT NULL REFERENCES arch_public_listings(id) ON DELETE CASCADE,
+  media_id            UUID        NOT NULL REFERENCES arch_project_media(id)   ON DELETE CASCADE,
+
+  sort_order          INTEGER     DEFAULT 0,
+
+  UNIQUE (public_listing_id, media_id)       -- same photo can't appear twice in one listing
 );
 
 
@@ -203,18 +207,26 @@ CREATE TABLE arch_project_payments (
 -- INDEXES
 -- ============================================================
 
-CREATE INDEX idx_arch_projects_client     ON arch_projects(client_id);
-CREATE INDEX idx_arch_projects_status     ON arch_projects(status);
-CREATE INDEX idx_arch_services_project    ON arch_project_services(project_id);
-CREATE INDEX idx_arch_phases_project      ON arch_project_phases(project_id);
-CREATE INDEX idx_arch_phases_service      ON arch_project_phases(service_id);
-CREATE INDEX idx_arch_extras_project      ON arch_project_extras(project_id);
-CREATE INDEX idx_arch_payments_project    ON arch_project_payments(project_id);
+CREATE INDEX idx_projects_client         ON arch_projects(client_id);
+CREATE INDEX idx_projects_type           ON arch_projects(type);
+CREATE INDEX idx_projects_year           ON arch_projects(year_completed);
+
+CREATE INDEX idx_media_project           ON arch_project_media(project_id);
+CREATE INDEX idx_media_phase             ON arch_project_media(phase);
+
+CREATE INDEX idx_extras_project          ON arch_project_extras(project_id);
+
+CREATE INDEX idx_payments_project        ON arch_project_payments(project_id);
+CREATE INDEX idx_payments_date           ON arch_project_payments(payment_date);
+
+CREATE INDEX idx_listings_slug           ON arch_public_listings(slug);
+CREATE INDEX idx_listings_featured       ON arch_public_listings(is_featured);
+
+CREATE INDEX idx_listing_media_listing   ON arch_public_listing_media(public_listing_id);
 
 
 -- ============================================================
 -- AUTO updated_at TRIGGER
--- Keeps updated_at fresh on every row update
 -- ============================================================
 
 CREATE OR REPLACE FUNCTION update_updated_at()
@@ -225,86 +237,53 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_arch_clients_updated
+CREATE TRIGGER trg_clients_updated
   BEFORE UPDATE ON arch_clients
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
-CREATE TRIGGER trg_arch_projects_updated
+CREATE TRIGGER trg_projects_updated
   BEFORE UPDATE ON arch_projects
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
-CREATE TRIGGER trg_arch_phases_updated
-  BEFORE UPDATE ON arch_project_phases
+CREATE TRIGGER trg_listings_updated
+  BEFORE UPDATE ON arch_public_listings
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 
 -- ============================================================
--- DEFAULT PHASE TEMPLATES
--- When a project service is created, these phases are
--- auto-inserted by the app. Listed here for reference.
+-- FEE CALCULATION REFERENCE
+-- All math happens in the app, not in the DB.
 -- ============================================================
 
--- design_drawings phases (in order):
---   1  Site measurement & survey
---   2  Concept floor plan
---   3  Final floor plan
---   4  Elevation drawings (front / side / back)
---   5  Section drawings
---   6  Electrical layout
---   7  Plumbing layout
---   8  Structural drawings
+-- base_fee        = area_sqft × rate_per_sqft   (calculated in form, stored as agreed_fee)
 
--- visualization_3d phases:
---   1  Exterior 3D render
---   2  Living room render
---   3  Master bedroom render
---   4  Kitchen render
---   5  Other interior renders
---   6  Walkthrough video
+-- approved_extras = SUM(fee_impact)
+--                   FROM arch_project_extras
+--                   WHERE project_id = ? AND approved_by_client = TRUE
 
--- construction_supervision phases:
---   1  Foundation
---   2  Structure / RCC
---   3  Brickwork / masonry
---   4  Plaster
---   5  Flooring
---   6  Electrical & plumbing rough-in
---   7  Finishing & painting
---   8  Final handover & inspection
+-- final_total     = agreed_fee + approved_extras
 
--- interior_design phases:
---   1  Space planning
---   2  Material & finish selection
---   3  Furniture layout
---   4  Lighting design
---   5  Final interior renders
---   6  Execution & supervision
+-- total_paid      = SUM(amount)
+--                   FROM arch_project_payments
+--                   WHERE project_id = ?
 
--- renovation phases:
---   1  Site assessment
---   2  Demolition plan
---   3  New layout drawings
---   4  Material selection
---   5  Execution & supervision
---   6  Final inspection
+-- balance_due     = final_total - total_paid
 
 
 -- ============================================================
--- FEE CALCULATION REFERENCE (done in app, not in DB)
+-- WHAT EACH TABLE IS FOR — QUICK REFERENCE
 -- ============================================================
 
--- base_fee          = area_sqft × rate_per_sqft
--- agreed_fee        = negotiated total (stored on project)
+-- arch_clients              Who your brother works with
+-- arch_projects             Every completed project, full internal record
+-- arch_project_media        All photos attached to a project (before/during/after tag)
+-- arch_project_extras       Scope changes + fee impact per project
+-- arch_project_payments     Individual payments received per project
+-- arch_public_listings      Curated public listing (one per project, created separately)
+-- arch_public_listing_media Which photos + order shown on the public site
 
--- approved_extras   = SUM(fee_impact) FROM arch_project_extras
---                     WHERE project_id = ? AND approved_by_client = TRUE
-
--- final_total       = agreed_fee + approved_extras
-
--- pending_extras    = SUM(fee_impact) FROM arch_project_extras
---                     WHERE project_id = ? AND approved_by_client = FALSE
-
--- total_paid        = SUM(amount) FROM arch_project_payments
---                     WHERE project_id = ?
-
--- balance_due       = final_total - total_paid
+-- Tables intentionally NOT here (removed vs old schema):
+-- arch_project_services     ← was phase/workflow tracking, dropped
+-- arch_project_phases       ← was timeline tracking, dropped
+-- status field              ← always "completed", useless
+-- project_number            ← auto-numbering, not needed for record-keeping
