@@ -71,6 +71,8 @@ export function ProductQuickAdd({ open, initialName, onClose, onSave }: Props) {
       if (!form.box_name.trim())    e.box_name      = 'Required'
       if (!form.units_per_box || parseInt(form.units_per_box) < 2)
                                     e.units_per_box = 'Min 2'
+      if (!form.box_purchase_price || parseFloat(form.box_purchase_price) <= 0)
+                                    e.box_purchase_price = 'Required'
       if (!form.box_selling_price || parseFloat(form.box_selling_price) <= 0)
                                     e.box_selling_price = 'Must be > 0'
     }
@@ -175,7 +177,7 @@ export function ProductQuickAdd({ open, initialName, onClose, onSave }: Props) {
                       onChange={e => set('units_per_box', e.target.value)}
                       aria-invalid={!!errors.units_per_box} />
                   </FieldRow>
-                  <FieldRow label="Box Purchase ₹">
+                  <FieldRow label="Box Purchase ₹" required error={errors.box_purchase_price}>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₹</span>
                       <Input type="number" min="0" step="0.01" value={form.box_purchase_price}

@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import { applyStockMovement, type StockRollbackLine } from '@/lib/services/stockMovement'
+import { insertQuickProduct } from '@/lib/services/productQuickAdd'
+import { rollbackFailedDocument } from '@/lib/services/documentRollback'
 import type {
   PurchaseHeaderValues, LineItemDraft, DiscountMode,
   QuickProductFormValues, Product, Supplier,
@@ -14,6 +17,27 @@ const PRODUCT_SELECT = 'id, name, sku, unit_name, purchase_price, has_box, box_n
 
 function sortByName<T extends { name: string }>(rows: T[]): T[] {
   return [...rows].sort((a, b) => a.name.localeCompare(b.name, 'en-IN', { sensitivity: 'base' }))
+}
+
+async function rollbackFailedPurchase(
+  supabase: ReturnType<typeof createClient>,
+  purchaseId: string,
+  purchaseNumber: string,
+  stockLines: StockRollbackLine[],
+): Promise<boolean> {
+  const ok = await rollbackFailedDocument(supabase, {
+    table: 'purchases',
+    documentId: purchaseId,
+    documentLabel: purchaseNumber,
+    movementType: 'purchase',
+    stockLines,
+  })
+  if (!ok) {
+    toast.error(
+      `Save failed and could not fully roll back ${purchaseNumber}. Check inventory before retrying.`,
+    )
+  }
+  return ok
 }
 
 export function useNewPurchase() {
@@ -66,14 +90,14 @@ export function useNewPurchase() {
       .from('purchases')
       .select('purchase_number')
       .like('purchase_number', `PO-${year}-%`)
-    
+
     if (error) {
       console.error('Error generating purchase number:', error)
       toast.error('Failed to check existing purchase numbers: ' + error.message)
     }
 
     const existingNumbers = new Set(
-      (data ?? []).map(p => p.purchase_number.trim())
+      (data ?? []).map(p => p.purchase_number.trim()),
     )
 
     let next = 1
@@ -86,7 +110,6 @@ export function useNewPurchase() {
     }
   }, [supabase])
 
-  // ── save purchase ───────────────────────────────────────────────────────────
   const savePurchase = useCallback(async (
     header: PurchaseHeaderValues,
     lineItems: LineItemDraft[],
@@ -134,53 +157,55 @@ export function useNewPurchase() {
       return false
     }
 
+    const stockLines: StockRollbackLine[] = []
+
     for (const row of validItems) {
       const product = row.product!
-      const isBox   = row.buy_mode === 'box'
-      const boxCount   = isBox ? num(row.qty_input) : null
-      const baseUnits  = isBox
+      const isBox = row.buy_mode === 'box'
+      const boxCount = isBox ? num(row.qty_input) : null
+      const baseUnits = isBox
         ? num(row.qty_input) * (product.units_per_box ?? 1)
         : num(row.qty_input)
-      const unitPrice  = num(row.unit_price)
-      const lineTotal  = parseFloat((num(row.qty_input) * unitPrice).toFixed(2))
+      const unitPrice = num(row.unit_price)
+      const lineTotal = parseFloat((num(row.qty_input) * unitPrice).toFixed(2))
+      const baseUnitsRounded = parseFloat(baseUnits.toFixed(3))
 
-      await supabase.from('purchase_items').insert({
+      const { error: itemErr } = await supabase.from('purchase_items').insert({
         purchase_id: purchase.id,
         product_id:  product.id,
         buy_mode:    row.buy_mode,
         box_count:   boxCount,
-        quantity:    parseFloat(baseUnits.toFixed(3)),
+        quantity:    baseUnitsRounded,
         unit_price:  unitPrice,
         tax_rate:    num(row.tax_rate),
         line_total:  lineTotal,
       })
 
-      await supabase.from('stock_movements').insert({
-        product_id:    product.id,
-        movement_type: 'purchase',
-        quantity:      parseFloat(baseUnits.toFixed(3)),
-        reference_id:  purchase.id,
-        notes:         `Purchase ${header.purchase_number}`,
+      if (itemErr) {
+        await rollbackFailedPurchase(supabase, purchase.id, header.purchase_number, stockLines)
+        toast.error(`Failed to save line item for ${product.name}: ${itemErr.message}`)
+        return false
+      }
+
+      const mov = await applyStockMovement(supabase, {
+        productId: product.id,
+        delta: baseUnitsRounded,
+        movementType: 'purchase',
+        referenceId: purchase.id,
+        notes: `Purchase ${header.purchase_number}`,
       })
 
+      if (!mov.ok) {
+        await rollbackFailedPurchase(supabase, purchase.id, header.purchase_number, stockLines)
+        toast.error(`Stock update failed for ${product.name}: ${mov.message}`)
+        return false
+      }
+
       if (product.track_inventory) {
-        await supabase.rpc('increment_stock', {
-          p_product_id: product.id,
-          p_delta:      parseFloat(baseUnits.toFixed(3)),
-        }).then(async ({ error: rpcErr }) => {
-          if (rpcErr) {
-            const { data: prod } = await supabase
-              .from('products')
-              .select('current_stock')
-              .eq('id', product.id)
-              .single()
-            if (prod) {
-              await supabase
-                .from('products')
-                .update({ current_stock: prod.current_stock + baseUnits })
-                .eq('id', product.id)
-            }
-          }
+        stockLines.push({
+          productId: product.id,
+          baseUnits: baseUnitsRounded,
+          trackInventory: true,
         })
       }
     }
@@ -189,33 +214,16 @@ export function useNewPurchase() {
     return true
   }, [supabase])
 
-  // ── quick add product ───────────────────────────────────────────────────────
   const quickAddProduct = useCallback(async (
     values: QuickProductFormValues,
   ): Promise<Product | null> => {
-    const { data, error } = await supabase
-      .from('products')
-      .insert({
-        name:               values.name.trim(),
-        sku:                values.sku.trim() || null,
-        category:           values.category.trim() || null,
-        unit_name:          values.unit_name.trim() || 'piece',
-        purchase_price:     num(values.purchase_price),
-        selling_price:      num(values.selling_price),
-        gst_rate:           num(values.gst_rate),
-        has_box:            values.has_box,
-        box_name:           values.has_box ? values.box_name.trim() || null : null,
-        units_per_box:      values.has_box ? num(values.units_per_box) || null : null,
-        box_purchase_price: values.has_box ? num(values.box_purchase_price) || null : null,
-        box_selling_price:  values.has_box ? num(values.box_selling_price) || null : null,
-        track_inventory:    values.track_inventory,
-        current_stock:      0,
-      })
-      .select(PRODUCT_SELECT)
-      .single()
-    if (error) { toast.error(error.message); return null }
+    const result = await insertQuickProduct<Product>(supabase, values, PRODUCT_SELECT)
+    if (!result.ok) {
+      toast.error(result.message)
+      return null
+    }
 
-    const product = data as Product
+    const product = result.data
     setProducts(prev => sortByName([
       ...prev.filter(p => p.id !== product.id),
       product,

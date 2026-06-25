@@ -6,13 +6,10 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
-  TableHeader,
   TableRow,
 } from '@/components/ui/table'
 import {
@@ -21,7 +18,6 @@ import {
   Boxes,
   AlertTriangle,
   Package,
-  ArrowUpDown,
   ChevronRight,
   RefreshCw,
   Copy,
@@ -33,7 +29,7 @@ import { useInventory } from './_components/useInventory'
 import { StockDetailDrawer } from './_components/StockDetailDrawer'
 import { PurchaseDetail } from '../purchases/_components/PurchaseDetail'
 import { InvoiceDetailSheet } from '../customers/_components/InvoiceDetailSheet'
-import type { InventoryItem, SortField } from './_components/types'
+import type { InventoryItem } from './_components/types'
 import type { PurchaseWithItems } from '../purchases/_components/types'
 import type { SaleWithItems } from '../sales/_components/types'
 import { cn } from '@/lib/utils'
@@ -154,16 +150,12 @@ export default function InventoryPage() {
     kpis,
     loading,
     filters,
-    sortField,
-    sortDir,
     selectedProductId,
     selectedItem,
     movements,
     drawerLoading,
     setSelectedProductId,
     changeFilter,
-    setSortField,
-    setSortDir,
     refresh,
   } = useInventory()
 
@@ -330,34 +322,6 @@ export default function InventoryPage() {
     }
     loadInvoice()
   }, [selectedInvoiceId, supabase])
-
-  // Sorting columns helper
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortField(field)
-      setSortDir(field === 'name' ? 'asc' : 'desc')
-    }
-  }
-
-  const renderSortHeader = (label: string, field: SortField, className?: string) => {
-    const isSorted = sortField === field
-    return (
-      <TableHead
-        className={cn("py-2.5 font-semibold text-xs cursor-pointer select-none group transition-colors hover:text-foreground", className)}
-        onClick={(e) => {
-          e.stopPropagation()
-          handleSort(field)
-        }}
-      >
-        <div className={cn("flex items-center gap-1", className?.includes("text-right") && "justify-end")}>
-          {label}
-          <ArrowUpDown className={cn("size-3 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors shrink-0", isSorted && "text-foreground font-bold")} />
-        </div>
-      </TableHead>
-    )
-  }
 
   // Row selection handler
   const handleRowClick = (productId: string) => {
@@ -898,6 +862,3 @@ export default function InventoryPage() {
     </div>
   )
 }
-
-// Small correction helper to prevent React hydration issues
-const Body = TableBody

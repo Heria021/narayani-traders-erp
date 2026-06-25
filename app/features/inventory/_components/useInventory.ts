@@ -90,7 +90,7 @@ export function useInventory() {
     // 4. Fetch latest sales with invoice reference
     const { data: saleItemsData } = await supabase
       .from('sale_items')
-      .select('product_id, sale_id, sales(bill_number, sale_date)')
+      .select('product_id, sale_id, sales(invoice_number, sale_date)')
 
     const lastSaleMap = new Map<string, { id: string; number: string; date: string }>()
     for (const si of saleItemsData ?? []) {
@@ -100,7 +100,7 @@ export function useInventory() {
         if (!existing || s.sale_date > existing.date) {
           lastSaleMap.set(si.product_id, {
             id: si.sale_id,
-            number: s.bill_number,
+            number: s.invoice_number,
             date: s.sale_date,
           })
         }
@@ -208,10 +208,10 @@ export function useInventory() {
     if (saleIds.length > 0) {
       const { data: salesData } = await supabase
         .from('sales')
-        .select('id, bill_number')
+        .select('id, invoice_number')
         .in('id', saleIds)
       for (const s of salesData ?? []) {
-        nameMap.set(s.id, s.bill_number ?? `Invoice #${s.id.slice(0, 6)}`)
+        nameMap.set(s.id, s.invoice_number)
       }
     }
 

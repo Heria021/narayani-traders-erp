@@ -822,6 +822,7 @@ export default function NewSalePage() {
     })
 
     if (saleId) {
+      setSaving(false)
       const preview = buildPreviewSale()
       setPreviewSale({ ...preview, id: saleId })
       setPreviewOpen(true)

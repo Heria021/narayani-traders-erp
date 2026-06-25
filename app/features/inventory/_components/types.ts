@@ -1,25 +1,5 @@
-export interface Product {
-  id:                  string
-  name:                string
-  sku:                 string | null
-  description:         string | null
-  category:            string | null
-  unit_name:           string
-  selling_price:       number
-  purchase_price:      number
-  gst_rate:            number
-  has_box:             boolean
-  box_name:            string | null
-  units_per_box:       number | null
-  box_purchase_price:  number | null
-  box_selling_price:   number | null
-  current_stock:       number
-  minimum_stock:       number
-  track_inventory:     boolean
-  is_active:           boolean
-  created_at:          string
-  updated_at:          string
-}
+export type { Product } from '@/app/features/products/_components/types'
+import type { Product } from '@/app/features/products/_components/types'
 
 export type InventoryStatus = 'in_stock' | 'low_stock' | 'out_of_stock' | 'untracked'
 

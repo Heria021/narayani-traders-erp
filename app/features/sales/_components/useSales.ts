@@ -6,10 +6,11 @@ import { toast } from 'sonner'
 import {
   type Sale, type SaleWithItems, type SaleItem, type PaymentRecord,
   type SaleKpi, type SaleFilters, type SortField, type SortDir,
-  type QuickProductFormValues, type SaleProduct, type Customer,
   type PaymentMethod, type PaymentStatus,
   DEFAULT_SALE_FILTERS, ROWS_PER_PAGE, WALKIN_CUSTOMER_NAME,
 } from './types'
+import { canDeleteSameDaySale } from '@/lib/services/documentRollback'
+import { rollbackReferencedStock } from '@/lib/services/stockMovement'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -71,43 +72,7 @@ export function useSales() {
   const [detailData,    setDetailData]    = useState<SaleWithItems | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
 
-  // ── walk-in customer ID cache ─────────────────────────────────────────────────
-  const walkinIdRef = useRef<string | null>(null)
-
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // ── get or create walk-in customer ──────────────────────────────────────────
-  const getOrCreateWalkinCustomer = useCallback(async (): Promise<string | null> => {
-    if (walkinIdRef.current) return walkinIdRef.current
-
-    // check if exists
-    const { data: existing } = await supabase
-      .from('customers')
-      .select('id')
-      .eq('name', WALKIN_CUSTOMER_NAME)
-      .single()
-
-    if (existing) {
-      walkinIdRef.current = existing.id
-      return existing.id
-    }
-
-    // create walk-in customer
-    const { data: created, error } = await supabase
-      .from('customers')
-      .insert({
-        name:          WALKIN_CUSTOMER_NAME,
-        is_active:     false,
-        credit_limit:  0,
-        opening_balance: 0,
-      })
-      .select('id')
-      .single()
-
-    if (error) { console.error('Failed to create walk-in customer:', error); return null }
-    walkinIdRef.current = created.id
-    return created.id
-  }, [supabase])
 
   // ── fetch KPIs ───────────────────────────────────────────────────────────────
   const fetchKpi = useCallback(async () => {
@@ -367,73 +332,64 @@ export function useSales() {
     fetchSales(filters, sortField, sortDir, pg)
   }, [filters, sortField, sortDir, fetchSales])
 
-  // ── generate bill number ──────────────────────────────────────────────────────
-  const generateBillNumber = useCallback(async (): Promise<string> => {
-    const year = new Date().getFullYear()
-    const { data } = await supabase
-      .from('sales')
-      .select('invoice_number')
-      .like('invoice_number', `BILL-${year}-%`)
-
-    const existingNumbers = new Set(
-      (data ?? []).map(s => s.invoice_number.trim())
-    )
-
-    let next = 1
-    while (true) {
-      const candidate = `BILL-${year}-${String(next).padStart(3, '0')}`
-      if (!existingNumbers.has(candidate)) return candidate
-      next++
-    }
-  }, [supabase])
-
   // ── delete sale ───────────────────────────────────────────────────────────────
   const deleteSale = useCallback(async (sale: Sale): Promise<boolean> => {
-    // Guard: same-day only
     if (sale.sale_date !== today()) {
       toast.error('Cannot delete — only today\'s bills can be deleted')
       return false
     }
 
-    // Guard: no payments
     const { data: payments } = await supabase
       .from('payments')
-      .select('id, amount')
+      .select('id, amount, created_at')
       .eq('sale_id', sale.id)
-      .limit(1)
+      .order('created_at')
 
-    if (payments && payments.length > 0) {
-      const amt = payments[0].amount
-      toast.error(`Cannot delete — payment of ₹${amt.toFixed(2)} is recorded against this bill`)
+    const payCheck = canDeleteSameDaySale({
+      payments: payments ?? [],
+      saleCreatedAt: sale.created_at,
+    })
+    if (!payCheck.ok) {
+      toast.error(payCheck.message)
       return false
     }
 
-    // Fetch line items for stock reversal
     const { data: items } = await supabase
       .from('sale_items')
       .select('*, products!inner(id, name, current_stock, track_inventory)')
       .eq('sale_id', sale.id)
 
-    // Delete stock movements
-    await supabase
-      .from('stock_movements')
-      .delete()
-      .eq('reference_id', sale.id)
-      .eq('movement_type', 'sale')
-
-    // Reverse stock for each item
-    for (const item of items ?? []) {
+    const stockLines = (items ?? []).map(item => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const prod = (item as any).products
-      if (prod?.track_inventory) {
-        await supabase.rpc('increment_stock', {
-          p_product_id: item.product_id,
-          p_delta:      parseFloat(item.quantity.toFixed(3)),
-        })
+      return {
+        productId: item.product_id,
+        baseUnits: item.quantity,
+        trackInventory: Boolean(prod?.track_inventory),
+      }
+    })
+
+    const rev = await rollbackReferencedStock(supabase, {
+      referenceId: sale.id,
+      movementType: 'sale',
+      lines: stockLines,
+    })
+    if (!rev.ok) {
+      toast.error(`Could not reverse stock: ${rev.message}`)
+      return false
+    }
+
+    if (payments && payments.length > 0) {
+      const { error: payDelErr } = await supabase
+        .from('payments')
+        .delete()
+        .eq('sale_id', sale.id)
+      if (payDelErr) {
+        toast.error(`Could not remove payment rows: ${payDelErr.message}`)
+        return false
       }
     }
 
-    // Delete sale (cascades to sale_items)
     const { error } = await supabase
       .from('sales')
       .delete()
@@ -499,88 +455,14 @@ export function useSales() {
     return true
   }, [supabase, fetchSales, fetchKpi, selectedId, fetchDetail])
 
-  // ── customer outstanding balance ──────────────────────────────────────────────
-  const getCustomerOutstanding = useCallback(async (customerId: string): Promise<number> => {
-    const { data } = await supabase
-      .from('sales')
-      .select('balance_due')
-      .eq('customer_id', customerId)
-      .neq('payment_status', 'paid')
-    return (data ?? []).reduce((s, r) => s + r.balance_due, 0)
-  }, [supabase])
-
-  // ── quick add product ─────────────────────────────────────────────────────────
-  const quickAddProduct = useCallback(async (
-    values: QuickProductFormValues,
-  ): Promise<SaleProduct | null> => {
-    const { data, error } = await supabase
-      .from('products')
-      .insert({
-        name:               values.name.trim(),
-        sku:                values.sku.trim() || null,
-        category:           values.category.trim() || null,
-        unit_name:          values.unit_name.trim() || 'piece',
-        purchase_price:     Number(values.purchase_price) || 0,
-        selling_price:      Number(values.selling_price) || 0,
-        gst_rate:           Number(values.gst_rate) || 0,
-        has_box:            values.has_box,
-        box_name:           values.has_box ? values.box_name.trim() || null : null,
-        units_per_box:      values.has_box ? Number(values.units_per_box) || null : null,
-        box_purchase_price: values.has_box ? Number(values.box_purchase_price) || null : null,
-        box_selling_price:  values.has_box ? Number(values.box_selling_price) || null : null,
-        track_inventory:    values.track_inventory,
-        current_stock:      0,
-      })
-      .select()
-      .single()
-
-    if (error) { toast.error(error.message); return null }
-    toast.success(`"${values.name}" added as a new product`)
-    return data as SaleProduct
-  }, [supabase])
-
-  // ── search customers ──────────────────────────────────────────────────────────
-  const searchCustomers = useCallback(async (q: string): Promise<Customer[]> => {
-    if (!q.trim()) return []
-    const { data } = await supabase
-      .from('customers')
-      .select('id, name, phone, email, address, city, credit_limit, opening_balance, is_active')
-      .ilike('name', `%${q}%`)
-      .eq('is_active', true)
-      .neq('name', WALKIN_CUSTOMER_NAME)
-      .order('name')
-      .limit(10)
-    return (data ?? []) as Customer[]
-  }, [supabase])
-
-  // ── search products ───────────────────────────────────────────────────────────
-  const searchProducts = useCallback(async (q: string): Promise<SaleProduct[]> => {
-    if (!q.trim()) return []
-    const { data } = await supabase
-      .from('products')
-      .select('id, name, sku, unit_name, selling_price, box_selling_price, purchase_price, has_box, box_name, units_per_box, gst_rate, current_stock, track_inventory, is_active')
-      .ilike('name', `%${q}%`)
-      .eq('is_active', true)
-      .order('name')
-      .limit(15)
-    return (data ?? []) as SaleProduct[]
-  }, [supabase])
-
   return {
-    // list
     sales, total, page, sortField, sortDir, filters, loading,
-    // kpi
     kpi, kpiLoading,
-    // detail
     selectedId, detailData, detailLoading,
-    // actions
     setSelectedId,
     handleSearchChange, handleStatusChange, handleDateRangeChange,
     handleSort, handlePageChange,
-    generateBillNumber,
     deleteSale, recordPayment,
-    getOrCreateWalkinCustomer, getCustomerOutstanding,
-    quickAddProduct, searchCustomers, searchProducts,
     fetchSales, fetchKpi,
   }
 }

@@ -8,6 +8,7 @@ import {
   type ProductFilters, type SortField, type SortDir,
   type ProductFormValues, DEFAULT_FILTERS, ROWS_PER_PAGE,
 } from '../../app/features/products/_components/types'
+import { applyStockMovement } from './stockMovement'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -66,9 +67,6 @@ export function useProducts() {
     // Status filter
     if (f.status === 'active') q = q.eq('is_active', true)
     if (f.status === 'inactive') q = q.eq('is_active', false)
-    if (f.status === 'low_stock') q = q.lte('current_stock', supabase.rpc as unknown as never)
-
-    // For low_stock we use a raw filter
     if (f.status === 'low_stock') {
       // Supabase doesn't support column-to-column comparisons directly.
       // We fetch all and filter client-side only for this special case.
@@ -104,11 +102,6 @@ export function useProducts() {
 
   // ── initial load ────────────────────────────────────────────────────────────
   useEffect(() => {
-    // ── auth diagnostic (remove after confirmed working) ──
-    supabase.auth.getUser().then(({ data, error }) => {
-      console.log('[useProducts] auth.getUser →', data?.user?.id ?? 'NO SESSION', error ?? '')
-    })
-    // ──────────────────────────────────────────────────────
     fetchCategories()
     fetchProducts()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -171,20 +164,19 @@ export function useProducts() {
 
     if (error) { toast.error(error.message); return false }
 
-    // Insert opening_stock movement if provided
     const openingStock = fmt(values.opening_stock)
     if (openingStock > 0 && data) {
-      await supabase.from('stock_movements').insert({
-        product_id: data.id,
-        movement_type: 'opening_stock',
-        quantity: openingStock,
+      const mov = await applyStockMovement(supabase, {
+        productId: data.id,
+        delta: openingStock,
+        movementType: 'opening_stock',
         notes: 'Opening stock on product creation',
       })
-      // Also set current_stock on the product
-      await supabase
-        .from('products')
-        .update({ current_stock: openingStock })
-        .eq('id', data.id)
+      if (!mov.ok) {
+        toast.error(`Product saved but opening stock failed: ${mov.message}`)
+        await Promise.all([fetchProducts(), fetchCategories()])
+        return false
+      }
     }
 
     toast.success(`${values.name} added successfully`)
