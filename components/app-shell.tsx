@@ -29,6 +29,7 @@ const routeTitles: Record<string, string> = {
   "/features/suppliers": "Suppliers",
   "/portfolio/admin/projects": "Projects Manager",
   "/portfolio/admin/projects/new": "New Project",
+  "/portfolio/admin/clients": "Clients Manager",
   "/portfolio/admin/media": "Media Library",
   "/portfolio/admin/settings": "Studio Settings",
 }

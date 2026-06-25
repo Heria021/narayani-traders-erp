@@ -96,6 +96,11 @@ const portfolioNavMain = [
     icon: <BriefcaseIcon />,
   },
   {
+    title: "Clients",
+    url: "/portfolio/admin/clients",
+    icon: <UsersIcon />,
+  },
+  {
     title: "Media Library",
     url: "/portfolio/admin/media",
     icon: <ImageIcon />,
