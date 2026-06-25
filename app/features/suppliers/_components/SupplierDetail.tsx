@@ -135,7 +135,7 @@ export function SupplierDetail({ supplier, purchases, supplierProducts, loading,
       </div>
 
       {/* ── Bottom Section: Purchases & Products Card ── */}
-      <div className="flex-1 min-h-0 border rounded-lg bg-card flex flex-col overflow-hidden">
+      <div className="flex-1 min-h-0 border rounded-xl bg-card flex flex-col overflow-hidden shadow-sm">
         {/* Custom Tab selectors */}
         <div className="flex flex-wrap items-center gap-2 border-b px-6 py-3 shrink-0 bg-muted/20">
           <Button
@@ -155,7 +155,7 @@ export function SupplierDetail({ supplier, purchases, supplierProducts, loading,
         </div>
 
         {/* Tables area with internal scrolling */}
-        <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:thin] p-4">
+        <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:thin] p-0 [&_[data-slot=table-container]]:overflow-visible">
           {activeTab === 'purchases' && (
             loading ? <TableSkeleton cols={5} /> : purchases.length === 0 ? <EmptyState message="No purchases recorded from this supplier yet." /> : (
               <PurchasesTable purchases={purchases} onViewPurchase={onViewPurchase} />
@@ -184,43 +184,61 @@ function EmptyState({ message }: { message: string }) {
 
 function TableSkeleton({ cols }: { cols: number }) {
   return (
-    <div className="flex flex-col gap-3">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="flex gap-4 py-2 border-b border-border/30">
-          {Array.from({ length: cols }).map((_, j) => (
-            <Skeleton key={j} className="h-3 flex-1" />
-          ))}
-        </div>
-      ))}
-    </div>
+    <Table className="w-full border-separate border-spacing-0 text-sm">
+      <TableBody>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <TableRow key={i} className="hover:bg-transparent border-b border-border/40">
+            {Array.from({ length: cols }).map((_, j) => (
+              <TableCell key={j} className={cn("py-3 px-3", j === 0 && "pl-4", j === cols - 1 && "pr-4")}>
+                <Skeleton className={cn("h-4 w-20", j === 0 && "w-32", (j === cols - 1 || j === cols - 2) && "ml-auto")} />
+              </TableCell>
+            ))}
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   )
 }
 
 function PurchasesTable({ purchases, onViewPurchase }: { purchases: Purchase[]; onViewPurchase: (id: string) => void }) {
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Date</TableHead>
-          <TableHead>Purchase No.</TableHead>
-          <TableHead className="text-center">Items</TableHead>
-          <TableHead className="text-right">Amount</TableHead>
-          <TableHead className="text-center">Status</TableHead>
+    <Table className="w-full border-separate border-spacing-0 text-sm">
+      <TableHeader className="bg-card shrink-0 sticky top-0 z-10">
+        <TableRow className="hover:bg-transparent">
+          <TableHead className="pl-4 py-2 text-left font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Date</TableHead>
+          <TableHead className="px-3 py-2 text-left font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Purchase No.</TableHead>
+          <TableHead className="px-3 py-2 text-center font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Items</TableHead>
+          <TableHead className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Amount</TableHead>
+          <TableHead className="px-3 py-2 text-center font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Status</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {purchases.map(p => (
-          <TableRow key={p.id} className="cursor-pointer hover:bg-muted/30" onClick={() => onViewPurchase(p.id)}>
-            <TableCell className="text-xs text-muted-foreground">{fmtDate(p.purchase_date)}</TableCell>
-            <TableCell className="font-mono text-xs font-medium">
-              {p.purchase_number ?? `#${p.id.slice(0, 6)}`}
+          <TableRow
+            key={p.id}
+            className="cursor-pointer group border-b border-border/40 hover:bg-muted/40 transition-colors"
+            onClick={() => onViewPurchase(p.id)}
+          >
+            <TableCell className="py-3 pl-4 text-xs text-muted-foreground align-middle">
+              {fmtDate(p.purchase_date)}
             </TableCell>
-            <TableCell className="text-center tabular-nums text-xs">{p.item_count ?? '—'}</TableCell>
-            <TableCell className="text-right tabular-nums font-semibold text-xs">{rupee(p.grand_total)}</TableCell>
-            <TableCell className="text-center">
-              <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-0 text-[10px] font-semibold">
-                Received
+            <TableCell className="py-3 px-3 font-mono text-xs font-medium text-foreground align-middle">
+              <span className="bg-muted/60 px-1.5 py-0.5 rounded font-medium">
+                {p.purchase_number ?? `#${p.id.slice(0, 6)}`}
+              </span>
+            </TableCell>
+            <TableCell className="py-3 px-3 text-center align-middle">
+              <Badge variant="outline" className="text-xs font-medium tabular-nums shadow-none">
+                {p.item_count ?? 0} {(p.item_count ?? 0) === 1 ? 'item' : 'items'}
               </Badge>
+            </TableCell>
+            <TableCell className="py-3 px-3 text-right tabular-nums font-semibold text-xs align-middle text-foreground">
+              {rupee(p.grand_total)}
+            </TableCell>
+            <TableCell className="py-3 px-3 text-center align-middle">
+              <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900">
+                Received
+              </span>
             </TableCell>
           </TableRow>
         ))}
@@ -231,22 +249,27 @@ function PurchasesTable({ purchases, onViewPurchase }: { purchases: Purchase[]; 
 
 function ProductsTable({ supplierProducts }: { supplierProducts: SupplierProduct[] }) {
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Product</TableHead>
-          <TableHead className="text-right">Total Qty Bought</TableHead>
-          <TableHead>Last Purchased</TableHead>
+    <Table className="w-full border-separate border-spacing-0 text-sm">
+      <TableHeader className="bg-card shrink-0 sticky top-0 z-10">
+        <TableRow className="hover:bg-transparent">
+          <TableHead className="pl-4 py-2 text-left font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Product</TableHead>
+          <TableHead className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Total Qty Bought</TableHead>
+          <TableHead className="px-3 py-2 text-left font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Last Purchased</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {supplierProducts.map(sp => (
-          <TableRow key={sp.product_id}>
-            <TableCell className="font-medium text-xs text-foreground">{sp.product_name}</TableCell>
-            <TableCell className="text-right tabular-nums text-xs font-semibold">
+          <TableRow
+            key={sp.product_id}
+            className="group border-b border-border/40 hover:bg-muted/40 transition-colors"
+          >
+            <TableCell className="py-3 pl-4 font-medium text-xs text-foreground align-middle">
+              {sp.product_name}
+            </TableCell>
+            <TableCell className="py-3 px-3 text-right align-middle tabular-nums text-xs font-semibold text-foreground">
               {sp.total_qty.toLocaleString('en-IN')} {sp.unit_name}
             </TableCell>
-            <TableCell className="text-xs text-muted-foreground">
+            <TableCell className="py-3 px-3 text-left align-middle text-xs text-muted-foreground">
               {sp.last_purchased ? fmtDate(sp.last_purchased) : '—'}
             </TableCell>
           </TableRow>

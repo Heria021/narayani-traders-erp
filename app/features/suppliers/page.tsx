@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
@@ -13,7 +12,7 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
-  Plus, Search, Phone, Mail, MapPin, Building2, MoreHorizontal, Pencil, Trash2
+  Plus, Search, Phone, Mail, MapPin, Building2, MoreHorizontal, Pencil, Trash2, Truck
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSuppliers } from './_components/useSuppliers'
@@ -53,7 +52,7 @@ export default function SuppliersPage() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 bg-background">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-4 bg-background">
 
       {/* ── Page Header ─────────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-4 shrink-0">
@@ -132,34 +131,66 @@ export default function SuppliersPage() {
             </span>
           </div>
         </div>
-
-        {/* ── Search bar ──────────────────────────────────────────────────── */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/50 pointer-events-none" />
-          <Input
-            value={search}
-            onChange={e => handleSearchChange(e.target.value)}
-            placeholder="Search by name, phone, or GSTIN…"
-            className="pl-9 h-9 text-sm rounded-lg border-border/60"
-          />
-        </div>
       </div>
 
-      {/* ── Supplier Table ─ inside a card like ProductTable ─────────── */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card">
-        <div className="h-full overflow-y-auto overscroll-contain [scrollbar-width:thin]">
+      {/* ── Supplier Table Card ────────────────────────────────────────── */}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card">
+        {/* Toolbar: Search inside the card */}
+        <div className="flex shrink-0 items-center justify-between border-b px-4 py-2.5">
+          <div className="relative min-w-0 shrink-0 sm:w-[min(320px,40vw)]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground/50 pointer-events-none" />
+            <input
+              value={search}
+              onChange={e => handleSearchChange(e.target.value)}
+              placeholder="Search by name, phone, or GSTIN..."
+              className={cn(
+                'w-full h-8 rounded-lg border border-input bg-transparent pl-9 pr-3 text-sm',
+                'placeholder:text-muted-foreground/50',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:border-ring/40',
+                'transition-colors',
+              )}
+            />
+          </div>
+        </div>
+
+        {/* Scrollable Table Viewport */}
+        <div className="min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain [scrollbar-width:thin] [&_[data-slot=table-container]]:overflow-visible">
           {loading ? (
-            <div className="p-4 space-y-4">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="flex gap-4 py-2 border-b">
-                  <Skeleton className="h-4 w-1/4" />
-                  <Skeleton className="h-4 w-1/4" />
-                  <Skeleton className="h-4 w-1/6" />
-                  <Skeleton className="h-4 w-1/6" />
-                  <Skeleton className="h-4 w-[10%]" />
-                </div>
-              ))}
-            </div>
+            <Table className="w-full min-w-[900px] border-separate border-spacing-0 text-sm">
+              <TableHeader className="bg-card shrink-0 sticky top-0 z-10">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="pl-4 py-2 text-left font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Supplier</TableHead>
+                  <TableHead className="px-3 py-2 text-left font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Location</TableHead>
+                  <TableHead className="px-3 py-2 text-left font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">GSTIN</TableHead>
+                  <TableHead className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Total Purchased</TableHead>
+                  <TableHead className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Amount Owed</TableHead>
+                  <TableHead className="w-10 pl-3 pr-4 py-2 text-right border-b border-border/40 bg-card sticky top-0 z-10" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <TableRow key={i} className="hover:bg-transparent border-b border-border/40">
+                    <TableCell className="py-3 pl-4">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="size-10 rounded-lg shrink-0" />
+                        <div className="flex flex-col gap-1.5">
+                          <Skeleton className="h-4 w-36" />
+                          <div className="flex items-center gap-2">
+                            <Skeleton className="h-3 w-16" />
+                            <Skeleton className="h-3 w-12" />
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-3 py-3"><Skeleton className="h-4 w-28" /></TableCell>
+                    <TableCell className="px-3 py-3"><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell className="px-3 py-3 text-right"><Skeleton className="ml-auto h-4 w-16" /></TableCell>
+                    <TableCell className="px-3 py-3 text-right"><Skeleton className="ml-auto h-4 w-16" /></TableCell>
+                    <TableCell className="py-3 pl-3 pr-4"><Skeleton className="size-7 rounded-md ml-auto" /></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           ) : suppliers.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-3 py-16 text-center">
               <Building2 className="size-10 text-muted-foreground/30" />
@@ -173,15 +204,15 @@ export default function SuppliersPage() {
               )}
             </div>
           ) : (
-            <Table>
-              <TableHeader className="bg-muted/40 sticky top-0 z-10">
-                <TableRow>
-                  <TableHead className="font-semibold text-xs text-muted-foreground uppercase py-3 pl-4">Supplier</TableHead>
-                  <TableHead className="font-semibold text-xs text-muted-foreground uppercase py-3">Location</TableHead>
-                  <TableHead className="font-semibold text-xs text-muted-foreground uppercase py-3">GSTIN</TableHead>
-                  <TableHead className="font-semibold text-xs text-muted-foreground uppercase py-3 text-right">Total Purchased</TableHead>
-                  <TableHead className="font-semibold text-xs text-muted-foreground uppercase py-3 text-right">Amount Owed</TableHead>
-                  <TableHead className="font-semibold text-xs text-muted-foreground uppercase py-3 text-right pr-4">Actions</TableHead>
+            <Table className="w-full min-w-[900px] border-separate border-spacing-0 text-sm">
+              <TableHeader className="bg-card shrink-0 sticky top-0 z-10">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="pl-4 py-2 text-left font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Supplier</TableHead>
+                  <TableHead className="px-3 py-2 text-left font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Location</TableHead>
+                  <TableHead className="px-3 py-2 text-left font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">GSTIN</TableHead>
+                  <TableHead className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Total Purchased</TableHead>
+                  <TableHead className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Amount Owed</TableHead>
+                  <TableHead className="w-10 pl-3 pr-4 py-2 text-right border-b border-border/40 bg-card sticky top-0 z-10" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -193,27 +224,35 @@ export default function SuppliersPage() {
                     <TableRow
                       key={s.id}
                       onClick={() => router.push(`/features/suppliers/${s.id}`)}
-                      className="cursor-pointer hover:bg-muted/30 transition-colors group border-b border-border/40"
+                      className="cursor-pointer hover:bg-muted/40 transition-colors group border-b border-border/40"
                     >
                       {/* Supplier Name & contact */}
                       <TableCell className="py-3 pl-4">
-                        <div className="space-y-0.5">
-                          <p className="font-semibold text-foreground group-hover:text-black dark:group-hover:text-white transition-colors">
-                            {s.name}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-                            {s.phone && (
-                              <span className="flex items-center gap-1"><Phone className="size-2.5" /> {s.phone}</span>
-                            )}
-                            {s.email && (
-                              <span className="flex items-center gap-1"><Mail className="size-2.5" /> {s.email}</span>
-                            )}
+                        <div className="flex items-center gap-3">
+                          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                            <Truck className="size-5" />
+                          </div>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-semibold text-foreground text-sm leading-tight transition-colors group-hover:text-black dark:group-hover:text-white">
+                              {s.name}
+                            </span>
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground leading-none mt-0.5">
+                              {s.phone && (
+                                <span className="flex items-center gap-1"><Phone className="size-2.5" /> {s.phone}</span>
+                              )}
+                              {s.phone && s.email && (
+                                <span className="text-muted-foreground/30">•</span>
+                              )}
+                              {s.email && (
+                                <span className="flex items-center gap-1"><Mail className="size-2.5" /> {s.email}</span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </TableCell>
 
                       {/* Location */}
-                      <TableCell className="py-3">
+                      <TableCell className="px-3 py-3 align-middle">
                         {location ? (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <MapPin className="size-2.5 text-muted-foreground/50 shrink-0" />
@@ -225,17 +264,21 @@ export default function SuppliersPage() {
                       </TableCell>
 
                       {/* GSTIN */}
-                      <TableCell className="py-3 font-mono text-xs text-muted-foreground">
-                        {s.gstin ? s.gstin : <span className="text-muted-foreground/40">—</span>}
+                      <TableCell className="px-3 py-3 align-middle font-mono text-xs text-muted-foreground">
+                        {s.gstin ? (
+                          <span className="bg-muted/60 px-1 rounded font-medium">{s.gstin}</span>
+                        ) : (
+                          <span className="text-muted-foreground/40">—</span>
+                        )}
                       </TableCell>
 
                       {/* Total Purchased */}
-                      <TableCell className="py-3 text-right tabular-nums text-xs font-semibold text-foreground">
-                        {s.total_purchased > 0 ? rupee(s.total_purchased) : <span className="text-muted-foreground/50">—</span>}
+                      <TableCell className="px-3 py-3 text-right align-middle tabular-nums text-xs font-semibold text-foreground">
+                        {s.total_purchased > 0 ? rupee(s.total_purchased) : <span className="text-muted-foreground/30">—</span>}
                       </TableCell>
 
                       {/* Amount Owed */}
-                      <TableCell className="py-3 text-right tabular-nums font-semibold">
+                      <TableCell className="px-3 py-3 text-right align-middle tabular-nums font-semibold">
                         <span className={cn(
                           'text-xs font-bold tabular-nums',
                           owed > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400',
@@ -245,11 +288,11 @@ export default function SuppliersPage() {
                       </TableCell>
 
                       {/* Actions */}
-                      <TableCell className="py-3 text-right pr-4 action-trigger" onClick={e => e.stopPropagation()}>
+                      <TableCell className="py-3 text-right pr-4 align-middle action-trigger" onClick={e => e.stopPropagation()}>
                         <DropdownMenu>
                           <DropdownMenuTrigger render={
-                            <Button variant="ghost" size="icon-sm" className="size-8 rounded-lg">
-                              <MoreHorizontal className="size-4 text-muted-foreground" />
+                            <Button variant="ghost" size="icon-sm" className="size-7 opacity-0 transition-opacity group-hover:opacity-100 ml-auto">
+                              <MoreHorizontal className="size-4" />
                             </Button>
                           } />
                           <DropdownMenuContent align="end" className="rounded-xl">

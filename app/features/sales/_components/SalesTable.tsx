@@ -58,9 +58,9 @@ function SortableHeader({
   label: string; field?: SortField; current: SortField; dir: SortDir; className?: string
   onSort: (field: SortField) => void
 }) {
-  if (!field) return <TableHead className={cn("bg-card", className)}>{label}</TableHead>
+  if (!field) return <TableHead className={cn("bg-card sticky top-0 z-10", className)}>{label}</TableHead>
   return (
-    <TableHead className={cn("bg-card", className)}>
+    <TableHead className={cn("bg-card sticky top-0 z-10", className)}>
       <button
         type="button"
         className={cn(
@@ -314,7 +314,7 @@ export function SalesTable({
             </p>
           </div>
         ) : (
-          <div className="min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain [scrollbar-width:thin]">
+          <div className="min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain [scrollbar-width:thin] [&_[data-slot=table-container]]:overflow-visible">
             <Table className="w-full min-w-[900px] border-separate border-spacing-0 text-sm">
               <TableHeader className="bg-card shrink-0 sticky top-0 z-10">
                 <TableRow className="hover:bg-transparent">
@@ -326,7 +326,7 @@ export function SalesTable({
                     onSort={onSort}
                     className="pl-4 py-2 text-left font-semibold text-xs text-muted-foreground border-b border-border/40"
                   />
-                  <TableHead className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card">
+                  <TableHead className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">
                     Items
                   </TableHead>
                   <SortableHeader
@@ -337,7 +337,7 @@ export function SalesTable({
                     onSort={onSort}
                     className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40"
                   />
-                  <TableHead className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card">
+                  <TableHead className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">
                     Paid
                   </TableHead>
                   <SortableHeader
@@ -348,10 +348,10 @@ export function SalesTable({
                     onSort={onSort}
                     className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40"
                   />
-                  <TableHead className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card">
+                  <TableHead className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">
                     Status
                   </TableHead>
-                  <TableHead className="w-10 pl-3 pr-4 py-2 text-right border-b border-border/40 bg-card" />
+                  <TableHead className="w-10 pl-3 pr-4 py-2 text-right border-b border-border/40 bg-card sticky top-0 z-10" />
                 </TableRow>
               </TableHeader>
               <TableBody>
