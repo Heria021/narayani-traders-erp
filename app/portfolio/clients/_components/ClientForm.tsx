@@ -113,7 +113,7 @@ export function ClientForm({ open, client, onClose, onSubmit }: Props) {
     <Sheet open={open} onOpenChange={v => { if (!v) onClose() }}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-none lg:w-[600px] lg:max-w-[600px] h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)] m-4 rounded-xl border flex flex-col p-0 overflow-hidden shadow-xl"
+        className="w-full sm:max-w-none lg:w-[800px] lg:max-w-[800px] h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)] m-4 rounded-xl border flex flex-col p-0 overflow-hidden shadow-xl"
       >
         {/* Header */}
         <SheetHeader className="px-8 py-5 border-b shrink-0">

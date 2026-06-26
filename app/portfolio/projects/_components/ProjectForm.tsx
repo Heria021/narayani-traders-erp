@@ -167,7 +167,7 @@ export function ProjectForm({ open, project, clients, onClose, onSubmit }: Props
     <Sheet open={open} onOpenChange={v => { if (!v) onClose() }}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-none lg:w-[650px] lg:max-w-[650px] h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)] m-4 rounded-xl border flex flex-col p-0 overflow-hidden shadow-xl"
+        className="w-full sm:max-w-none lg:w-[800px] lg:max-w-[800px] h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)] m-4 rounded-xl border flex flex-col p-0 overflow-hidden shadow-xl"
       >
         <SheetHeader className="px-8 py-5 border-b border-border/60 shrink-0">
           <div className="flex flex-col gap-1">

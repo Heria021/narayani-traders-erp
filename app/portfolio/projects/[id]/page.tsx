@@ -2,75 +2,66 @@
 
 import { use, useState, useEffect } from 'react'
 import { useProjectDetail } from './_components/useProjectDetail'
+import { useProjects } from '../_components/useProjects'
 import { useBreadcrumb } from '@/components/app-shell'
-import {
-  EMPTY_CURATION_FORM,
-} from './_components/types'
+import { EMPTY_CURATION_FORM } from './_components/types'
 import type { PublicCurationFormValues } from './_components/types'
 import { PROJECT_TYPES } from '../_components/types'
+import type { ProjectFormValues } from '../_components/types'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter,
-  DialogHeader, DialogTitle
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import {
   MapPin, Calendar, Users,
   DollarSign, Upload, Globe, Image as ImageIcon,
-  Building2, Layers, Trash2, Ruler, Info
+  Trash2, Info, IndianRupee, Layers,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
 import { InvoiceSheet } from './_components/InvoiceSheet'
 import { WebsiteConfigSheet } from './_components/WebsiteConfigSheet'
-import { ProjectDetailsSheet } from './_components/ProjectDetailsSheet'
-
-// ─────────────────────────────────────────────────────────────────────────────
+import { ProjectDetailSheet } from './_components/ProjectDetailSheet'
+import { MediaUploadSheet } from './_components/MediaUploadSheet'
+import { ProjectForm } from '../_components/ProjectForm'
 
 function getProjectTypeName(typeVal: string) {
   const item = PROJECT_TYPES.find(t => t.value === typeVal)
   return item ? item.label : typeVal
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+function formatINR(num: number | null) {
+  if (num === null || isNaN(num)) return '—'
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency', currency: 'INR', maximumFractionDigits: 0,
+  }).format(num)
+}
 
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
 
   const {
-    loading, project, media, extras, publicListing, publicListingMedia, clients,
+    loading, project, media, extras, publicListing, publicListingMedia,
     baseFee, approvedExtras, finalTotalFee,
     uploadMedia, deleteMedia, setAsCoverImage, addExtra, deleteExtra,
-    savePublicCuration, updateProjectDetails
+    savePublicCuration, refetch,
   } = useProjectDetail(id)
 
+  const { clients, updateProject } = useProjects()
   const { setCustomTitle } = useBreadcrumb()
 
   useEffect(() => {
-    if (project?.title) {
-      setCustomTitle(project.title)
-    }
+    if (project?.title) setCustomTitle(project.title)
   }, [project?.title, setCustomTitle])
 
-  // ── Sheet States ──────────────────────────────────────────────────────────
+  const [detailSheetOpen, setDetailSheetOpen] = useState(false)
   const [invoiceSheetOpen, setInvoiceSheetOpen] = useState(false)
   const [curationSheetOpen, setCurationSheetOpen] = useState(false)
-  const [detailsSheetOpen, setDetailsSheetOpen] = useState(false)
+  const [formOpen, setFormOpen] = useState(false)
 
-  // ── Media Upload State ─────────────────────────────────────────────────────
   const [mediaUploadOpen, setMediaUploadOpen] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [mediaFile, setMediaFile] = useState<File | null>(null)
-  const [mediaCaption, setMediaCaption] = useState('')
-
-  // ── Curation Form State ────────────────────────────────────────────────────
   const [curationValues, setCurationValues] = useState<PublicCurationFormValues>(EMPTY_CURATION_FORM)
   const [curationSaving, setCurationSaving] = useState(false)
 
-  // Load curation settings from DB when project loads
   useEffect(() => {
     if (project) {
       setCurationValues({
@@ -80,24 +71,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         public_description: publicListing?.public_description ?? project.description ?? '',
         cover_media_id: publicListing?.cover_media_id ?? '',
         is_featured: publicListing?.is_featured ?? false,
-        selected_media_ids: publicListingMedia.map(m => m.media_id)
+        selected_media_ids: publicListingMedia.map(m => m.media_id),
       })
     }
   }, [project, publicListing, publicListingMedia])
-
-  // ── Handlers ──────────────────────────────────────────────────────────────
-  const handleUpload = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!mediaFile) return
-    setUploading(true)
-    const ok = await uploadMedia(mediaFile, mediaCaption)
-    if (ok) {
-      setMediaFile(null)
-      setMediaCaption('')
-      setMediaUploadOpen(false)
-    }
-    setUploading(false)
-  }
 
   const handleCurationSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -106,7 +83,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     setCurationSaving(false)
   }
 
-  // ── Loading state ──────────────────────────────────────────────────────────
+  async function handleProjectUpdate(values: ProjectFormValues, imageFile: File | null) {
+    if (!project) return false
+    const ok = await updateProject(project.id, values, imageFile, media)
+    if (ok) await refetch()
+    return ok
+  }
+
   if (loading || !project) {
     return (
       <div className="flex flex-col gap-6 p-6 h-screen overflow-hidden">
@@ -114,11 +97,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           <Skeleton className="size-8 rounded-lg" />
           <Skeleton className="h-6 w-48" />
         </div>
-        <div className="grid grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-20 rounded-xl" />
-          ))}
-        </div>
+        <Skeleton className="h-16 w-full rounded-xl" />
         <Skeleton className="flex-1 w-full rounded-xl" />
       </div>
     )
@@ -129,9 +108,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
 
-      {/* ══ PROJECT HEADER ════════════════════════════════════════════════════ */}
+      {/* ── Compact header + basic strip ── */}
       <div className="shrink-0 border-b border-border/60 bg-background relative overflow-hidden">
-        {/* Subtle architectural dot-grid background */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-[0.025] dark:opacity-[0.04]"
@@ -142,9 +120,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         />
 
         <div className="relative px-8 pt-7 pb-0">
-          {/* ── Top row: badge + actions ── */}
           <div className="flex items-start justify-between gap-4 mb-4">
-            {/* Left: type badge + title */}
             <div className="space-y-2 flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge
@@ -164,7 +140,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   </Badge>
                 )}
               </div>
-              <h1 className="text-2xl font-bold tracking-tight text-foreground leading-tight truncate">
+              <h1 className="text-2xl font-bold tracking-tight leading-tight truncate">
                 {project.title}
               </h1>
               {project.description && (
@@ -174,8 +150,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               )}
             </div>
 
-            {/* Right: actions */}
-            <div className="flex items-center gap-2 shrink-0 pt-0.5">
+            <div className="flex items-center gap-2 shrink-0 pt-0.5 flex-wrap justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDetailSheetOpen(true)}
+                className="h-8 px-3 text-xs font-medium gap-1.5"
+              >
+                <Info className="size-3.5 text-muted-foreground" />
+                Details
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -183,7 +167,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 className="h-8 px-3 text-xs font-medium gap-1.5"
               >
                 <Upload className="size-3.5 text-muted-foreground" />
-                Upload Media
+                Upload
               </Button>
               <Button
                 variant="outline"
@@ -203,103 +187,71 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 <Globe className="size-3.5 text-muted-foreground" />
                 Showcase
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setDetailsSheetOpen(true)}
-                className="h-8 px-3 text-xs font-medium gap-1.5"
-              >
-                <Info className="size-3.5 text-muted-foreground" />
-                Details
-              </Button>
             </div>
           </div>
 
-          {/* ── Metadata Strip: Basic Info ── */}
-          <div className="flex items-stretch divide-x divide-border/60 border-t border-border/40 overflow-x-auto scrollbar-none">
-            {/* Client */}
-            <div className="flex items-center gap-3 px-6 py-4 first:pl-0 shrink-0 group">
+          {/* Single basic metadata strip */}
+          <button
+            type="button"
+            onClick={() => setDetailSheetOpen(true)}
+            className="w-full flex items-stretch divide-x divide-border/60 border-t border-border/40 overflow-x-auto scrollbar-none hover:bg-muted/30 transition-colors text-left group"
+          >
+            <div className="flex items-center gap-3 px-6 py-4 first:pl-0 shrink-0">
               <div className="flex size-8 items-center justify-center rounded-lg bg-muted/70 shrink-0">
                 <Users className="size-4 text-muted-foreground" />
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/60 leading-none mb-1">Client</p>
-                <p className="text-sm font-semibold text-foreground leading-tight">
-                  {project.client?.name || 'Not Assigned'}
-                </p>
+                <p className="text-sm font-semibold leading-tight">{project.client?.name || 'Not assigned'}</p>
               </div>
             </div>
-
-            {/* Location */}
-            <div className="flex items-center gap-3 px-6 py-4 shrink-0 group">
+            <div className="flex items-center gap-3 px-6 py-4 shrink-0">
               <div className="flex size-8 items-center justify-center rounded-lg bg-muted/70 shrink-0">
                 <MapPin className="size-4 text-muted-foreground" />
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/60 leading-none mb-1">Location</p>
-                <p className="text-sm font-semibold text-foreground leading-tight">
-                  {locationText || 'Not Specified'}
-                </p>
+                <p className="text-sm font-semibold leading-tight">{locationText || 'Not specified'}</p>
               </div>
             </div>
-
-            {/* Completion */}
-            <div className="flex items-center gap-3 px-6 py-4 shrink-0 group">
+            <div className="flex items-center gap-3 px-6 py-4 shrink-0">
               <div className="flex size-8 items-center justify-center rounded-lg bg-muted/70 shrink-0">
                 <Calendar className="size-4 text-muted-foreground" />
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/60 leading-none mb-1">Completed</p>
-                <p className="text-sm font-semibold text-foreground leading-tight">
-                  {project.year_completed ?? 'Ongoing'}
-                </p>
+                <p className="text-sm font-semibold leading-tight">{project.year_completed ?? 'Ongoing'}</p>
               </div>
             </div>
-
-            {/* Project type */}
-            <div className="flex items-center gap-3 px-6 py-4 shrink-0 group">
+            <div className="flex items-center gap-3 px-6 py-4 shrink-0">
               <div className="flex size-8 items-center justify-center rounded-lg bg-muted/70 shrink-0">
-                <Building2 className="size-4 text-muted-foreground" />
+                <IndianRupee className="size-4 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/60 leading-none mb-1">Type</p>
-                <p className="text-sm font-semibold text-foreground leading-tight">
-                  {getProjectTypeName(project.type)}
-                </p>
+                <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/60 leading-none mb-1">Agreed fee</p>
+                <p className="text-sm font-semibold leading-tight tabular-nums">{formatINR(project.agreed_fee)}</p>
               </div>
             </div>
-
-            {/* Media count */}
-            <div className="flex items-center gap-3 px-6 py-4 shrink-0 group">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-muted/70 shrink-0">
-                <ImageIcon className="size-4 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/60 leading-none mb-1">Media</p>
-                <p className="text-sm font-semibold text-foreground leading-tight">
-                  {media.length} photo{media.length !== 1 ? 's' : ''}
-                </p>
-              </div>
+            <div className="flex items-center px-4 py-4 shrink-0 ml-auto">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                View all details →
+              </span>
             </div>
-          </div>
+          </button>
         </div>
       </div>
 
-      {/* ══ MAIN BODY: Media Pool Grid ════════════════════════════════════════ */}
+      {/* ── Media grid ── */}
       <div className="flex-1 overflow-y-auto p-8">
         {media.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center border border-dashed rounded-xl bg-card">
             <ImageIcon className="size-12 text-muted-foreground/20 mb-3" />
             <h4 className="font-semibold text-sm">No photos uploaded yet</h4>
             <p className="text-xs text-muted-foreground max-w-sm mt-1">
-              Click on &ldquo;Upload Media&rdquo; to attach photos to this project.
+              Upload photos to build this project&apos;s visual log.
             </p>
-            <Button
-              onClick={() => setMediaUploadOpen(true)}
-              variant="outline"
-              className="mt-4 text-xs rounded-lg h-8 gap-1.5"
-            >
-              <Upload className="size-3.5" /> Upload Photo
+            <Button onClick={() => setMediaUploadOpen(true)} variant="outline" className="mt-4 text-xs rounded-lg h-8 gap-1.5">
+              <Upload className="size-3.5" /> Upload photo
             </Button>
           </div>
         ) : (
@@ -331,7 +283,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                           size="sm"
                           className="h-7 text-[10px] bg-white text-black hover:bg-white/90 rounded-md font-semibold px-2.5"
                         >
-                          Make Cover
+                          Make cover
                         </Button>
                       )}
                       <Button
@@ -346,13 +298,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     </div>
                   </div>
                   {m.caption ? (
-                    <p className="p-3 text-[11px] text-neutral-800 dark:text-neutral-200 font-semibold leading-tight truncate">
-                      {m.caption}
-                    </p>
+                    <p className="p-3 text-[11px] font-semibold leading-tight truncate">{m.caption}</p>
                   ) : (
-                    <p className="p-3 text-[10px] text-muted-foreground/60 italic font-medium">
-                      No caption recorded
-                    </p>
+                    <p className="p-3 text-[10px] text-muted-foreground/60 italic font-medium">No caption</p>
                   )}
                 </div>
               )
@@ -361,7 +309,20 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         )}
       </div>
 
-      {/* ══ INVOICE SHEET ════════════════════════════════════════════════════ */}
+      <ProjectDetailSheet
+        open={detailSheetOpen}
+        onOpenChange={setDetailSheetOpen}
+        project={project}
+        mediaCount={media.length}
+        publicListing={publicListing}
+        baseFee={baseFee}
+        approvedExtras={approvedExtras}
+        finalTotalFee={finalTotalFee}
+        onEdit={() => setFormOpen(true)}
+        onOpenInvoice={() => setInvoiceSheetOpen(true)}
+        onOpenShowcase={() => setCurationSheetOpen(true)}
+      />
+
       <InvoiceSheet
         open={invoiceSheetOpen}
         onOpenChange={setInvoiceSheetOpen}
@@ -374,7 +335,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         deleteExtra={deleteExtra}
       />
 
-      {/* ══ WEBSITE CONFIG SHEET ═════════════════════════════════════════════ */}
       <WebsiteConfigSheet
         open={curationSheetOpen}
         onOpenChange={setCurationSheetOpen}
@@ -385,70 +345,19 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         onSubmit={handleCurationSubmit}
       />
 
-      {/* ══ PROJECT DETAILS SHEET ═══════════════════════════════════════════ */}
-      <ProjectDetailsSheet
-        open={detailsSheetOpen}
-        onClose={() => setDetailsSheetOpen(false)}
+      <ProjectForm
+        open={formOpen}
         project={project}
         clients={clients}
-        onSave={updateProjectDetails}
+        onClose={() => setFormOpen(false)}
+        onSubmit={handleProjectUpdate}
       />
 
-      {/* ══ DIALOG: Upload Project Media ══════════════════════════════════ */}
-      <Dialog open={mediaUploadOpen} onOpenChange={setMediaUploadOpen}>
-        <DialogContent className="max-w-lg rounded-2xl p-0 overflow-hidden border shadow-lg">
-          <DialogHeader className="px-7 py-5 border-b bg-muted/20">
-            <DialogTitle className="text-base font-bold">Upload Project Media</DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              Select an image file and attach it to this project&apos;s visual log.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleUpload}>
-            <div className="px-7 py-6 space-y-5">
-              {/* File Select */}
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-foreground/70">Select File</label>
-                <div className="border-2 border-dashed border-input rounded-xl p-8 bg-muted/10 hover:bg-muted/25 transition-colors relative cursor-pointer flex flex-col items-center justify-center gap-2">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={e => setMediaFile(e.target.files?.[0] || null)}
-                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                    required
-                  />
-                  <Upload className="size-7 text-muted-foreground/50" />
-                  <span className="text-sm font-medium">
-                    {mediaFile ? mediaFile.name : 'Click or drag to upload'}
-                  </span>
-                  <span className="text-xs text-muted-foreground">Supports JPG, PNG, WEBP</span>
-                </div>
-              </div>
-
-              {/* Caption */}
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-foreground/70">Caption <span className="font-normal text-muted-foreground">(optional)</span></label>
-                <Input
-                  value={mediaCaption}
-                  onChange={e => setMediaCaption(e.target.value)}
-                  placeholder="e.g. Front elevation view, finished modular kitchen"
-                  className="text-sm"
-                />
-              </div>
-            </div>
-
-            <DialogFooter className="px-7 py-4 border-t bg-muted/10">
-              <Button type="button" variant="outline" onClick={() => setMediaUploadOpen(false)} disabled={uploading} className="text-xs h-8">
-                Cancel
-              </Button>
-              <Button type="submit" disabled={uploading || !mediaFile} className="text-xs h-8 font-semibold">
-                {uploading ? 'Uploading…' : 'Upload File'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
+      <MediaUploadSheet
+        open={mediaUploadOpen}
+        onOpenChange={setMediaUploadOpen}
+        uploadMedia={uploadMedia}
+      />
     </div>
   )
 }

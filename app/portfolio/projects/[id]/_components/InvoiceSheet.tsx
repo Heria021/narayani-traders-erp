@@ -93,20 +93,27 @@ export function InvoiceSheet({
         className="w-full sm:max-w-none lg:w-[800px] lg:max-w-[800px] h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)] m-4 rounded-xl border flex flex-col p-0 overflow-hidden"
       >
         {/* Sheet Header */}
-        <SheetHeader className="px-8 py-5 border-b shrink-0">
-          <div className="flex items-center justify-between">
+        <SheetHeader className="px-8 py-5 border-b shrink-0 bg-muted/10 dark:bg-muted/[0.02]">
+          <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex size-9 items-center justify-center rounded-lg bg-foreground/5 border">
-                <FileText className="size-4 text-muted-foreground" />
+              <div className="flex size-9 items-center justify-center rounded-lg bg-indigo-50 border border-indigo-100 dark:bg-indigo-500/10 dark:border-indigo-500/20 shrink-0">
+                <FileText className="size-4 text-indigo-500" />
               </div>
               <div>
                 <SheetTitle className="text-base font-bold leading-tight">Project Invoice</SheetTitle>
-                <SheetDescription className="text-xs">Financial breakdown &amp; scope ledger</SheetDescription>
+                <SheetDescription className="text-xs">
+                  Financial breakdown &amp; scope ledger for <span className="font-semibold text-foreground">{project.title}</span>
+                </SheetDescription>
               </div>
             </div>
-            <Badge variant="outline" className="text-xs font-mono tracking-wide">
-              {invoiceNumber}
-            </Badge>
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              <Badge variant="outline" className="text-xs font-mono tracking-wide bg-background">
+                {invoiceNumber}
+              </Badge>
+              <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mt-1">
+                Value: {formatINR(finalTotalFee)}
+              </span>
+            </div>
           </div>
         </SheetHeader>
 
