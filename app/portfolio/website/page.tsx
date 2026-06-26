@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -15,8 +16,12 @@ import {
   ExternalLink
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useWebsiteCuration, type ListingRow, type UnpublishedProject } from './_components/useWebsiteCuration'
+import { useWebsiteCuration, type ListingRow } from './_components/useWebsiteCuration'
 import { PROJECT_TYPES } from '../projects/_components/types'
+import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
+import { WebsiteConfigSheet } from '../projects/[id]/_components/WebsiteConfigSheet'
+import type { PublicCurationFormValues } from '../projects/[id]/_components/types'
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -63,12 +68,15 @@ function ListingCard({
   const displayTitle = listing.public_title || listing.project_title
 
   return (
-    <div className={cn(
-      'group relative flex flex-col rounded-2xl border overflow-hidden bg-card',
-      'shadow-xs hover:shadow-md hover:shadow-black/8 dark:hover:shadow-black/25',
-      'hover:border-border hover:-translate-y-0.5 transition-all duration-300 ease-out',
-      listing.is_featured && 'ring-1 ring-amber-300/60 dark:ring-amber-500/30',
-    )}>
+    <div
+      onClick={onGoToProject}
+      className={cn(
+        'group relative flex flex-col rounded-2xl border overflow-hidden bg-card cursor-pointer',
+        'shadow-xs hover:shadow-md hover:shadow-black/8 dark:hover:shadow-black/25',
+        'hover:border-border hover:-translate-y-0.5 transition-all duration-300 ease-out',
+        listing.is_featured && 'ring-1 ring-amber-300/60 dark:ring-amber-500/30',
+      )}
+    >
 
       {/* ── Image zone ── */}
       <div className="relative aspect-[16/9] w-full overflow-hidden bg-muted shrink-0">
@@ -105,7 +113,7 @@ function ListingCard({
             } />
             <DropdownMenuContent align="end" className="rounded-xl">
               <DropdownMenuItem onClick={onGoToProject}>
-                <Pencil className="size-4 mr-2" /> Configure in Project
+                <Pencil className="size-4 mr-2" /> Configure Showcase
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onToggleFeatured}>
                 <Star className="size-4 mr-2" />
@@ -189,63 +197,7 @@ function ListingCard({
   )
 }
 
-// ── Unpublished project row ────────────────────────────────────────────────────
-function UnpublishedRow({
-  p, onGoToProject
-}: {
-  p: UnpublishedProject
-  onGoToProject: () => void
-}) {
-  const location = [p.city, p.state].filter(Boolean).join(', ')
 
-  return (
-    <button
-      onClick={onGoToProject}
-      className={cn(
-        'w-full text-left flex items-center gap-4 rounded-xl border border-border/60 bg-card p-4',
-        'hover:border-border hover:shadow-sm hover:bg-muted/10',
-        'transition-all duration-200 group',
-      )}
-    >
-      {/* Type dot */}
-      <div className="flex size-9 items-center justify-center rounded-lg bg-muted/60 shrink-0">
-        <Layers className="size-4 text-muted-foreground/60" />
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold text-sm text-foreground truncate">{p.title}</p>
-        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-          <span className={cn(
-            'text-[10px] font-semibold px-1.5 py-0.5 rounded-md',
-            TYPE_COLORS[p.type] ?? 'bg-muted text-muted-foreground'
-          )}>
-            {getProjectTypeName(p.type)}
-          </span>
-          {location && (
-            <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
-              <MapPin className="size-2.5" />{location}
-            </span>
-          )}
-          {p.year_completed && (
-            <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
-              <Calendar className="size-2.5" />{p.year_completed}
-            </span>
-          )}
-          {p.client_name && (
-            <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
-              <Users className="size-2.5" />{p.client_name}
-            </span>
-          )}
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2 shrink-0">
-        <span className="text-[11px] text-muted-foreground hidden sm:block">Publish via project</span>
-        <ArrowUpRight className="size-4 text-muted-foreground/40 group-hover:text-foreground group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all shrink-0" />
-      </div>
-    </button>
-  )
-}
 
 // ── Skeleton ─────────────────────────────────────────────────────────────────
 function SkeletonCard() {
@@ -272,10 +224,155 @@ function SkeletonCard() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function ShowcasePage() {
   const router = useRouter()
-  const { listings, unpublished, loading, toggleFeatured, unpublish } = useWebsiteCuration()
+  const supabase = createClient()
+  const { listings, unpublished, loading, refetch, toggleFeatured, unpublish } = useWebsiteCuration()
 
   const featuredCount = listings.filter(l => l.is_featured).length
   const totalGallery = listings.reduce((s, l) => s + l.gallery_count, 0)
+
+  // ── Showcase config states ──
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
+  const [selectedProjectMedia, setSelectedProjectMedia] = useState<any[]>([])
+
+  const EMPTY_CURATION_FORM: PublicCurationFormValues = {
+    is_active: false,
+    slug: '',
+    public_title: '',
+    public_description: '',
+    cover_media_id: '',
+    is_featured: false,
+    selected_media_ids: []
+  }
+
+  const [curationValues, setCurationValues] = useState<PublicCurationFormValues>(EMPTY_CURATION_FORM)
+  const [curationSaving, setCurationSaving] = useState(false)
+  const [curationSheetOpen, setCurationSheetOpen] = useState(false)
+
+  const handleCardClick = async (projectId: string) => {
+    const listing = listings.find(l => l.project_id === projectId)
+    if (!listing) return
+
+    setSelectedProjectId(projectId)
+
+    setCurationValues({
+      is_active: true,
+      slug: listing.slug,
+      public_title: listing.public_title || '',
+      public_description: listing.public_description || '',
+      cover_media_id: listing.cover_media_id || '',
+      is_featured: listing.is_featured,
+      selected_media_ids: []
+    })
+
+    setCurationSheetOpen(true)
+
+    // Load project media
+    const { data: mediaData } = await supabase
+      .from('arch_project_media')
+      .select('id, file_url, caption')
+      .eq('project_id', projectId)
+      .order('sort_order')
+
+    setSelectedProjectMedia(mediaData || [])
+
+    // Load selected media ids
+    const { data: listMediaData } = await supabase
+      .from('arch_public_listing_media')
+      .select('media_id')
+      .eq('public_listing_id', listing.id)
+
+    const selectedMediaIds = (listMediaData || []).map(m => m.media_id)
+
+    setCurationValues(v => ({
+      ...v,
+      selected_media_ids: selectedMediaIds
+    }))
+  }
+
+  const handleCurationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedProjectId) return
+    setCurationSaving(true)
+
+    try {
+      const listing = listings.find(l => l.project_id === selectedProjectId)
+      if (!listing) return
+
+      if (!curationValues.is_active) {
+        // Unpublish/toggle off visibility
+        const { error } = await supabase
+          .from('arch_public_listings')
+          .delete()
+          .eq('id', listing.id)
+
+        if (error) {
+          toast.error(error.message)
+        } else {
+          toast.success('Public listing disabled')
+          setCurationSheetOpen(false)
+          await refetch()
+        }
+        return
+      }
+
+      // Upsert listing metadata
+      const { data: upsertedListing, error: upsertErr } = await supabase
+        .from('arch_public_listings')
+        .upsert({
+          id: listing.id,
+          project_id: selectedProjectId,
+          slug: curationValues.slug.trim(),
+          public_title: curationValues.public_title.trim() || null,
+          public_description: curationValues.public_description.trim() || null,
+          cover_media_id: curationValues.cover_media_id || null,
+          is_featured: curationValues.is_featured,
+          updated_at: new Date().toISOString()
+        } as any, {
+          onConflict: 'project_id'
+        })
+        .select()
+        .single()
+
+      if (upsertErr) {
+        toast.error(upsertErr.message)
+        return
+      }
+
+      const listingId = upsertedListing.id
+
+      // Clear previous list media mappings
+      await supabase
+        .from('arch_public_listing_media')
+        .delete()
+        .eq('public_listing_id', listingId)
+
+      // Insert new selections
+      if (curationValues.selected_media_ids.length > 0) {
+        const rows = curationValues.selected_media_ids.map((mediaId, idx) => ({
+          public_listing_id: listingId,
+          media_id: mediaId,
+          sort_order: idx
+        }))
+
+        const { error: insErr } = await supabase
+          .from('arch_public_listing_media')
+          .insert(rows)
+
+        if (insErr) {
+          console.error(insErr)
+          toast.warning('Metadata saved, but failed to link gallery photo selections.')
+        }
+      }
+
+      toast.success('Showcase settings updated successfully')
+      setCurationSheetOpen(false)
+      await refetch()
+    } catch (err: any) {
+      toast.error(err.message || 'An error occurred saving configurations')
+    } finally {
+      setCurationSaving(false)
+    }
+  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
@@ -409,7 +506,7 @@ export default function ShowcasePage() {
                 <ListingCard
                   key={l.id}
                   listing={l}
-                  onGoToProject={() => router.push(`/portfolio/projects/${l.project_id}`)}
+                  onGoToProject={() => handleCardClick(l.project_id)}
                   onToggleFeatured={() => toggleFeatured(l)}
                   onUnpublish={() => unpublish(l)}
                 />
@@ -418,33 +515,17 @@ export default function ShowcasePage() {
           )}
         </section>
 
-        {/* ── UNPUBLISHED PROJECTS ── */}
-        {!loading && unpublished.length > 0 && (
-          <section>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="size-1.5 rounded-full bg-muted-foreground/40" />
-              <h2 className="text-sm font-bold text-foreground">Not Yet Published</h2>
-              <Badge variant="outline" className="text-[10px] px-2 py-0 rounded-full ml-1 text-muted-foreground">
-                {unpublished.length}
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground mb-3">
-              These projects exist in your records but are not on the public website. Open a project and use the
-              {' '}<strong>Website</strong> panel to publish it.
-            </p>
-            <div className="space-y-2">
-              {unpublished.map(p => (
-                <UnpublishedRow
-                  key={p.id}
-                  p={p}
-                  onGoToProject={() => router.push(`/portfolio/projects/${p.id}`)}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
       </div>
+
+      <WebsiteConfigSheet
+        open={curationSheetOpen}
+        onOpenChange={setCurationSheetOpen}
+        curationValues={curationValues}
+        setCurationValues={setCurationValues}
+        media={selectedProjectMedia}
+        curationSaving={curationSaving}
+        onSubmit={handleCurationSubmit}
+      />
     </div>
   )
 }
