@@ -20,12 +20,13 @@ import { Input } from '@/components/ui/input'
 import {
   MapPin, Calendar, Users,
   DollarSign, Upload, Globe, Image as ImageIcon,
-  Building2, Layers, Trash2, Ruler
+  Building2, Layers, Trash2, Ruler, Info
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 import { InvoiceSheet } from './_components/InvoiceSheet'
 import { WebsiteConfigSheet } from './_components/WebsiteConfigSheet'
+import { ProjectDetailsSheet } from './_components/ProjectDetailsSheet'
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -40,10 +41,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const { id } = use(params)
 
   const {
-    loading, project, media, extras, publicListing, publicListingMedia,
+    loading, project, media, extras, publicListing, publicListingMedia, clients,
     baseFee, approvedExtras, finalTotalFee,
     uploadMedia, deleteMedia, setAsCoverImage, addExtra, deleteExtra,
-    savePublicCuration
+    savePublicCuration, updateProjectDetails
   } = useProjectDetail(id)
 
   const { setCustomTitle } = useBreadcrumb()
@@ -57,6 +58,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   // ── Sheet States ──────────────────────────────────────────────────────────
   const [invoiceSheetOpen, setInvoiceSheetOpen] = useState(false)
   const [curationSheetOpen, setCurationSheetOpen] = useState(false)
+  const [detailsSheetOpen, setDetailsSheetOpen] = useState(false)
 
   // ── Media Upload State ─────────────────────────────────────────────────────
   const [mediaUploadOpen, setMediaUploadOpen] = useState(false)
@@ -201,10 +203,19 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 <Globe className="size-3.5 text-muted-foreground" />
                 Showcase
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDetailsSheetOpen(true)}
+                className="h-8 px-3 text-xs font-medium gap-1.5"
+              >
+                <Info className="size-3.5 text-muted-foreground" />
+                Details
+              </Button>
             </div>
           </div>
 
-          {/* ── Metadata Strip 1: General Info ── */}
+          {/* ── Metadata Strip: Basic Info ── */}
           <div className="flex items-stretch divide-x divide-border/60 border-t border-border/40 overflow-x-auto scrollbar-none">
             {/* Client */}
             <div className="flex items-center gap-3 px-6 py-4 first:pl-0 shrink-0 group">
@@ -254,48 +265,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/60 leading-none mb-1">Type</p>
                 <p className="text-sm font-semibold text-foreground leading-tight">
                   {getProjectTypeName(project.type)}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Metadata Strip 2: Specs & Media ── */}
-          <div className="flex items-stretch divide-x divide-border/60 border-t border-border/40 overflow-x-auto scrollbar-none bg-muted/5 dark:bg-muted/[0.01]">
-            {/* Area */}
-            <div className="flex items-center gap-3 px-6 py-4 first:pl-0 shrink-0 group">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-muted/70 shrink-0">
-                <Ruler className="size-4 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/60 leading-none mb-1">Area</p>
-                <p className="text-sm font-semibold text-foreground leading-tight">
-                  {project.area_sqft ? `${Math.round(project.area_sqft).toLocaleString('en-IN')} ft²` : '—'}
-                </p>
-              </div>
-            </div>
-
-            {/* Floors */}
-            <div className="flex items-center gap-3 px-6 py-4 shrink-0 group">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-muted/70 shrink-0">
-                <Layers className="size-4 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/60 leading-none mb-1">Floors</p>
-                <p className="text-sm font-semibold text-foreground leading-tight">
-                  {project.floors != null ? project.floors : '—'}
-                </p>
-              </div>
-            </div>
-
-            {/* Configuration */}
-            <div className="flex items-center gap-3 px-6 py-4 shrink-0 group">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-muted/70 shrink-0">
-                <Building2 className="size-4 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/60 leading-none mb-1">Config</p>
-                <p className="text-sm font-semibold text-foreground leading-tight">
-                  {project.configuration || '—'}
                 </p>
               </div>
             </div>
@@ -414,6 +383,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         media={media}
         curationSaving={curationSaving}
         onSubmit={handleCurationSubmit}
+      />
+
+      {/* ══ PROJECT DETAILS SHEET ═══════════════════════════════════════════ */}
+      <ProjectDetailsSheet
+        open={detailsSheetOpen}
+        onClose={() => setDetailsSheetOpen(false)}
+        project={project}
+        clients={clients}
+        onSave={updateProjectDetails}
       />
 
       {/* ══ DIALOG: Upload Project Media ══════════════════════════════════ */}

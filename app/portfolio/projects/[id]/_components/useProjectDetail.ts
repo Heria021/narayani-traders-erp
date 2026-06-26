@@ -21,6 +21,7 @@ export function useProjectDetail(projectId: string) {
   const [extras, setExtras] = useState<ProjectExtra[]>([])
   const [publicListing, setPublicListing] = useState<PublicListing | null>(null)
   const [publicListingMedia, setPublicListingMedia] = useState<PublicListingMedia[]>([])
+  const [clients, setClients] = useState<{ id: string; name: string }[]>([])
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -38,6 +39,13 @@ export function useProjectDetail(projectId: string) {
         setLoading(false)
         return
       }
+
+      // Fetch all clients for the dropdown
+      const { data: clientsData } = await supabase
+        .from('arch_clients')
+        .select('id, name')
+        .order('name')
+      setClients(clientsData || [])
 
       // Convert numeric fields from strings if necessary
       const enrichedProj: ProjectWithRelations = {
@@ -379,6 +387,42 @@ export function useProjectDetail(projectId: string) {
     }
   }
 
+  const updateProjectDetails = async (values: any): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('arch_projects')
+        .update({
+          client_id: values.client_id,
+          title: values.title,
+          type: values.type,
+          city: values.city || null,
+          state: values.state || null,
+          area_sqft: values.area_sqft ? parseFloat(values.area_sqft) : null,
+          floors: values.floors ? parseInt(values.floors) : null,
+          configuration: values.configuration || null,
+          rate_per_sqft: values.rate_per_sqft ? parseFloat(values.rate_per_sqft) : null,
+          agreed_fee: values.agreed_fee ? parseFloat(values.agreed_fee) : null,
+          year_completed: values.year_completed ? parseInt(values.year_completed) : null,
+          start_date: values.start_date || null,
+          completion_date: values.completion_date || null,
+          description: values.description || null,
+          internal_notes: values.internal_notes || null,
+          client_testimonial: values.client_testimonial || null
+        })
+        .eq('id', projectId)
+
+      if (error) throw error
+
+      toast.success('Project details updated successfully')
+      await fetchData()
+      return true
+    } catch (err: any) {
+      console.error('Error updating project details:', err)
+      toast.error(err.message || 'Failed to update project details')
+      return false
+    }
+  }
+
   return {
     loading,
     project,
@@ -386,6 +430,7 @@ export function useProjectDetail(projectId: string) {
     extras,
     publicListing,
     publicListingMedia,
+    clients,
     
     // Ledger stats
     baseFee,
@@ -399,6 +444,7 @@ export function useProjectDetail(projectId: string) {
     addExtra,
     deleteExtra,
     savePublicCuration,
+    updateProjectDetails,
     refetch: fetchData
   }
 }
