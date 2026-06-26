@@ -36,7 +36,7 @@ import {
   PaletteIcon,
   BriefcaseIcon,
   ImageIcon,
-  SettingsIcon,
+  GlobeIcon,
   ChevronsUpDown,
 } from "lucide-react"
 
@@ -128,6 +128,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       logo: PaletteIcon,
       url: "/portfolio/projects",
       id: "portfolio",
+    },
+    {
+      name: "Studio Website",
+      plan: "Public site",
+      logo: GlobeIcon,
+      url: "/",
+      id: "website",
     },
   ]
 
