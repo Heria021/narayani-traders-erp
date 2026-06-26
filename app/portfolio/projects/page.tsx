@@ -179,33 +179,6 @@ function ProjectCard({
           )}
         </div>
 
-        {/* Specs row */}
-        <div className="flex items-center gap-0 rounded-lg border border-border/60 overflow-hidden text-xs divide-x divide-border/60 bg-muted/20">
-          <div className="flex flex-col items-center justify-center px-3 py-2 flex-1 text-center">
-            <span className="text-[9px] text-muted-foreground/50 uppercase tracking-wider font-semibold mb-0.5 flex items-center gap-0.5">
-              <Ruler className="size-2.5" /> Area
-            </span>
-            <span className="font-semibold text-foreground text-[12px]">
-              {p.area_sqft ? `${Math.round(p.area_sqft).toLocaleString('en-IN')} ft²` : '—'}
-            </span>
-          </div>
-          <div className="flex flex-col items-center justify-center px-3 py-2 flex-1 text-center">
-            <span className="text-[9px] text-muted-foreground/50 uppercase tracking-wider font-semibold mb-0.5 flex items-center gap-0.5">
-              <Layers className="size-2.5" /> Floors
-            </span>
-            <span className="font-semibold text-foreground text-[12px]">
-              {p.floors != null ? p.floors : '—'}
-            </span>
-          </div>
-          <div className="flex flex-col items-center justify-center px-3 py-2 flex-1 text-center">
-            <span className="text-[9px] text-muted-foreground/50 uppercase tracking-wider font-semibold mb-0.5">
-              Config
-            </span>
-            <span className="font-semibold text-foreground text-[12px] truncate max-w-full" title={p.configuration || ''}>
-              {p.configuration || '—'}
-            </span>
-          </div>
-        </div>
       </div>
 
       {/* ── Card footer: fee ── */}

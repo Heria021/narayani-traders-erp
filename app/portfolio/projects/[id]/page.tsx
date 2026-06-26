@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/input'
 import {
   MapPin, Calendar, Users,
   DollarSign, Upload, Globe, Image as ImageIcon,
-  Building2, Layers, Trash2
+  Building2, Layers, Trash2, Ruler
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -204,10 +204,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </div>
           </div>
 
-          {/* ── Metadata strip ── */}
-          <div className="flex items-stretch divide-x divide-border/60 border-t border-border/40">
+          {/* ── Metadata Strip 1: General Info ── */}
+          <div className="flex items-stretch divide-x divide-border/60 border-t border-border/40 overflow-x-auto scrollbar-none">
             {/* Client */}
-            <div className="flex items-center gap-3 px-6 py-4 first:pl-0 group">
+            <div className="flex items-center gap-3 px-6 py-4 first:pl-0 shrink-0 group">
               <div className="flex size-8 items-center justify-center rounded-lg bg-muted/70 shrink-0">
                 <Users className="size-4 text-muted-foreground" />
               </div>
@@ -220,7 +220,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </div>
 
             {/* Location */}
-            <div className="flex items-center gap-3 px-6 py-4 group">
+            <div className="flex items-center gap-3 px-6 py-4 shrink-0 group">
               <div className="flex size-8 items-center justify-center rounded-lg bg-muted/70 shrink-0">
                 <MapPin className="size-4 text-muted-foreground" />
               </div>
@@ -233,7 +233,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </div>
 
             {/* Completion */}
-            <div className="flex items-center gap-3 px-6 py-4 group">
+            <div className="flex items-center gap-3 px-6 py-4 shrink-0 group">
               <div className="flex size-8 items-center justify-center rounded-lg bg-muted/70 shrink-0">
                 <Calendar className="size-4 text-muted-foreground" />
               </div>
@@ -245,21 +245,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               </div>
             </div>
 
-            {/* Media count */}
-            <div className="flex items-center gap-3 px-6 py-4 group">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-muted/70 shrink-0">
-                <ImageIcon className="size-4 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/60 leading-none mb-1">Media</p>
-                <p className="text-sm font-semibold text-foreground leading-tight">
-                  {media.length} photo{media.length !== 1 ? 's' : ''}
-                </p>
-              </div>
-            </div>
-
             {/* Project type */}
-            <div className="flex items-center gap-3 px-6 py-4 group">
+            <div className="flex items-center gap-3 px-6 py-4 shrink-0 group">
               <div className="flex size-8 items-center justify-center rounded-lg bg-muted/70 shrink-0">
                 <Building2 className="size-4 text-muted-foreground" />
               </div>
@@ -267,6 +254,61 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/60 leading-none mb-1">Type</p>
                 <p className="text-sm font-semibold text-foreground leading-tight">
                   {getProjectTypeName(project.type)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Metadata Strip 2: Specs & Media ── */}
+          <div className="flex items-stretch divide-x divide-border/60 border-t border-border/40 overflow-x-auto scrollbar-none bg-muted/5 dark:bg-muted/[0.01]">
+            {/* Area */}
+            <div className="flex items-center gap-3 px-6 py-4 first:pl-0 shrink-0 group">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-muted/70 shrink-0">
+                <Ruler className="size-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/60 leading-none mb-1">Area</p>
+                <p className="text-sm font-semibold text-foreground leading-tight">
+                  {project.area_sqft ? `${Math.round(project.area_sqft).toLocaleString('en-IN')} ft²` : '—'}
+                </p>
+              </div>
+            </div>
+
+            {/* Floors */}
+            <div className="flex items-center gap-3 px-6 py-4 shrink-0 group">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-muted/70 shrink-0">
+                <Layers className="size-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/60 leading-none mb-1">Floors</p>
+                <p className="text-sm font-semibold text-foreground leading-tight">
+                  {project.floors != null ? project.floors : '—'}
+                </p>
+              </div>
+            </div>
+
+            {/* Configuration */}
+            <div className="flex items-center gap-3 px-6 py-4 shrink-0 group">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-muted/70 shrink-0">
+                <Building2 className="size-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/60 leading-none mb-1">Config</p>
+                <p className="text-sm font-semibold text-foreground leading-tight">
+                  {project.configuration || '—'}
+                </p>
+              </div>
+            </div>
+
+            {/* Media count */}
+            <div className="flex items-center gap-3 px-6 py-4 shrink-0 group">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-muted/70 shrink-0">
+                <ImageIcon className="size-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/60 leading-none mb-1">Media</p>
+                <p className="text-sm font-semibold text-foreground leading-tight">
+                  {media.length} photo{media.length !== 1 ? 's' : ''}
                 </p>
               </div>
             </div>
