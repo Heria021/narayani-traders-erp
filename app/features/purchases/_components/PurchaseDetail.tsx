@@ -2,6 +2,7 @@
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
@@ -11,27 +12,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Calendar, Building2, FileText, Package } from 'lucide-react'
+import { Calendar, Building2, FileText, CreditCard } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { PurchaseWithItems } from './types'
-
-const PAYMENT_STATUS_STYLE = {
-  paid:    'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900',
-  partial: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900',
-  pending: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900',
-} as const
-
-function PaymentSummaryBadge({ status }: { status: PurchaseWithItems['payment_status'] }) {
-  const label = status.charAt(0).toUpperCase() + status.slice(1)
-  return (
-    <span className={cn(
-      'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold capitalize ml-auto',
-      PAYMENT_STATUS_STYLE[status],
-    )}>
-      {label}
-    </span>
-  )
-}
+import { PaymentStatusBadge } from './PaymentStatusBadge'
 
 const rupee = (n: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2 }).format(n)
@@ -44,9 +28,12 @@ interface Props {
   purchase: PurchaseWithItems | null
   loading: boolean
   onClose: () => void
+  onRecordPayment?: () => void
 }
 
-export function PurchaseDetail({ open, purchase, loading, onClose }: Props) {
+export function PurchaseDetail({ open, purchase, loading, onClose, onRecordPayment }: Props) {
+  const canPay = purchase && purchase.payment_status !== 'paid' && purchase.balance_due > 0
+
   return (
     <Sheet open={open} onOpenChange={v => !v && onClose()}>
       <SheetContent
@@ -56,7 +43,7 @@ export function PurchaseDetail({ open, purchase, loading, onClose }: Props) {
         {/* ── Header ────────────────────────────────────────────────── */}
         <SheetHeader className="px-8 py-5 border-b shrink-0">
           <div className="flex items-start justify-between gap-4">
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1 min-w-0">
               <SheetTitle className="text-lg">
                 {loading || !purchase ? 'Purchase Detail' : `Purchase ${purchase.purchase_number}`}
               </SheetTitle>
@@ -67,9 +54,22 @@ export function PurchaseDetail({ open, purchase, loading, onClose }: Props) {
               )}
             </div>
             {!loading && purchase && (
-              <Badge className="shrink-0 mt-0.5 mr-4 bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-400 border-0 uppercase text-[10px] font-bold tracking-wider">
-                Purchase Order
-              </Badge>
+              <div className="flex items-center gap-2 shrink-0 mr-4">
+                {canPay && onRecordPayment && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onRecordPayment}
+                    className="h-8 text-xs font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+                  >
+                    <CreditCard className="size-3.5 mr-1.5" />
+                    Record Payment
+                  </Button>
+                )}
+                <Badge className="shrink-0 bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-400 border-0 uppercase text-[10px] font-bold tracking-wider">
+                  Purchase Order
+                </Badge>
+              </div>
             )}
           </div>
         </SheetHeader>
@@ -266,7 +266,9 @@ function PurchaseContent({ purchase: p }: { purchase: PurchaseWithItems }) {
                   Payment Status
                 </TableCell>
                 <TableCell className="text-right align-middle py-3 pr-4">
-                  <PaymentSummaryBadge status={p.payment_status} />
+                  <div className="flex justify-end">
+                    <PaymentStatusBadge status={p.payment_status} />
+                  </div>
                 </TableCell>
               </TableRow>
             </TableBody>

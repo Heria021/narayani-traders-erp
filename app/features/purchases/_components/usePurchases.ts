@@ -9,7 +9,8 @@ import {
   DEFAULT_FILTERS, ROWS_PER_PAGE,
 } from './types'
 import { rollbackReferencedStock } from '@/lib/services/stockMovement'
-import { mapPurchaseRow } from '../../suppliers/_components/balances'
+import { mapBalanceRow, mapPurchaseRow, type SupplierBalanceRow } from '../../suppliers/_components/balances'
+import type { SupplierWithStats, SupplierPaymentFormValues } from '../../suppliers/_components/types'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -53,13 +54,15 @@ export function usePurchases() {
   const [loading,      setLoading]      = useState(true)
 
   const [kpi,          setKpi]          = useState<PurchaseKpi>({
-    total_count: 0, this_month: 0, total_spent: 0, total_items_bought: 0,
+    total_count: 0, this_month: 0, total_spent: 0, pending_amount: 0, pending_count: 0,
   })
   const [kpiLoading,   setKpiLoading]   = useState(true)
 
   const [selectedId,    setSelectedId]    = useState<string | null>(null)
   const [detailData,    setDetailData]    = useState<PurchaseWithItems | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
+  const [paymentSupplier, setPaymentSupplier] = useState<SupplierWithStats | null>(null)
+  const [paymentPrefill,  setPaymentPrefill]  = useState<{ purchaseId: string; amount: string } | null>(null)
 
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -69,18 +72,21 @@ export function usePurchases() {
     const [
       { data: allPurchases },
       { data: monthPurchases },
-      { data: itemsData },
+      { data: pendingRows },
     ] = await Promise.all([
       supabase.from('purchases').select('grand_total'),
       supabase.from('purchases').select('id').gte('purchase_date', som),
-      supabase.from('purchase_items').select('quantity'),
+      supabase.from('purchases').select('balance_due'),
     ])
 
+    const pending = (pendingRows ?? []).filter(r => Number(r.balance_due) > 0)
+
     setKpi({
-      total_count:       (allPurchases ?? []).length,
-      this_month:        (monthPurchases ?? []).length,
-      total_spent:       (allPurchases ?? []).reduce((s, p) => s + p.grand_total, 0),
-      total_items_bought:(itemsData ?? []).reduce((s, i) => s + i.quantity, 0),
+      total_count:     (allPurchases ?? []).length,
+      this_month:      (monthPurchases ?? []).length,
+      total_spent:     (allPurchases ?? []).reduce((s, p) => s + Number(p.grand_total), 0),
+      pending_amount:  pending.reduce((s, r) => s + Number(r.balance_due), 0),
+      pending_count:   pending.length,
     })
     setKpiLoading(false)
   }, [supabase])
@@ -107,6 +113,7 @@ export function usePurchases() {
 
     if (from) query = query.gte('purchase_date', from)
     if (to)   query = query.lte('purchase_date', to)
+    if (f.paymentStatus !== 'all') query = query.eq('payment_status', f.paymentStatus)
 
     if (sf === 'supplier_name') {
       query = query.order('suppliers(name)', { ascending: sd === 'asc' })
@@ -250,6 +257,73 @@ export function usePurchases() {
     fetchPurchases(next, sortField, sortDir, 1)
   }, [filters, sortField, sortDir, fetchPurchases])
 
+  const handlePaymentStatusChange = useCallback((paymentStatus: PurchaseFilters['paymentStatus']) => {
+    const next = { ...filters, paymentStatus }
+    setFilters(next)
+    setPage(1)
+    fetchPurchases(next, sortField, sortDir, 1)
+  }, [filters, sortField, sortDir, fetchPurchases])
+
+  const prepareRecordPayment = useCallback(async (purchase: PurchaseWithItems) => {
+    const { data, error } = await supabase
+      .from('supplier_balances')
+      .select('*')
+      .eq('id', purchase.supplier_id)
+      .single()
+
+    if (error || !data) {
+      toast.error('Could not load supplier balance')
+      return false
+    }
+
+    setPaymentSupplier(mapBalanceRow(data as SupplierBalanceRow))
+    setPaymentPrefill({
+      purchaseId: purchase.id,
+      amount: purchase.balance_due > 0 ? purchase.balance_due.toFixed(2) : '',
+    })
+    return true
+  }, [supabase])
+
+  const clearPaymentContext = useCallback(() => {
+    setPaymentSupplier(null)
+    setPaymentPrefill(null)
+  }, [])
+
+  const recordPayment = useCallback(async (values: SupplierPaymentFormValues): Promise<boolean> => {
+    if (!paymentSupplier || !detailData) return false
+
+    const amountNum = Number(values.amount)
+    if (isNaN(amountNum) || amountNum <= 0) {
+      toast.error('Enter a valid payment amount')
+      return false
+    }
+
+    const { error } = await supabase
+      .from('supplier_payments')
+      .insert({
+        supplier_id:      paymentSupplier.id,
+        purchase_id:      values.purchase_id || detailData.id,
+        amount:           amountNum,
+        payment_method:   values.payment_method,
+        reference_number: values.reference_number.trim() || null,
+        payment_date:     values.payment_date,
+        note:             values.note.trim() || null,
+      })
+
+    if (error) {
+      toast.error(error.message)
+      return false
+    }
+
+    toast.success('Payment recorded successfully')
+    await Promise.all([
+      fetchDetail(detailData.id),
+      fetchPurchases(),
+      fetchKpi(),
+    ])
+    return true
+  }, [supabase, paymentSupplier, detailData, fetchDetail, fetchPurchases, fetchKpi])
+
   const handleSort = useCallback((field: SortField) => {
     const dir: SortDir = sortField === field && sortDir === 'desc' ? 'asc' : 'desc'
     setSortField(field)
@@ -315,9 +389,11 @@ export function usePurchases() {
     purchases, total, page, sortField, sortDir, filters, loading,
     kpi, kpiLoading,
     selectedId, detailData, detailLoading,
+    paymentSupplier, paymentPrefill,
     setSelectedId,
-    handleSearchChange, handleDateRangeChange, handleSort, handlePageChange,
+    handleSearchChange, handleDateRangeChange, handlePaymentStatusChange, handleSort, handlePageChange,
     deletePurchase,
+    prepareRecordPayment, recordPayment, clearPaymentContext,
     fetchPurchases, fetchKpi,
   }
 }

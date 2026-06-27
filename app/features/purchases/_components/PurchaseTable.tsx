@@ -22,9 +22,10 @@ import {
   CalendarDays, ShoppingBag, MoreHorizontal, Eye, Trash2, ReceiptText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { Purchase, PurchaseFilters, SortField, SortDir } from './types'
+import type { Purchase, PurchaseFilters, SortField, SortDir, PurchasePaymentFilter } from './types'
 import { ROWS_PER_PAGE } from './types'
 import { Input } from '@/components/ui/input'
+import { PaymentStatusBadge, isPurchaseAgedUnpaid } from './PaymentStatusBadge'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -48,6 +49,7 @@ interface Props {
   onPageChange: (page: number) => void
   onSearch: (v: string) => void
   onDateRange: (range: PurchaseFilters['dateRange'], from?: string, to?: string) => void
+  onPaymentStatus: (status: PurchasePaymentFilter) => void
   onView: (purchase: Purchase) => void
   onDelete: (purchase: Purchase) => Promise<boolean>
 }
@@ -118,6 +120,7 @@ function SkeletonRow() {
       <td className="px-3 py-3 text-right"><Skeleton className="ml-auto h-4 w-16" /></td>
       <td className="px-3 py-3 text-right"><Skeleton className="ml-auto h-4 w-16" /></td>
       <td className="px-3 py-3 text-right"><Skeleton className="ml-auto h-4 w-24" /></td>
+      <td className="px-3 py-3 text-center"><Skeleton className="mx-auto h-5 w-14 rounded-full" /></td>
       <td className="py-3 pl-3 pr-4"><Skeleton className="size-7 rounded-md" /></td>
     </tr>
   )
@@ -157,7 +160,7 @@ function DeleteConfirm({ purchase, deleting, onConfirm, onCancel }: {
 
 export function PurchaseTable({
   purchases, total, page, sortField, sortDir, filters, loading,
-  onSort, onPageChange, onSearch, onDateRange, onView, onDelete,
+  onSort, onPageChange, onSearch, onDateRange, onPaymentStatus, onView, onDelete,
 }: Props) {
   const [deleteTarget, setDeleteTarget] = useState<Purchase | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -225,6 +228,26 @@ export function PurchaseTable({
                 </SelectContent>
               </Select>
             </div>
+            <div className="flex items-center gap-1.5">
+              <Select
+                value={filters.paymentStatus}
+                onValueChange={v => onPaymentStatus(v as PurchasePaymentFilter)}>
+                <SelectTrigger className="h-8 w-36 rounded-lg border-border/60 text-xs">
+                  <span>
+                    {filters.paymentStatus === 'all'     && 'All payments'}
+                    {filters.paymentStatus === 'paid'    && 'Paid'}
+                    {filters.paymentStatus === 'partial' && 'Partial'}
+                    {filters.paymentStatus === 'pending' && 'Pending'}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All payments</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="partial">Partial</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {showCustom && (
@@ -253,15 +276,15 @@ export function PurchaseTable({
           <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center text-muted-foreground">
             <ShoppingBag className="size-8 opacity-20" />
             <p className="text-sm font-medium text-foreground">
-              {filters.search || filters.dateRange !== 'all'
-                ? 'No purchases match your search'
+              {filters.search || filters.dateRange !== 'all' || filters.paymentStatus !== 'all'
+                ? 'No purchases match your filters'
                 : 'No purchases yet'}
             </p>
             <p className="text-xs">
               {filters.search
                 ? 'Try a different search term.'
-                : filters.dateRange !== 'all'
-                  ? 'No purchases in this period.'
+                : filters.dateRange !== 'all' || filters.paymentStatus !== 'all'
+                  ? 'No purchases match the selected filters.'
                   : 'Record your first purchase to start tracking stock.'}
             </p>
           </div>
@@ -305,6 +328,9 @@ export function PurchaseTable({
                     className="text-right"
                     onSort={onSort}
                   />
+                  <th className="h-10 px-3 text-center align-middle text-xs font-medium whitespace-nowrap text-muted-foreground">
+                    Payment
+                  </th>
                   <th className="h-10 w-10 px-3 pr-4" />
                 </tr>
               </thead>
@@ -370,6 +396,13 @@ export function PurchaseTable({
                         <span className="text-sm tabular-nums font-semibold text-foreground">
                           {rupee(p.grand_total)}
                         </span>
+                      </td>
+
+                      <td className="px-3 py-3 text-center align-middle">
+                        <PaymentStatusBadge
+                          status={p.payment_status}
+                          aged={isPurchaseAgedUnpaid(p.purchase_date, p.balance_due, p.payment_status)}
+                        />
                       </td>
 
                       <td className="w-10 py-3 pl-3 pr-4 align-middle" onClick={e => e.stopPropagation()}>

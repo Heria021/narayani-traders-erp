@@ -35,7 +35,7 @@ export interface Purchase {
   grand_total: number
   amount_paid: number
   balance_due: number
-  payment_status: 'paid' | 'partial' | 'pending'
+  payment_status: PurchasePaymentStatus
   notes: string | null
   created_at: string
   item_count?: number          // COUNT(purchase_items) — included on list
@@ -62,10 +62,11 @@ export interface PurchaseWithItems extends Purchase {
 // ─── KPI ──────────────────────────────────────────────────────────────────────
 
 export interface PurchaseKpi {
-  total_count: number
-  this_month: number
-  total_spent: number
-  total_items_bought: number
+  total_count:     number
+  this_month:      number
+  total_spent:     number
+  pending_amount:  number
+  pending_count:   number
 }
 
 // ─── Form types ───────────────────────────────────────────────────────────────
@@ -96,11 +97,15 @@ export type DiscountMode = 'flat' | 'percent'
 
 export type DateRangeFilter = 'all' | 'today' | 'week' | 'month' | 'custom'
 
+export type PurchasePaymentStatus = 'paid' | 'partial' | 'pending'
+export type PurchasePaymentFilter = 'all' | PurchasePaymentStatus
+
 export interface PurchaseFilters {
   search: string
   dateRange: DateRangeFilter
   customFrom: string
   customTo: string
+  paymentStatus: PurchasePaymentFilter
 }
 
 export const DEFAULT_FILTERS: PurchaseFilters = {
@@ -108,6 +113,7 @@ export const DEFAULT_FILTERS: PurchaseFilters = {
   dateRange: 'all',
   customFrom: '',
   customTo: '',
+  paymentStatus: 'all',
 }
 
 export type SortField = 'purchase_date' | 'grand_total' | 'supplier_name'

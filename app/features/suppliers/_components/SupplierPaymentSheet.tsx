@@ -26,6 +26,10 @@ interface Props {
   purchases:      Purchase[]
   onClose:        () => void
   onSubmit:       (values: SupplierPaymentFormValues) => Promise<boolean>
+  /** When set, payment is locked to this PO (Purchase detail entry point) */
+  lockedPurchaseId?: string | null
+  initialAmount?:    string
+  hidePurchaseSelector?: boolean
 }
 
 const EMPTY: SupplierPaymentFormValues = {
@@ -49,18 +53,26 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function SupplierPaymentSheet({ open, supplier, purchases, onClose, onSubmit }: Props) {
+export function SupplierPaymentSheet({
+  open, supplier, purchases, onClose, onSubmit,
+  lockedPurchaseId, initialAmount, hidePurchaseSelector,
+}: Props) {
   const [values,  setValues]  = useState<SupplierPaymentFormValues>(EMPTY)
   const [errors,  setErrors]  = useState<Partial<Record<keyof SupplierPaymentFormValues, string>>>({})
   const [saving,  setSaving]  = useState(false)
 
   useEffect(() => {
     if (open) {
-      setValues({ ...EMPTY, payment_date: today() })
+      setValues({
+        ...EMPTY,
+        payment_date: today(),
+        purchase_id: lockedPurchaseId ?? '',
+        amount: initialAmount ?? '',
+      })
       setErrors({})
       setSaving(false)
     }
-  }, [open])
+  }, [open, lockedPurchaseId, initialAmount])
 
   function set(key: keyof SupplierPaymentFormValues, val: string) {
     setValues(v => ({ ...v, [key]: val }))
@@ -176,7 +188,7 @@ export function SupplierPaymentSheet({ open, supplier, purchases, onClose, onSub
             </Field>
 
             {/* Against Purchase */}
-            {purchases.length > 0 && (
+            {!hidePurchaseSelector && purchases.length > 0 && (
               <Field>
                 <FieldLabel>Against Purchase Invoice</FieldLabel>
                 <Select value={values.purchase_id} onValueChange={v => set('purchase_id', v ?? '')}>
@@ -192,6 +204,20 @@ export function SupplierPaymentSheet({ open, supplier, purchases, onClose, onSub
                     ))}
                   </SelectContent>
                 </Select>
+              </Field>
+            )}
+
+            {hidePurchaseSelector && lockedPurchaseId && (
+              <Field>
+                <FieldLabel>Against Purchase Invoice</FieldLabel>
+                <Input
+                  readOnly
+                  value={
+                    purchases.find(p => p.id === lockedPurchaseId)?.purchase_number
+                    ?? `PO ${lockedPurchaseId.slice(0, 8)}`
+                  }
+                  className="rounded-lg bg-muted/40"
+                />
               </Field>
             )}
 

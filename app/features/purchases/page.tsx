@@ -4,12 +4,14 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Plus, ShoppingCart, TrendingUp, IndianRupee, Boxes } from 'lucide-react'
+import { Plus, ShoppingCart, TrendingUp, IndianRupee, AlertCircle } from 'lucide-react'
 
 import { usePurchases } from './_components/usePurchases'
 import { PurchaseTable }  from './_components/PurchaseTable'
 import { PurchaseDetail } from './_components/PurchaseDetail'
+import { SupplierPaymentSheet } from '../suppliers/_components/SupplierPaymentSheet'
 import type { Purchase } from './_components/types'
+import type { Purchase as SupplierPurchase } from '../suppliers/_components/types'
 
 const rupee = (n: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n)
@@ -20,17 +22,49 @@ export default function PurchasesPage() {
     purchases, total, page, sortField, sortDir, filters, loading,
     kpi, kpiLoading,
     selectedId, detailData, detailLoading,
+    paymentSupplier, paymentPrefill,
     setSelectedId,
-    handleSearchChange, handleDateRangeChange, handleSort, handlePageChange,
+    handleSearchChange, handleDateRangeChange, handlePaymentStatusChange, handleSort, handlePageChange,
     deletePurchase,
+    prepareRecordPayment, recordPayment, clearPaymentContext,
   } = usePurchases()
 
   const [detailOpen, setDetailOpen] = useState(false)
+  const [paymentOpen, setPaymentOpen] = useState(false)
 
   function openDetail(p: Purchase) {
     setSelectedId(p.id)
     setDetailOpen(true)
   }
+
+  function closeDetail() {
+    setDetailOpen(false)
+    setSelectedId(null)
+  }
+
+  async function handleRecordPayment() {
+    if (!detailData) return
+    const ok = await prepareRecordPayment(detailData)
+    if (ok) setPaymentOpen(true)
+  }
+
+  function closePayment() {
+    setPaymentOpen(false)
+    clearPaymentContext()
+  }
+
+  const paymentPurchases: SupplierPurchase[] = detailData ? [{
+    id:              detailData.id,
+    supplier_id:     detailData.supplier_id,
+    purchase_number: detailData.purchase_number,
+    purchase_date:   detailData.purchase_date,
+    grand_total:     detailData.grand_total,
+    amount_paid:     detailData.amount_paid,
+    balance_due:     detailData.balance_due,
+    payment_status:  detailData.payment_status,
+    notes:           detailData.notes,
+    created_at:      detailData.created_at,
+  }] : []
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-4">
@@ -115,22 +149,24 @@ export default function PurchasesPage() {
             </div>
           </div>
 
-          {/* Card 4 — Items Bought */}
-          <div className="rounded-xl border bg-card p-4 space-y-2">
+          {/* Card 4 — Pending Amount */}
+          <div className="rounded-xl border border-amber-100 dark:border-amber-950/40 bg-amber-50/20 dark:bg-amber-950/10 p-4 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                Items Bought
+              <span className="text-xs font-semibold tracking-wider text-amber-700/80 dark:text-amber-400/80 uppercase">
+                Pending Amount
               </span>
-              <div className="size-7 rounded-lg bg-muted flex items-center justify-center text-muted-foreground shrink-0">
-                <Boxes className="size-4" />
+              <div className="size-7 rounded-lg bg-amber-100 dark:bg-amber-950/50 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                <AlertCircle className="size-4" />
               </div>
             </div>
             <div className="space-y-0.5">
-              <div className="text-2xl font-bold tracking-tight text-foreground">
-                {kpiLoading ? <Skeleton className="h-8 w-24" /> : kpi.total_items_bought.toLocaleString('en-IN')}
+              <div className="text-2xl font-bold tracking-tight text-amber-800 dark:text-amber-300">
+                {kpiLoading ? <Skeleton className="h-8 w-28" /> : rupee(kpi.pending_amount)}
               </div>
-              <span className="text-xs text-muted-foreground block font-medium">
-                Total product units received
+              <span className="text-xs text-amber-700/70 dark:text-amber-400/60 block font-medium">
+                {kpiLoading
+                  ? '…'
+                  : `${kpi.pending_count} unpaid PO${kpi.pending_count === 1 ? '' : 's'}`}
               </span>
             </div>
           </div>
@@ -152,6 +188,7 @@ export default function PurchasesPage() {
           onPageChange={handlePageChange}
           onSearch={handleSearchChange}
           onDateRange={handleDateRangeChange}
+          onPaymentStatus={handlePaymentStatusChange}
           onView={openDetail}
           onDelete={deletePurchase}
         />
@@ -162,7 +199,20 @@ export default function PurchasesPage() {
         open={detailOpen}
         purchase={detailData}
         loading={detailLoading}
-        onClose={() => { setDetailOpen(false); setSelectedId(null) }}
+        onClose={closeDetail}
+        onRecordPayment={handleRecordPayment}
+      />
+
+      {/* ── Record payment (reuses supplier payment sheet) ─────────────────────── */}
+      <SupplierPaymentSheet
+        open={paymentOpen}
+        supplier={paymentSupplier}
+        purchases={paymentPurchases}
+        lockedPurchaseId={paymentPrefill?.purchaseId ?? null}
+        initialAmount={paymentPrefill?.amount}
+        hidePurchaseSelector
+        onClose={closePayment}
+        onSubmit={recordPayment}
       />
 
     </div>

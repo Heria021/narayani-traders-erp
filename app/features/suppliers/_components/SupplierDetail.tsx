@@ -16,25 +16,8 @@ import {
   Phone, Mail, MapPin, Building2,
   Pencil, Trash2, MoreHorizontal, CreditCard,
 } from 'lucide-react'
-import type { SupplierWithStats, Purchase, SupplierProduct, SupplierPayment, PurchasePaymentStatus } from './types'
-
-const PAYMENT_STATUS_STYLE: Record<PurchasePaymentStatus, string> = {
-  paid:    'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900',
-  partial: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900',
-  pending: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900',
-}
-
-function PaymentStatusBadge({ status }: { status: PurchasePaymentStatus }) {
-  const label = status.charAt(0).toUpperCase() + status.slice(1)
-  return (
-    <span className={cn(
-      'inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold capitalize',
-      PAYMENT_STATUS_STYLE[status],
-    )}>
-      {label}
-    </span>
-  )
-}
+import type { SupplierWithStats, Purchase, SupplierProduct, SupplierPayment } from './types'
+import { PaymentStatusBadge } from '../../purchases/_components/PaymentStatusBadge'
 
 const rupee = (n: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(n)
