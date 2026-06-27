@@ -20,6 +20,7 @@ import Link from "next/link"
 import {
   ArrowRight,
   MapPin,
+  MapPinned,
   Search,
   Layers,
 } from "lucide-react"
@@ -346,12 +347,91 @@ const SERVICES = [
   },
 ]
 
+const SHOWCASE_ITEMS = [
+  {
+    num: "01",
+    image: "/website_stock_images/pexels-ahmetcotur-27626177.jpg",
+    title: "Brutalist Concrete Concept",
+    desc: "Refining mass and shadow through photorealistic raw textures.",
+  },
+  {
+    num: "02",
+    image: "/website_stock_images/pexels-aksinfo7-31387268.jpg",
+    title: "Minimalist Purity Retreat",
+    desc: "Refining details to achieve clean light and architectural volume.",
+  },
+  {
+    num: "03",
+    image: "/website_stock_images/pexels-ahmetcotur-31817155.jpg",
+    title: "Timber & Light Synthesis",
+    desc: "Warm local wood textures balancing industrial envelopes.",
+  },
+  {
+    num: "04",
+    image: "/website_stock_images/pexels-abid-ali-150086727-10647324.jpg",
+    title: "Terraces & Overhangs Villa",
+    desc: "Extending visual lines outwards with dramatic cantilevers.",
+  },
+  {
+    num: "05",
+    image: "/website_stock_images/pexels-ahmetcotur-27626174.jpg",
+    title: "Daylight Ingress Mapping",
+    desc: "Washing galleries and atriums with soft, indirect sky wells.",
+  },
+  {
+    num: "06",
+    image: "/website_stock_images/pexels-keeganjchecks-12715585.jpg",
+    title: "Urban Landscape Synthesis",
+    desc: "Designing environments that breathe and blend with nature.",
+  },
+]
+
+const STUDIO_STATS: { value: string; label: string }[] = [
+  { value: "12+", label: "Years Active" },
+  { value: "85+", label: "Projects Delivered" },
+]
+
 // - Main component -
 
 export default function PublicHomePage() {
   const [activeIndex, setActiveIndex] = useState(0)
+  const [activeService, setActiveService] = useState(0)
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [searchQuery, setSearchQuery] = useState("")
+
+  // - Studio scroll parallax hook -
+  const aboutStudioRef = useRef<HTMLElement>(null)
+  const { scrollYProgress: studioScrollY } = useScroll({
+    target: aboutStudioRef,
+    offset: ["start end", "end start"],
+  })
+  const studioPhotoY = useTransform(studioScrollY, [0, 1], ["8%", "-8%"])
+  
+  // - Studio mouse interactive hover parallax values -
+  const studioHoverX = useMotionValue(0)
+  const studioHoverY = useMotionValue(0)
+  const studioCardRef = useRef<HTMLDivElement>(null)
+
+  const studioMouseBgX = useSpring(useTransform(studioHoverX, [-1, 1], ["-1.5%", "1.5%"]), { stiffness: 180, damping: 24 })
+  const studioMouseBgY = useSpring(useTransform(studioHoverY, [-1, 1], ["-1.5%", "1.5%"]), { stiffness: 180, damping: 24 })
+
+  const handleStudioMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = studioCardRef.current?.getBoundingClientRect()
+    if (!rect) return
+    studioHoverX.set(((e.clientX - rect.left) / rect.width - 0.5) * 2)
+    studioHoverY.set(((e.clientY - rect.top) / rect.height - 0.5) * 2)
+  }, [studioHoverX, studioHoverY])
+
+  const handleStudioLeave = useCallback(() => {
+    studioHoverX.set(0)
+    studioHoverY.set(0)
+  }, [studioHoverX, studioHoverY])
+
+  // Combine scroll-linked y translation and mouse hover y spring
+  const finalStudioPhotoY = useTransform(
+    [studioPhotoY, studioMouseBgY],
+    ([scrollY, mouseContainerY]) => `calc(${scrollY} + ${mouseContainerY})`
+  )
 
   // - RAF loop for progress bar — zero React re-renders -
   const progressBarRef = useRef<HTMLDivElement>(null)
@@ -541,12 +621,205 @@ export default function PublicHomePage() {
         </div>
       </section>
 
+      {/* ==========================================
+          WHAT WE DO (02)
+          ========================================== */}
+      <section
+        id="what-we-do"
+        className="relative w-full bg-black py-24 md:py-32 border-t border-white/10 overflow-hidden"
+      >
+        <div className="max-w-7xl mx-auto w-full px-6 md:px-12">
+          
+          {/* Section label */}
+          <div className="flex items-center gap-3 mb-14">
+            <span className="text-[10px] md:text-xs font-bold tracking-[0.3em] text-white/45 uppercase">02 / What We Do</span>
+            <div className="h-px w-8 bg-white/20" />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+            {/* LEFT - Services list */}
+            <div className="lg:col-span-7 flex flex-col gap-0">
+              <div className="mb-10 max-w-xl">
+                <h2 className="text-4xl md:text-5xl font-extralight tracking-tight uppercase leading-none text-white mb-4">
+                  <AnimatedText text="Our Core Services" />
+                </h2>
+                <p className="text-white/55 font-light text-sm md:text-base leading-relaxed">
+                  We bridge the gap between design theory and tactile execution. Our range of disciplines ensures accuracy at every scale.
+                </p>
+              </div>
+
+              <div className="flex flex-col border-t border-white/10">
+                {SERVICES.map((service, idx) => {
+                  const isActive = activeService === idx
+                  return (
+                    <div
+                      key={idx}
+                      onMouseEnter={() => setActiveService(idx)}
+                      className="relative py-6 border-b border-white/10 cursor-pointer group transition-all duration-300"
+                    >
+                      {/* Hover background highlight */}
+                      <AnimatePresence>
+                        {isActive && (
+                          <motion.div
+                            layoutId="activeServiceBg"
+                            className="absolute inset-y-2 inset-x-[-12px] bg-white/[0.03] rounded-xl -z-10"
+                            transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                          />
+                        )}
+                      </AnimatePresence>
+
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex gap-6 items-start">
+                          {/* Service number */}
+                          <span className={`text-sm font-mono tracking-widest transition-colors duration-300 mt-1 ${isActive ? "text-white" : "text-white/30"}`}>
+                            {service.num}
+                          </span>
+
+                          <div className="flex flex-col gap-2">
+                            {/* Service title */}
+                            <h3 className={`text-xl md:text-2xl font-light uppercase tracking-wide transition-all duration-300 ${isActive ? "text-white translate-x-1" : "text-white/60"}`}>
+                              {service.title.split(" ").map((w, i) => (
+                                <span key={i} className={i % 2 === 1 ? "font-bold" : "font-light"}>
+                                  {w}{" "}
+                                </span>
+                              ))}
+                            </h3>
+
+                            {/* Service description (collapsible accordion style) */}
+                            <motion.div
+                              initial={false}
+                              animate={{
+                                height: isActive ? "auto" : 0,
+                                opacity: isActive ? 1 : 0,
+                                marginTop: isActive ? 8 : 0,
+                              }}
+                              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                              className="overflow-hidden pr-6"
+                            >
+                              <p className="text-white/50 text-xs md:text-sm font-light leading-relaxed">
+                                {service.desc}
+                              </p>
+                            </motion.div>
+                          </div>
+                        </div>
+
+                        {/* Arrow icon */}
+                        <div className="relative overflow-hidden w-6 h-6 flex items-center justify-center shrink-0">
+                          <ArrowRight
+                            className={`h-4 w-4 transition-all duration-300 ${isActive ? "translate-x-0 rotate-0 text-white" : "-translate-x-4 -rotate-45 text-white/20 group-hover:translate-x-0 group-hover:rotate-0 group-hover:text-white/50"}`}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* RIGHT - Dynamic sticky visualization canvas */}
+            <div className="lg:col-span-5 lg:sticky lg:top-28 mt-8 lg:mt-0">
+              <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden border border-white/10 bg-[#0d0d0d] shadow-2xl group">
+                
+                {/* Visualizer blueprint grid background lines */}
+                <div 
+                  className="absolute inset-0 opacity-10 pointer-events-none z-10" 
+                  style={{
+                    backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px)",
+                    backgroundSize: "20px 20px"
+                  }}
+                />
+
+                {/* Blueprint technical markings */}
+                <div className="absolute top-4 left-4 z-20 font-mono text-[8px] text-white/30 select-none pointer-events-none uppercase tracking-widest flex flex-col gap-1">
+                  <div>STUDIO SPEC // REF_002_{SERVICES[activeService].num}</div>
+                  <div>SCALE: 1:25 @ A3</div>
+                </div>
+
+                <div className="absolute top-4 right-4 z-20 font-mono text-[8px] text-white/30 select-none pointer-events-none uppercase tracking-widest">
+                  LOC: BIDASAR_HQ
+                </div>
+
+                <div className="absolute bottom-4 left-4 z-20 font-mono text-[8px] text-white/30 select-none pointer-events-none uppercase tracking-widest">
+                  SYS: STABLE_OP_3.5
+                </div>
+
+                {/* Animated active image */}
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeService}
+                    initial={{ opacity: 0, scale: 1.08, filter: "blur(10px)" }}
+                    animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+                    exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
+                    transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute inset-0 w-full h-full"
+                  >
+                    {SERVICES[activeService].image && (
+                      <img
+                        src={SERVICES[activeService].image}
+                        alt={SERVICES[activeService].title}
+                        className="w-full h-full object-cover grayscale brightness-90 group-hover:grayscale-0 transition-all duration-700"
+                      />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
+                  </motion.div>
+                </AnimatePresence>
+
+                {/* Technical crosshair overlays */}
+                <div className="absolute inset-0 pointer-events-none z-20">
+                  {/* Top-left corner bracket */}
+                  <div className="absolute top-2 left-2 w-3 h-3 border-t border-l border-white/20" />
+                  {/* Top-right corner bracket */}
+                  <div className="absolute top-2 right-2 w-3 h-3 border-t border-r border-white/20" />
+                  {/* Bottom-left corner bracket */}
+                  <div className="absolute bottom-2 left-2 w-3 h-3 border-b border-l border-white/20" />
+                  {/* Bottom-right corner bracket */}
+                  <div className="absolute bottom-2 right-2 w-3 h-3 border-b border-r border-white/20" />
+                </div>
+              </div>
+
+              {/* Dynamic Service details / metadata footer below the visualization */}
+              <motion.div
+                key={activeService}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className="mt-6 p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex flex-col gap-4"
+              >
+                <div className="flex justify-between items-center border-b border-white/10 pb-3">
+                  <span className="text-[10px] font-mono text-white/35 uppercase tracking-wider">Deliverables</span>
+                  <span className="text-xs text-white/70 font-light font-mono">
+                    {activeService === 0 && "2D Layouts, Site Maps"}
+                    {activeService === 1 && "Exterior/Interior CGI, 4K Stills"}
+                    {activeService === 2 && "Material Boards, Lighting Moods"}
+                    {activeService === 3 && "Master Planning, Road Networks"}
+                    {activeService === 4 && "Orientation Maps, Energy Audits"}
+                    {activeService === 5 && "Structural Details, HVAC Sheets"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-mono text-white/35 uppercase tracking-wider">Execution Tools</span>
+                  <span className="text-xs text-white/70 font-light font-mono">
+                    {activeService === 0 && "AutoCAD, SpacePlanner"}
+                    {activeService === 1 && "3ds Max, V-Ray, Corona"}
+                    {activeService === 2 && "Sketchup, Photoshop, Fohn"}
+                    {activeService === 3 && "ArcGIS, Civil 3D, AutoCAD"}
+                    {activeService === 4 && "Vastu Compass, Solar Angles"}
+                    {activeService === 5 && "Revit, AutoCAD, Tekla"}
+                  </span>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
       {/* =
           PROJECT ARCHIVE  (unchanged)
       = */}
       <section
         id="projects"
-        className="relative w-full bg-[#060606] py-24 md:py-32 border-t border-white/8"
+        className="relative w-full bg-[#060606] py-24 md:py-32 border-t border-white/10"
       >
         <div className="flex flex-col">
 
@@ -554,10 +827,13 @@ export default function PublicHomePage() {
             <motion.div
               initial={{ opacity: 0, y: 36 }} whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.7, ease: EASE_EXPO }}
-              className="flex flex-col gap-3 mb-20">
-              <span className="text-[10px] md:text-xs font-bold tracking-[0.3em] text-white/45 uppercase">Portfolio Curation</span>
-              <h2 className="text-4xl md:text-6xl lg:text-7xl font-extralight tracking-tight uppercase leading-none">
-                Project <span className="font-bold">Archive</span>
+              className="flex flex-col gap-4 mb-20">
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] md:text-xs font-bold tracking-[0.3em] text-white/45 uppercase">03 / Selected Portfolio</span>
+                <div className="h-px w-8 bg-white/20" />
+              </div>
+              <h2 className="text-4xl md:text-6xl lg:text-7xl font-extralight tracking-tight uppercase leading-none text-white">
+                <AnimatedText text="Project Archive" />
               </h2>
               <p className="text-white/55 font-light text-sm md:text-base max-w-xl leading-relaxed mt-1">
                 Explore our complete collection of bespoke architectural concept renderings, interior visualizations, and high-end built designs.
@@ -567,7 +843,7 @@ export default function PublicHomePage() {
             <motion.div
               initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6, ease: EASE_EXPO, delay: 0.1 }}
-              className="flex flex-col md:flex-row gap-5 justify-between items-start md:items-center mb-16 border-b border-white/8 pb-8">
+              className="flex flex-col md:flex-row gap-5 justify-between items-start md:items-center mb-16 border-b border-white/10 pb-8">
               <div className="flex items-center gap-1.5 flex-wrap">
                 {CATEGORIES.map(cat => (
                   <button key={cat} onClick={() => setSelectedCategory(cat)}
@@ -584,7 +860,7 @@ export default function PublicHomePage() {
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/35 pointer-events-none" />
                 <input type="text" placeholder="Search projects…" value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-white/5 hover:bg-white/8 focus:bg-white/8 focus:ring-1 focus:ring-white/15 border border-white/8 rounded-full text-xs md:text-sm outline-none transition-colors duration-200 placeholder:text-white/25" />
+                  className="w-full pl-10 pr-4 py-2.5 bg-white/5 hover:bg-white/8 focus:bg-white/8 focus:ring-1 focus:ring-white/15 border border-white/10 rounded-full text-xs md:text-sm outline-none transition-colors duration-200 placeholder:text-white/25" />
               </div>
             </motion.div>
           </div>
@@ -643,83 +919,138 @@ export default function PublicHomePage() {
           ABOUT THE STUDIO
       = */}
       <section
+        ref={aboutStudioRef}
         id="about-studio"
-        className="relative w-full bg-black py-24 md:py-32 border-t border-white/8 overflow-hidden"
+        className="relative w-full bg-[#060606] py-24 md:py-32 border-t border-white/10 overflow-hidden"
       >
-        <div className="max-w-7xl mx-auto w-full px-6 md:px-12 flex flex-col gap-12">
+        <div className="max-w-7xl mx-auto w-full px-6 md:px-12">
 
-          {/* Row 1: Header, Brief & Redirection Button */}
+          {/* Section label */}
           <motion.div
-            initial={{ opacity: 0, y: 36 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.7, ease: EASE_EXPO }}
-            className="flex flex-col gap-6 w-full"
+            viewport={{ once: false, amount: 0.05 }}
+            transition={{ duration: 0.5, ease: EASE_EXPO }}
+            className="flex items-center gap-3 mb-14"
           >
-            <div className="flex items-center gap-3">
-              <span className="text-[10px] md:text-xs font-bold tracking-[0.3em] text-white/45 uppercase">02 / The Studio</span>
-              <div className="h-px w-8 bg-white/20" />
-            </div>
+            <span className="text-[10px] md:text-xs font-bold tracking-[0.3em] text-white/45 uppercase">04 / Who We Are</span>
+            <div className="h-px w-8 bg-white/20" />
+          </motion.div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-start">
-              <div className="lg:col-span-8">
-                <h2 className="text-4xl md:text-5xl lg:text-6xl font-extralight tracking-tight uppercase leading-tight text-white mb-4">
-                  Sculpting <span className="font-bold">Space</span> <br />
-                  From Our <span className="font-bold">Creative Hub</span>.
-                </h2>
-                <p className="text-white/60 font-light text-sm md:text-base leading-relaxed max-w-3xl">
-                  Rooted in the architectural heritage of Rajasthan, our studio space in Bidasar is a laboratory where computational design, light study, and material honesty converge. We design environments that breathe, blending raw materiality with refined comfort.
-                </p>
-              </div>
-              <div className="lg:col-span-4 flex lg:justify-end lg:items-end h-full pt-4 lg:pt-0">
-                <Link
-                  href="/about"
-                  className="group w-full lg:w-auto inline-flex items-center justify-center gap-3 text-xs font-semibold tracking-widest uppercase border border-white/20 text-white hover:border-white/50 bg-white/5 hover:bg-white/10 px-8 py-4 rounded-full transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+          {/* Two-column layout: photo left (larger col-span), content right */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-center">
+
+            {/* LEFT — parallax photo (Col-span 7 for a wider, more massive image) */}
+            <div className="lg:col-span-7">
+              <motion.div
+                initial={{ opacity: 0, x: -60, scale: 0.96 }}
+                whileInView={{ opacity: 1, x: 0, scale: 1 }}
+                viewport={{ once: false, amount: 0.05 }}
+                transition={{ type: "spring", stiffness: 50, damping: 15 }}
+                className="w-full h-full"
+              >
+                <motion.div
+                  ref={studioCardRef}
+                  onMouseMove={handleStudioMove}
+                  onMouseLeave={handleStudioLeave}
+                  whileHover="hover"
+                  initial="rest"
+                  className="relative overflow-hidden rounded-2xl border border-white/10 cursor-pointer group w-full"
+                  style={{ height: "clamp(540px, 64vw, 760px)" }}
                 >
-                  <span>Explore Our Story</span>
-                  <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-                </Link>
-              </div>
+                  <motion.div
+                    className="absolute inset-[-14%] bg-cover bg-center"
+                    style={{
+                      backgroundImage: "url('/website_stock_images/office.jpg')",
+                      x: studioMouseBgX,
+                      y: finalStudioPhotoY,
+                      willChange: "transform",
+                    }}
+                    variants={{ rest: { scale: 1 }, hover: { scale: 1.06 } }}
+                    transition={{ duration: 0.7, ease: EASE_EXPO }}
+                  />
+                  {/* Subtle dark vignette at bottom */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent z-10" />
+                  
+                  {/* Hover Darken overlay */}
+                  <motion.div
+                    className="absolute inset-0 bg-black/15 z-10"
+                    variants={{ rest: { opacity: 0 }, hover: { opacity: 1 } }}
+                    transition={{ duration: 0.35 }}
+                  />
+
+                  {/* Floating location badge */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: false }}
+                    transition={{ duration: 0.6, ease: EASE_EXPO, delay: 0.4 }}
+                    className="absolute bottom-5 left-5 flex items-center gap-2 bg-black/70 backdrop-blur-md border border-white/10 rounded-full px-4 py-2 z-20"
+                  >
+                    <MapPinned className="h-3.5 w-3.5 text-white/50 shrink-0" />
+                    <span className="text-[10px] font-light text-white/70 tracking-wider">Bidasar, Rajasthan — Studio HQ</span>
+                  </motion.div>
+                </motion.div>
+              </motion.div>
             </div>
-          </motion.div>
 
-          {/* Row 2: Full Width Image Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 36 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.7, ease: EASE_EXPO, delay: 0.15 }}
-            className="w-full"
-          >
-            <OfficePhotoCard image="/website_stock_images/office.jpg" />
-          </motion.div>
+            {/* RIGHT — copy + stats (Col-span 5) */}
+            <motion.div
+              initial={{ opacity: 0, x: 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: false, amount: 0.05 }}
+              transition={{ type: "spring", stiffness: 50, damping: 15, delay: 0.1 }}
+              className="lg:col-span-5 flex flex-col gap-8"
+            >
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-extralight tracking-tight uppercase leading-tight text-white">
+                <AnimatedText text="Rooted in Rajasthan. Designing for the World." />
+              </h2>
 
+              <p className="text-white/65 font-light text-sm md:text-base leading-relaxed">
+                Founded from the architectural heritage of Rajasthan, our studio in Bidasar is where computational design, light study, and material honesty converge. We work directly with clients from sketch to final handover, ensuring every space is crafted with precision, honesty, and execution-ready detail.
+              </p>
+
+              {/* Stats grid — proof, not decoration */}
+              <div className="grid grid-cols-2 gap-px bg-white/10 border border-white/10 rounded-2xl overflow-hidden mt-2">
+                {STUDIO_STATS.map((stat, idx) => (
+                  <motion.div
+                    key={stat.label}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: false }}
+                    transition={{ type: "spring", stiffness: 60, damping: 13, delay: 0.2 + idx * 0.08 }}
+                    className="flex flex-col gap-1 p-5 bg-[#0d0d0d]"
+                  >
+                    <span className="text-2xl md:text-3xl font-bold text-white tracking-tight">{stat.value}</span>
+                    <span className="text-[10px] font-light text-white/45 uppercase tracking-[0.15em]">{stat.label}</span>
+                  </motion.div>
+                ))}
+              </div>
+
+              <Link
+                href="/about"
+                className="group self-start inline-flex items-center gap-3 text-xs font-semibold tracking-widest uppercase border border-white/20 text-white hover:border-white/50 bg-white/5 hover:bg-white/10 px-7 py-3.5 rounded-full transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <span>Full Studio Story</span>
+                <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
+              </Link>
+            </motion.div>
+          </div>
         </div>
       </section>
 
       {/* ==========================================
-          WHAT WE DO
+          WORK SHOWCASE (Curved Infinite Marquee Gallery)
           ========================================== */}
       <section
-        id="what-we-do"
-        className="relative w-full bg-[#060606] py-24 md:py-32 border-t border-white/8 overflow-hidden"
+        id="work-showcase"
+        className="relative w-full bg-black py-24 md:py-32 border-t border-white/10 overflow-hidden"
       >
-        <div className="max-w-7xl mx-auto w-full px-6 md:px-12 flex flex-col gap-16 mb-16">
-          <motion.div
-            initial={{ opacity: 0, y: 36 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.7, ease: EASE_EXPO }}
-            className="flex flex-col gap-3"
-          >
-            <span className="text-[10px] md:text-xs font-bold tracking-[0.3em] text-white/45 uppercase">03 / What We Do</span>
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-extralight tracking-tight uppercase leading-none text-white">
-              Our Core <span className="font-bold">Services</span>
-            </h2>
-            <p className="text-white/55 font-light text-sm md:text-base max-w-xl leading-relaxed mt-1">
-              A comprehensive design integration studio. We shape space, structures, and layouts from concept to execution.
-            </p>
-          </motion.div>
+        {/* Centered Heading */}
+        <div className="max-w-7xl mx-auto w-full px-6 md:px-12 text-center mb-16">
+          <h2 className="text-4xl md:text-6xl font-extralight tracking-tight uppercase leading-none text-white">
+            <AnimatedText text="Work Showcase" />
+          </h2>
         </div>
 
         {/* Curved Infinite Marquee Gallery (Right to Left) */}
@@ -750,7 +1081,7 @@ export default function PublicHomePage() {
               },
             }}
           >
-            {[...SERVICES, ...SERVICES, ...SERVICES].map((service, idx) => (
+            {[...SHOWCASE_ITEMS, ...SHOWCASE_ITEMS, ...SHOWCASE_ITEMS].map((service, idx) => (
               <ServiceImageCard key={idx} service={service} />
             ))}
           </motion.div>
@@ -758,11 +1089,11 @@ export default function PublicHomePage() {
       </section>
 
       {/* ==========================================
-          HOW WE DO
+          HOW WE DO (05)
           ========================================== */}
       <section
         id="how-we-do"
-        className="relative w-full bg-black py-24 md:py-32 border-t border-white/8 overflow-hidden"
+        className="relative w-full bg-black py-24 md:py-32 border-t border-white/10 overflow-hidden"
       >
         <div className="max-w-7xl mx-auto w-full px-6 md:px-12 flex flex-col gap-16">
           <motion.div
@@ -772,9 +1103,12 @@ export default function PublicHomePage() {
             transition={{ duration: 0.7, ease: EASE_EXPO }}
             className="flex flex-col gap-3"
           >
-            <span className="text-[10px] md:text-xs font-bold tracking-[0.3em] text-white/45 uppercase">04 / How We Do</span>
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] md:text-xs font-bold tracking-[0.3em] text-white/45 uppercase">05 / How We Do</span>
+              <div className="h-px w-8 bg-white/20" />
+            </div>
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-extralight tracking-tight uppercase leading-none text-white">
-              The Studio <span className="font-bold">Process</span>
+              <AnimatedText text="The Studio Process" />
             </h2>
             <p className="text-white/55 font-light text-sm md:text-base max-w-xl leading-relaxed mt-1">
               From solar paths and local clay brick analysis to detailed execution plans.
@@ -794,13 +1128,13 @@ export default function PublicHomePage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.2 }}
                 transition={{ duration: 0.7, ease: EASE_EXPO, delay: idx * 0.08 }}
-                className="group flex flex-col md:flex-row justify-between items-start md:items-center py-8 border-b border-white/10 hover:bg-white/[0.01] px-4 md:px-8 transition-colors duration-300"
+                className="group flex flex-col md:flex-row justify-between items-start md:items-center py-8 border-b border-white/10 hover:bg-white/[0.02] px-4 md:px-8 transition-colors duration-300"
               >
                 <div className="flex items-center gap-6 md:gap-12 w-full md:w-auto">
-                  <span className="text-3xl md:text-4xl font-extralight text-white/20 font-mono tracking-wider group-hover:text-white/40 transition-colors duration-300 w-16">
+                  <span className="text-3xl md:text-4xl font-extralight text-white/20 font-mono tracking-wider group-hover:text-white/55 transition-colors duration-300 w-16">
                     {item.num}
                   </span>
-                  <h3 className="text-lg md:text-xl font-light uppercase tracking-wide text-white">
+                  <h3 className="text-lg md:text-xl font-light uppercase tracking-wide text-white/70 group-hover:text-white transition-colors duration-300">
                     {item.step}
                   </h3>
                 </div>
@@ -816,7 +1150,7 @@ export default function PublicHomePage() {
       {/* ==========================================
           FOOTER
           ========================================== */}
-      <footer className="relative w-full bg-[#060606] pt-24 pb-16 border-t border-white/8 overflow-hidden">
+      <footer className="relative w-full bg-[#060606] pt-24 pb-16 border-t border-white/10 overflow-hidden">
         <div className="max-w-7xl mx-auto w-full px-6 md:px-12 flex flex-col gap-16">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-start">
             <div className="md:col-span-6 flex flex-col gap-6">
@@ -874,7 +1208,7 @@ export default function PublicHomePage() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-white/8 pt-8 text-[10px] font-mono text-white/20 uppercase tracking-widest">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-white/10 pt-8 text-[10px] font-mono text-white/20 uppercase tracking-widest">
             <span>© {new Date().getFullYear()} JR SUTHAR & DESIGNS.</span>
             <span>Crafting built realities</span>
           </div>
@@ -980,7 +1314,7 @@ function PhotoCard({ project }: { project: Project }) {
       ref={cardRef}
       onMouseMove={handleMove}
       onMouseLeave={handleLeave}
-      className="group relative overflow-hidden rounded-3xl bg-[#0d0d0d] border border-white/8 p-0 ring-0 shadow-none"
+      className="group relative overflow-hidden rounded-3xl bg-[#0d0d0d] border border-white/10 p-0 ring-0 shadow-none"
       style={{ height: 460 }}
       whileHover="hover"
       initial="rest"
@@ -1076,7 +1410,7 @@ function OfficePhotoCard({ image }: { image: string }) {
       ref={cardRef}
       onMouseMove={handleMove}
       onMouseLeave={handleLeave}
-      className="group relative overflow-hidden rounded-3xl bg-[#0d0d0d] border border-white/8 p-0 ring-0 shadow-none w-full"
+      className="group relative overflow-hidden rounded-3xl bg-[#0d0d0d] border border-white/10 p-0 ring-0 shadow-none w-full"
       style={{ height: 600 }}
       whileHover="hover"
       initial="rest"
@@ -1100,9 +1434,65 @@ function OfficePhotoCard({ image }: { image: string }) {
   )
 }
 
+// - Animated Text Component -
+
+function AnimatedText({ text, className = "" }: { text: string; className?: string }) {
+  const words = text.split(" ")
+  const container: Variants = {
+    hidden: { opacity: 0 },
+    visible: (i = 1) => ({
+      opacity: 1,
+      transition: { staggerChildren: 0.08, delayChildren: 0.04 * i },
+    }),
+  }
+  const child: Variants = {
+    visible: {
+      opacity: 1,
+      y: 0,
+      filter: "blur(0px)",
+      transition: {
+        type: "spring",
+        damping: 14,
+        stiffness: 110,
+      },
+    },
+    hidden: {
+      opacity: 0,
+      y: 15,
+      filter: "blur(4px)",
+      transition: {
+        type: "spring",
+        damping: 14,
+        stiffness: 110,
+      },
+    },
+  }
+
+  return (
+    <motion.span
+      style={{ display: "inline-block", overflow: "hidden" }}
+      variants={container}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, amount: 0.2 }}
+      className={className}
+    >
+      {words.map((word, index) => (
+        <motion.span
+          variants={child}
+          style={{ display: "inline-block", marginRight: "0.25em" }}
+          key={index}
+        >
+          {word}
+        </motion.span>
+      ))}
+    </motion.span>
+  )
+}
+
 // - Service Image Card -
 
-function ServiceImageCard({ service }: { service: typeof SERVICES[0] }) {
+function ServiceImageCard({ service }: { service: { image: string; title: string; desc: string; num?: string; icon?: string } }) {
   const hoverX = useMotionValue(0)
   const hoverY = useMotionValue(0)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -1128,7 +1518,7 @@ function ServiceImageCard({ service }: { service: typeof SERVICES[0] }) {
         ref={cardRef}
         onMouseMove={handleMove}
         onMouseLeave={handleLeave}
-        className="group relative overflow-hidden rounded-3xl bg-[#0d0d0d] border border-white/8 p-0 ring-0 shadow-none"
+        className="group relative overflow-hidden rounded-3xl bg-[#0d0d0d] border border-white/10 p-0 ring-0 shadow-none"
         style={{ height: "min(600px, 58vw)", width: "min(960px, 90vw)" }}
         whileHover="hover"
         initial="rest"
@@ -1266,7 +1656,7 @@ function ArtCard({ project, artPaths }: { project: Project; artPaths: string }) 
 
   return (
     <MotionCard
-      className="group relative overflow-hidden rounded-3xl border border-white/8 bg-[#0d0d0d] p-0 ring-0 shadow-none"
+      className="group relative overflow-hidden rounded-3xl border border-white/10 bg-[#0d0d0d] p-0 ring-0 shadow-none"
       style={{ height: 460 }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -1278,7 +1668,7 @@ function ArtCard({ project, artPaths }: { project: Project; artPaths: string }) 
 
       <div className="relative h-full flex flex-col md:flex-row">
 
-        <div className="flex flex-col justify-between p-8 md:w-[42%] shrink-0 border-r border-white/6">
+        <div className="flex flex-col justify-between p-8 md:w-[42%] shrink-0 border-r border-white/10">
           <CardHeader className="p-0 gap-0 space-y-0">
             <CardDescription className="text-[9px] font-bold tracking-[0.24em] text-white/35 uppercase block mb-6 border-0 p-0">
               {project.category} &nbsp;·&nbsp; {project.year}
