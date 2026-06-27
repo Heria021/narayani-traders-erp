@@ -49,12 +49,13 @@ interface Props {
   invoiceLoading: boolean
   onViewInvoice: (saleId: string) => void
   onCloseInvoice: () => void
+  onApplyAdvance: (payment: Payment) => void
 }
 
 export function CustomerDetail({
   customer, sales, payments, loading, ledger,
   onEdit, onPayment, onToggle, onDelete,
-  selectedInvoice, invoiceLoading, onViewInvoice, onCloseInvoice,
+  selectedInvoice, invoiceLoading, onViewInvoice, onCloseInvoice, onApplyAdvance,
 }: Props) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<'ledger' | 'invoices' | 'payments'>('ledger')
@@ -241,7 +242,11 @@ export function CustomerDetail({
           )}
           {activeTab === 'payments' && (
             loading ? <LedgerSkeleton /> : payments.length === 0 ? <EmptyState message="No payments recorded for this customer." /> : (
-              <PaymentsTable payments={payments} sales={sales} />
+              <PaymentsTable
+                payments={payments}
+                sales={sales}
+                onApplyAdvance={onApplyAdvance}
+              />
             )
           )}
         </div>
@@ -417,8 +422,15 @@ function InvoicesTable({
   )
 }
 
-function PaymentsTable({ payments, sales }: { payments: Payment[]; sales: Sale[] }) {
+function PaymentsTable({
+  payments, sales, onApplyAdvance,
+}: {
+  payments: Payment[]
+  sales: Sale[]
+  onApplyAdvance: (payment: Payment) => void
+}) {
   const invoiceMap = new Map(sales.map(s => [s.id, s.invoice_number]))
+  const hasOpenInvoices = sales.some(s => s.balance_due > 0)
   return (
     <Table>
       <TableHeader>
@@ -429,6 +441,7 @@ function PaymentsTable({ payments, sales }: { payments: Payment[]; sales: Sale[]
           <TableHead>Reference</TableHead>
           <TableHead>Against Bill</TableHead>
           <TableHead>Note</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -439,7 +452,20 @@ function PaymentsTable({ payments, sales }: { payments: Payment[]; sales: Sale[]
             <TableCell className="text-xs font-medium capitalize">{p.payment_method.replace('_', ' ')}</TableCell>
             <TableCell className="font-mono text-xs text-muted-foreground">{p.reference_number ?? '—'}</TableCell>
             <TableCell className="font-mono text-xs">{p.sale_id ? invoiceMap.get(p.sale_id) ?? '—' : 'Advance'}</TableCell>
-            <TableCell className="text-xs text-muted-foreground">{p.note ?? '—'}</TableCell>
+            <TableCell className="text-xs text-muted-foreground max-w-[160px] truncate">{p.note ?? '—'}</TableCell>
+            <TableCell className="text-right">
+              {!p.sale_id && hasOpenInvoices && (
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  className="h-auto p-0 text-xs font-medium"
+                  onClick={() => onApplyAdvance(p)}
+                >
+                  Apply to Invoice
+                </Button>
+              )}
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>

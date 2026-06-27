@@ -8,7 +8,9 @@ import { useCustomerDetail } from './_components/useCustomerDetail'
 import { CustomerDetail } from '../_components/CustomerDetail'
 import { CustomerForm } from '../_components/CustomerForm'
 import { PaymentModal } from '../_components/PaymentModal'
+import { ApplyAdvanceModal } from '../_components/ApplyAdvanceModal'
 import { useBreadcrumb } from '@/components/app-shell'
+import type { Payment } from '../_components/types'
 import { customerDisplayName } from '../_components/ledger'
 
 export default function CustomerDetailPage() {
@@ -31,10 +33,13 @@ export default function CustomerDetailPage() {
     toggleActive,
     deleteCustomer,
     recordPayment,
+    applyAdvance,
   } = useCustomerDetail(id)
 
   const [formOpen, setFormOpen] = useState(false)
   const [paymentOpen, setPaymentOpen] = useState(false)
+  const [applyOpen, setApplyOpen] = useState(false)
+  const [applyPayment, setApplyPayment] = useState<Payment | null>(null)
   const { setCustomTitle } = useBreadcrumb()
 
   // Set the custom breadcrumb title to customer's name when loaded
@@ -66,6 +71,12 @@ export default function CustomerDetailPage() {
 
   const ledger = customer ? buildLedger() : []
   const unpaidSales = sales.filter(s => s.payment_status !== 'paid')
+  const openInvoices = sales.filter(s => s.balance_due > 0)
+
+  function openApplyAdvance(payment: Payment) {
+    setApplyPayment(payment)
+    setApplyOpen(true)
+  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
@@ -85,6 +96,7 @@ export default function CustomerDetailPage() {
           invoiceLoading={invoiceLoading}
           onViewInvoice={fetchInvoiceDetail}
           onCloseInvoice={() => setSelectedInvoice(null)}
+          onApplyAdvance={openApplyAdvance}
         />
       </div>
 
@@ -103,6 +115,16 @@ export default function CustomerDetailPage() {
         unpaidSales={unpaidSales}
         onClose={() => setPaymentOpen(false)}
         onSubmit={recordPayment}
+      />
+
+      <ApplyAdvanceModal
+        open={applyOpen}
+        payment={applyPayment}
+        openInvoices={openInvoices}
+        onClose={() => { setApplyOpen(false); setApplyPayment(null) }}
+        onApply={(saleId, amount) => applyPayment
+          ? applyAdvance(applyPayment, saleId, amount)
+          : Promise.resolve(false)}
       />
     </div>
   )

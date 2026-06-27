@@ -6,7 +6,8 @@ import { toast } from 'sonner'
 import {
   type CustomerWithStats, type Sale, type Payment,
   type LedgerEntry, type CustomerKpi, type CustomerFormValues,
-  type PaymentFormValues, type CustomerFilter, EMPTY_CUSTOMER_FORM,
+  type PaymentFormValues, type CustomerFilter, type ReceivablesAgingBucket,
+  EMPTY_CUSTOMER_FORM,
 } from './types'
 import { mapBalanceRow, sumPositiveAmountOwed, type CustomerBalanceRow } from './balances'
 import { isWalkinCustomer, customerDisplayName } from './ledger'
@@ -15,6 +16,15 @@ import { isWalkinCustomer, customerDisplayName } from './ledger'
 const num = (v: string | number) => Number(v) || 0
 const today = () => new Date().toISOString().slice(0, 10)
 
+function bucketAge(saleDate: string): ReceivablesAgingBucket['bucket'] {
+  const days = Math.floor(
+    (Date.now() - new Date(saleDate).getTime()) / (1000 * 60 * 60 * 24),
+  )
+  if (days <= 30) return '0-30'
+  if (days <= 60) return '31-60'
+  return '60+'
+}
+
 // ─── hook ─────────────────────────────────────────────────────────────────────
 export function useCustomers() {
   const supabase = createClient()
@@ -22,6 +32,7 @@ export function useCustomers() {
   // ── list state ──────────────────────────────────────────────────────────────
   const [customers,    setCustomers]    = useState<CustomerWithStats[]>([])
   const [kpi,          setKpi]          = useState<CustomerKpi>({ total_active: 0, amount_owed: 0, total_collected: 0 })
+  const [aging,        setAging]        = useState<ReceivablesAgingBucket[]>([])
   const [filter,       setFilter]       = useState<CustomerFilter>('all')
   const [search,       setSearch]       = useState('')
   const [loading,      setLoading]      = useState(true)
@@ -43,9 +54,11 @@ export function useCustomers() {
     const [
       { data: rows },
       { data: custs },
+      { data: openSales },
     ] = await Promise.all([
       supabase.from('customer_balances').select('amount_owed, total_paid'),
       supabase.from('customers').select('id, is_active'),
+      supabase.from('sales').select('sale_date, balance_due').gt('balance_due', 0),
     ])
 
     const balances = rows ?? []
@@ -54,6 +67,19 @@ export function useCustomers() {
       amount_owed:     sumPositiveAmountOwed(balances),
       total_collected: balances.reduce((sum, r) => sum + r.total_paid, 0),
     })
+
+    const bucketMap = new Map<ReceivablesAgingBucket['bucket'], ReceivablesAgingBucket>([
+      ['0-30',  { bucket: '0-30',  invoice_count: 0, total_due: 0 }],
+      ['31-60', { bucket: '31-60', invoice_count: 0, total_due: 0 }],
+      ['60+',   { bucket: '60+',   invoice_count: 0, total_due: 0 }],
+    ])
+    for (const row of openSales ?? []) {
+      const bucket = bucketAge(row.sale_date)
+      const entry = bucketMap.get(bucket)!
+      entry.invoice_count += 1
+      entry.total_due += Number(row.balance_due) || 0
+    }
+    setAging(Array.from(bucketMap.values()))
     setKpiLoading(false)
   }, [supabase])
 
@@ -64,20 +90,35 @@ export function useCustomers() {
   ) => {
     setLoading(true)
 
-    const [{ data: rows, error }, { data: extras }] = await Promise.all([
+    const [{ data: rows, error }, { data: extras }, { data: overdueSales }] = await Promise.all([
       supabase.from('customer_balances').select('*').order('name'),
       supabase.from('customers').select('id, is_active, credit_limit'),
+      supabase.from('sales').select('customer_id, balance_due, sale_date').gt('balance_due', 0),
     ])
 
     if (error || !rows) { console.error(error); setLoading(false); return }
+
+    const overdueMap = new Map<string, number>()
+    for (const row of overdueSales ?? []) {
+      const days = Math.floor(
+        (Date.now() - new Date(row.sale_date).getTime()) / (1000 * 60 * 60 * 24),
+      )
+      if (days > 60) {
+        overdueMap.set(
+          row.customer_id,
+          (overdueMap.get(row.customer_id) ?? 0) + (Number(row.balance_due) || 0),
+        )
+      }
+    }
 
     const extraMap = new Map(
       (extras ?? []).map(e => [e.id, { is_active: e.is_active, credit_limit: e.credit_limit }]),
     )
 
-    let enriched: CustomerWithStats[] = (rows as CustomerBalanceRow[]).map(row =>
-      mapBalanceRow(row, extraMap.get(row.id) ?? { is_active: true, credit_limit: null }),
-    )
+    let enriched: CustomerWithStats[] = (rows as CustomerBalanceRow[]).map(row => ({
+      ...mapBalanceRow(row, extraMap.get(row.id) ?? { is_active: true, credit_limit: null }),
+      overdue_60_amount: overdueMap.get(row.id) ?? 0,
+    }))
 
     // Apply search
     if (s.trim()) {
@@ -304,7 +345,7 @@ export function useCustomers() {
 
   return {
     // state
-    customers, kpi, filter, search, loading, kpiLoading,
+    customers, kpi, aging, filter, search, loading, kpiLoading,
     selectedId, selectedCustomer, sales, payments, detailLoading,
     // actions
     setSelectedId,

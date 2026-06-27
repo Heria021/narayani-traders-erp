@@ -310,6 +310,95 @@ export function useCustomerDetail(id: string) {
     return true
   }, [supabase, customer, sales, fetchAll])
 
+  // ── apply unapplied advance to an invoice ────────────────────────────────────
+  const applyAdvance = useCallback(async (
+    payment: Payment,
+    saleId: string,
+    applyAmount: number,
+  ): Promise<boolean> => {
+    if (!customer) return false
+    if (payment.sale_id) {
+      toast.error('This payment is already linked to an invoice')
+      return false
+    }
+    if (applyAmount <= 0) {
+      toast.error('Amount must be greater than ₹0')
+      return false
+    }
+    if (applyAmount > payment.amount + 0.001) {
+      toast.error(`Cannot apply more than the payment amount (${applyAmount.toFixed(2)})`)
+      return false
+    }
+
+    const linkedSale = sales.find(s => s.id === saleId)
+    if (!linkedSale || linkedSale.balance_due <= 0) {
+      toast.error('Selected invoice has no balance due')
+      return false
+    }
+    if (applyAmount > linkedSale.balance_due + 0.001) {
+      toast.error(`Cannot apply more than invoice balance (₹${linkedSale.balance_due.toFixed(2)})`)
+      return false
+    }
+
+    const remainder = parseFloat((payment.amount - applyAmount).toFixed(2))
+    const willSplit = remainder > 0.001
+
+    if (willSplit) {
+      const { error: updateErr } = await supabase
+        .from('payments')
+        .update({
+          amount:  applyAmount,
+          sale_id: saleId,
+          note:    payment.note
+            ? `${payment.note} (partial advance applied to ${linkedSale.invoice_number})`
+            : `Partial advance applied to ${linkedSale.invoice_number}`,
+        })
+        .eq('id', payment.id)
+
+      if (updateErr) { toast.error(updateErr.message); return false }
+
+      const { error: insertErr } = await supabase.from('payments').insert({
+        customer_id:      payment.customer_id,
+        sale_id:          null,
+        amount:           remainder,
+        payment_method:   payment.payment_method,
+        reference_number: payment.reference_number,
+        payment_date:     payment.payment_date,
+        note:             `Split from advance — remainder after applying to ${linkedSale.invoice_number}`,
+      })
+      if (insertErr) { toast.error(insertErr.message); return false }
+    } else {
+      const { error: linkErr } = await supabase
+        .from('payments')
+        .update({ sale_id: saleId })
+        .eq('id', payment.id)
+      if (linkErr) { toast.error(linkErr.message); return false }
+    }
+
+    const newPaid    = parseFloat((linkedSale.amount_paid + applyAmount).toFixed(2))
+    const newBalance = parseFloat(Math.max(0, linkedSale.grand_total - newPaid).toFixed(2))
+    const newStatus  = newBalance <= 0.001 ? 'paid' : newPaid > 0 ? 'partial' : 'pending'
+
+    const { error: saleErr } = await supabase
+      .from('sales')
+      .update({
+        amount_paid:    newPaid,
+        balance_due:    newBalance,
+        payment_status: newStatus,
+      })
+      .eq('id', saleId)
+
+    if (saleErr) { toast.error(saleErr.message); return false }
+
+    toast.success(
+      willSplit
+        ? `₹${applyAmount.toFixed(2)} applied to ${linkedSale.invoice_number} — ₹${remainder.toFixed(2)} remains as advance`
+        : `₹${applyAmount.toFixed(2)} applied to ${linkedSale.invoice_number}`,
+    )
+    await fetchAll()
+    return true
+  }, [supabase, customer, sales, fetchAll])
+
   return {
     customer,
     sales,
@@ -325,6 +414,7 @@ export function useCustomerDetail(id: string) {
     toggleActive,
     deleteCustomer,
     recordPayment,
+    applyAdvance,
     refresh: fetchAll,
   }
 }

@@ -22,6 +22,7 @@ export interface CustomerWithStats extends Customer {
   total_paid:        number   // from customer_balances view
   unapplied_advance: number   // from customer_balances view
   amount_owed:       number   // from customer_balances view: opening_balance + total_billed − total_paid
+  overdue_60_amount: number   // sum of balance_due on invoices older than 60 days
 }
 
 export interface Sale {
@@ -58,6 +59,12 @@ export interface CustomerKpi {
   total_active:    number
   amount_owed:     number   // sum of positive receivables
   total_collected: number
+}
+
+export interface ReceivablesAgingBucket {
+  bucket:         '0-30' | '31-60' | '60+'
+  invoice_count:  number
+  total_due:      number
 }
 
 export interface CustomerFormValues {

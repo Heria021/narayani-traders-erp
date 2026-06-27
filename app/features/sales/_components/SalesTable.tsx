@@ -315,7 +315,7 @@ export function SalesTable({
           </div>
         ) : (
           <div className="min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain [scrollbar-width:thin] [&_[data-slot=table-container]]:overflow-visible">
-            <Table className="w-full min-w-[900px] border-separate border-spacing-0 text-sm">
+            <Table className="w-full min-w-[980px] border-separate border-spacing-0 text-sm">
               <TableHeader className="bg-card shrink-0 sticky top-0 z-10">
                 <TableRow className="hover:bg-transparent">
                   <SortableHeader
@@ -337,6 +337,9 @@ export function SalesTable({
                     onSort={onSort}
                     className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40"
                   />
+                  <TableHead className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">
+                    Profit
+                  </TableHead>
                   <TableHead className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">
                     Paid
                   </TableHead>
@@ -372,6 +375,7 @@ export function SalesTable({
                       </TableCell>
                       <TableCell className="px-3 py-3 text-right"><Skeleton className="ml-auto h-5 w-14 rounded-md" /></TableCell>
                       <TableCell className="px-3 py-3 text-right"><Skeleton className="ml-auto h-4 w-20" /></TableCell>
+                      <TableCell className="px-3 py-3 text-right"><Skeleton className="ml-auto h-4 w-16" /></TableCell>
                       <TableCell className="px-3 py-3 text-right"><Skeleton className="ml-auto h-4 w-16" /></TableCell>
                       <TableCell className="px-3 py-3 text-right"><Skeleton className="ml-auto h-4 w-16" /></TableCell>
                       <TableCell className="px-3 py-3 text-right"><Skeleton className="ml-auto h-5 w-16 rounded-full" /></TableCell>
@@ -426,14 +430,24 @@ export function SalesTable({
                           </span>
                         </TableCell>
 
-                        {/* Col 4: Paid */}
+                        {/* Col 4: Profit */}
+                        <TableCell className="px-3 py-3 text-right align-middle">
+                          <span className={cn(
+                            'text-sm tabular-nums font-medium',
+                            (s.profit ?? 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-foreground',
+                          )}>
+                            {rupee2(s.profit ?? 0)}
+                          </span>
+                        </TableCell>
+
+                        {/* Col 5: Paid */}
                         <TableCell className="px-3 py-3 text-right align-middle">
                           <span className="text-sm tabular-nums text-emerald-600 dark:text-emerald-400 font-medium">
                             {rupee2(s.amount_paid)}
                           </span>
                         </TableCell>
 
-                        {/* Col 5: Balance */}
+                        {/* Col 6: Balance */}
                         <TableCell className="px-3 py-3 text-right align-middle">
                           {s.balance_due > 0 ? (
                             <span className="text-sm tabular-nums font-semibold text-amber-600 dark:text-amber-400">
@@ -444,12 +458,12 @@ export function SalesTable({
                           )}
                         </TableCell>
 
-                        {/* Col 6: Status */}
+                        {/* Col 7: Status */}
                         <TableCell className="px-3 py-3 text-right align-middle">
                           <StatusBadge status={s.payment_status} />
                         </TableCell>
 
-                        {/* Col 7: Actions */}
+                        {/* Col 8: Actions */}
                         <TableCell className="w-10 py-3 pl-3 pr-4 align-middle text-right" onClick={e => e.stopPropagation()}>
                           <DropdownMenu>
                             <DropdownMenuTrigger render={

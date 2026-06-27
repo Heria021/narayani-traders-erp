@@ -53,6 +53,7 @@ import { DatePicker } from '@/components/ui/date-picker'
 import { ProductQuickAdd } from '../_components/ProductQuickAdd'
 import { useNewPurchase } from './useNewPurchase'
 import { useBreadcrumb } from '@/components/app-shell'
+import { EntityBalanceNote } from '@/components/EntityBalanceNote'
 import type {
   LineItemDraft, PurchaseHeaderValues, DiscountMode,
   Supplier, Product, QuickProductFormValues,
@@ -80,52 +81,6 @@ function emptyRow(): LineItemDraft {
 
 function normalized(value: string | null | undefined) {
   return (value ?? '').toLocaleLowerCase('en-IN')
-}
-
-// ─── SupplierBalanceNote ──────────────────────────────────────────────────────
-
-function SupplierBalanceNote({ supplierId }: { supplierId: string | null }) {
-  const supabase = useMemo(() => createClient(), [])
-  const [amountOwed, setAmountOwed] = useState<number | null>(null)
-
-  useEffect(() => {
-    if (!supplierId) {
-      setAmountOwed(null)
-      return
-    }
-    let active = true
-    supabase
-      .from('supplier_balances')
-      .select('amount_owed')
-      .eq('id', supplierId)
-      .single()
-      .then(({ data }) => {
-        if (active) setAmountOwed(Number(data?.amount_owed ?? 0))
-      })
-    return () => { active = false }
-  }, [supplierId, supabase])
-
-  if (amountOwed === null) return null
-
-  if (amountOwed > 0) {
-    return (
-      <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-1">
-        Current balance: {rupee(amountOwed)} owed
-      </p>
-    )
-  }
-  if (amountOwed < 0) {
-    return (
-      <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1">
-        Current balance: {rupee(Math.abs(amountOwed))} credit
-      </p>
-    )
-  }
-  return (
-    <p className="text-xs text-muted-foreground mt-1">
-      Current balance: settled (₹0)
-    </p>
-  )
 }
 
 // ─── SupplierSearch ───────────────────────────────────────────────────────────
@@ -750,7 +705,7 @@ function NewPurchaseForm() {
                       }}
                       error={headerErrors.supplier_id}
                     />
-                    <SupplierBalanceNote supplierId={selectedSupplier?.id ?? null} />
+                    <EntityBalanceNote entityType="supplier" entityId={selectedSupplier?.id ?? null} />
                   </Field>
 
                   <Field className="flex-1 flex flex-col min-h-[140px]">

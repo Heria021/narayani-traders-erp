@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 
@@ -11,6 +12,7 @@ import { ProductForm } from './_components/ProductForm'
 import type { Product } from './_components/types'
 
 export default function ProductsPage() {
+  const router = useRouter()
   const {
     products, total, page, sortField, sortDir,
     filters, categories, loading,
@@ -106,7 +108,7 @@ export default function ProductsPage() {
               Low Stock
             </span>
             <div className="text-xl font-semibold tracking-tight">
-              {products.filter(p => p.track_inventory && p.current_stock > 0 && p.current_stock <= p.minimum_stock).length}
+              {products.filter(p => p.track_inventory && p.minimum_stock > 0 && p.current_stock > 0 && p.current_stock <= p.minimum_stock).length}
             </div>
             <span className="text-xs text-muted-foreground block font-medium">
               Below minimum threshold
@@ -131,7 +133,7 @@ export default function ProductsPage() {
           onSearchChange={handleSearchChange}
           onCategoryChange={handleCategoryChange}
           onEdit={openEdit}
-          onViewDetail={() => { /* detail drawer — no-op */ }}
+          onViewDetail={p => router.push(`/features/products/${p.id}`)}
           onToggleActive={toggleActive}
           onDelete={deleteProduct}
         />

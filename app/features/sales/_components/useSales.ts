@@ -147,16 +147,19 @@ export function useSales() {
       return
     }
 
-    // Fetch item counts per sale
+    // Fetch item counts and profit per sale
     const saleIds = (data ?? []).map(s => s.id)
     const itemCountMap = new Map<string, number>()
+    const profitMap = new Map<string, number>()
     if (saleIds.length > 0) {
-      const { data: itemCounts } = await supabase
+      const { data: itemRows } = await supabase
         .from('sale_items')
-        .select('sale_id')
+        .select('sale_id, quantity, unit_price, cost_price_at_sale')
         .in('sale_id', saleIds)
-      for (const item of itemCounts ?? []) {
+      for (const item of itemRows ?? []) {
         itemCountMap.set(item.sale_id, (itemCountMap.get(item.sale_id) ?? 0) + 1)
+        const lineProfit = item.quantity * (item.unit_price - item.cost_price_at_sale)
+        profitMap.set(item.sale_id, (profitMap.get(item.sale_id) ?? 0) + lineProfit)
       }
     }
 
@@ -184,6 +187,7 @@ export function useSales() {
         notes: s.notes,
         created_at: s.created_at,
         item_count: itemCountMap.get(s.id) ?? 0,
+        profit: profitMap.get(s.id) ?? 0,
       }
     })
 

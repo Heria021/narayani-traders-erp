@@ -92,7 +92,7 @@ export function useProducts() {
 
     // Client-side low_stock post-filter (column-to-column comparison)
     if (f.status === 'low_stock') {
-      rows = rows.filter(r => r.current_stock <= r.minimum_stock)
+      rows = rows.filter(r => r.minimum_stock > 0 && r.current_stock <= r.minimum_stock && r.current_stock > 0)
     }
 
     setProducts(rows)

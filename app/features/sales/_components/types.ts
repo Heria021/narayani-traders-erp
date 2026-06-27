@@ -51,6 +51,7 @@ export interface Sale {
   notes: string | null
   created_at: string
   item_count?: number
+  profit?: number                // sum of line profits for this invoice
 }
 
 export interface SaleItem {

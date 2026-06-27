@@ -41,6 +41,13 @@ export default function SalesPage() {
     setPaymentOpen(true)
   }
 
+  function openRecordPaymentFromInvoice() {
+    if (!detailData) return
+    const { items: _items, payments: _payments, ...saleFields } = detailData
+    setPaymentSale(saleFields)
+    setPaymentOpen(true)
+  }
+
   async function handleRecordPayment(
     sale: Sale, amount: number, method: PaymentMethod, referenceNumber: string,
   ) {
@@ -207,6 +214,7 @@ export default function SalesPage() {
         open={invoiceOpen && !!detailData && !detailLoading && selectedId === detailData?.id}
         sale={detailData}
         onClose={() => { setInvoiceOpen(false); setSelectedId(null) }}
+        onRecordPayment={detailData && detailData.balance_due > 0 ? openRecordPaymentFromInvoice : undefined}
       />
 
       {/* ── Record Payment Modal ─────────────────────────────────────────────── */}

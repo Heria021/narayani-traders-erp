@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -19,9 +20,10 @@ import {
 } from '@/components/ui/dialog'
 import {
   MoreHorizontal, Pencil, PowerOff, Power, Trash2, Copy, Check, Package, Search,
+  Eye, ShoppingCart,
 } from 'lucide-react'
 import type { Product, SortField, SortDir, ProductFilters } from './types'
-import { getStockStatus, ROWS_PER_PAGE } from './types'
+import { getStockStatus, getProductMarginPct, getMarginColorClass, canReorder, ROWS_PER_PAGE } from './types'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -164,6 +166,8 @@ function TableSkeleton() {
       <TableCell className="py-3">
         <div className="flex flex-col gap-1"><Skeleton className="h-4 w-16" /><Skeleton className="h-3 w-12" /></div>
       </TableCell>
+      {/* Margin */}
+      <TableCell className="py-3"><Skeleton className="h-4 w-12" /></TableCell>
       {/* Stock */}
       <TableCell className="py-3"><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
       {/* Actions */}
@@ -221,8 +225,9 @@ export function ProductTable({
   products, total, page, loading,
   filters, categories,
   onPageChange, onSearchChange, onCategoryChange,
-  onEdit, onToggleActive, onDelete,
+  onEdit, onViewDetail, onToggleActive, onDelete,
 }: Props) {
+  const router = useRouter()
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null)
   const totalPages = Math.ceil(total / ROWS_PER_PAGE)
   const from = (page - 1) * ROWS_PER_PAGE + 1
@@ -282,18 +287,22 @@ export function ProductTable({
           </div>
         ) : (
           <div className="min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain [scrollbar-width:thin]">
-            <Table className="w-full min-w-[900px] caption-bottom border-separate border-spacing-0 text-sm">
+            <Table className="w-full min-w-[980px] caption-bottom border-separate border-spacing-0 text-sm">
               <TableBody>
                 {loading ? (
                   <TableSkeleton />
                 ) : (
-                  products.map(p => (
+                  products.map(p => {
+                    const margin = getProductMarginPct(p)
+                    const showReorder = canReorder(p)
+                    return (
                     <TableRow
                       key={p.id}
                       className={cn(
-                        'group border-b transition-colors hover:bg-muted/40',
+                        'group cursor-pointer border-b transition-colors hover:bg-muted/40',
                         !p.is_active && 'opacity-50',
                       )}
+                      onClick={() => onViewDetail(p)}
                     >
                       {/* Col 1: Product (Icon + Name + SKU) */}
                       <TableCell className="py-3 pl-4">
@@ -363,12 +372,19 @@ export function ProductTable({
                         </div>
                       </TableCell>
 
-                      {/* Col 6: Stock */}
+                      {/* Col 6: Margin % */}
+                      <TableCell className="py-3">
+                        <span className={cn('text-sm tabular-nums', getMarginColorClass(margin))}>
+                          {margin === null ? '—' : `${margin.toFixed(1)}%`}
+                        </span>
+                      </TableCell>
+
+                      {/* Col 7: Stock */}
                       <TableCell className="py-3">
                         <StockBadge product={p} />
                       </TableCell>
 
-                      {/* Col 7: Actions */}
+                      {/* Col 8: Actions */}
                       <TableCell className="w-10 py-3 pr-4" onClick={e => e.stopPropagation()}>
                         <DropdownMenu>
                           <DropdownMenuTrigger render={
@@ -377,9 +393,17 @@ export function ProductTable({
                             </Button>
                           } />
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => onViewDetail(p)}>
+                              <Eye className="mr-2 size-4" /> View Product
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => onEdit(p)}>
                               <Pencil className="mr-2 size-4" /> Edit Product
                             </DropdownMenuItem>
+                            {showReorder && (
+                              <DropdownMenuItem onClick={() => router.push(`/features/purchases/new?product_id=${p.id}`)}>
+                                <ShoppingCart className="mr-2 size-4" /> Reorder
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem onClick={() => onToggleActive(p)}>
                               {p.is_active
                                 ? <><PowerOff className="mr-2 size-4" /> Deactivate</>
@@ -393,7 +417,8 @@ export function ProductTable({
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))
+                    )
+                  })
                 )}
               </TableBody>
             </Table>

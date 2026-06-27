@@ -49,6 +49,7 @@ export function mapBalanceRow(
     total_paid:        row.total_paid,
     unapplied_advance: row.unapplied_advance,
     amount_owed:       row.amount_owed,
+    overdue_60_amount: 0,
   }
 }
 

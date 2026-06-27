@@ -45,6 +45,7 @@ import {
   ComboboxItem,
 } from '@/components/ui/combobox'
 import { DatePicker } from '@/components/ui/date-picker'
+import { EntityBalanceNote } from '@/components/EntityBalanceNote'
 import { useCustomers } from '../../customers/_components/useCustomers'
 import { CustomerForm } from '../../customers/_components/CustomerForm'
 import {
@@ -198,15 +199,14 @@ function CustomerSearch({
 // ─── CustomerInfoPanel ────────────────────────────────────────────────────────
 
 function CustomerInfoPanel({
-  customer, outstanding,
-}: { customer: Customer; outstanding: number }) {
+  customer, amountOwed,
+}: { customer: Customer; amountOwed: number }) {
   const creditLimit = customer.credit_limit
-  const openingBal = customer.opening_balance
-  const totalOwed = outstanding + Math.max(0, openingBal)
-  const hasAdvance = openingBal < 0
+  const totalOwed = amountOwed
+  const hasAdvance = amountOwed < 0
 
   const noLimit = creditLimit <= 0
-  const usageRatio = noLimit ? 0 : totalOwed / creditLimit
+  const usageRatio = noLimit ? 0 : Math.max(0, totalOwed) / creditLimit
   const nearLimit = !noLimit && usageRatio >= 0.8 && usageRatio < 1
   const atLimit = !noLimit && usageRatio >= 1
 
@@ -227,8 +227,8 @@ function CustomerInfoPanel({
           </div>
           <div className="space-y-0.5 text-right text-xs">
             <p className="text-muted-foreground">Outstanding</p>
-            <p className={cn('font-bold tabular-nums', outstanding > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-foreground')}>
-              {rupee(outstanding)}
+            <p className={cn('font-bold tabular-nums', amountOwed > 0 ? 'text-amber-600 dark:text-amber-400' : amountOwed < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground')}>
+              {amountOwed < 0 ? `${rupee(Math.abs(amountOwed))} credit` : rupee(amountOwed)}
             </p>
           </div>
         </div>
@@ -236,7 +236,7 @@ function CustomerInfoPanel({
         {!noLimit && (
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>Credit Limit: {rupee(creditLimit)}</span>
-            <span>Available: {rupee(Math.max(0, creditLimit - totalOwed))}</span>
+            <span>Available: {rupee(Math.max(0, creditLimit - Math.max(0, totalOwed)))}</span>
           </div>
         )}
 
@@ -244,7 +244,7 @@ function CustomerInfoPanel({
           <Alert className="border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-400 [&>svg]:text-blue-700 dark:[&>svg]:text-blue-400">
             <Info className="size-3.5" />
             <AlertDescription>
-              {customer.name} has {rupee(Math.abs(openingBal))} advance credit
+              {customer.name} has {rupee(Math.abs(amountOwed))} credit balance
             </AlertDescription>
           </Alert>
         )}
@@ -579,8 +579,8 @@ export default function NewSalePage() {
     notes: '',
   })
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
-  const [customerOutstanding, setCustomerOutstanding] = useState(0)
-  const [loadingOutstanding, setLoadingOutstanding] = useState(false)
+  const [customerAmountOwed, setCustomerAmountOwed] = useState(0)
+  const [loadingAmountOwed, setLoadingAmountOwed] = useState(false)
   const [headerErrors, setHeaderErrors] = useState<Partial<Record<string, string>>>({})
 
   const [rows, setRows] = useState<SaleDraftLineItem[]>([emptyRow()])
@@ -614,17 +614,16 @@ export default function NewSalePage() {
   const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
-    if (!selectedCustomer) { setCustomerOutstanding(0); return }
-    setLoadingOutstanding(true)
+    if (!selectedCustomer) { setCustomerAmountOwed(0); return }
+    setLoadingAmountOwed(true)
     supabase
-      .from('sales')
-      .select('balance_due')
-      .eq('customer_id', selectedCustomer.id)
-      .neq('payment_status', 'paid')
+      .from('customer_balances')
+      .select('amount_owed')
+      .eq('id', selectedCustomer.id)
+      .single()
       .then(({ data }) => {
-        const total = (data ?? []).reduce((s: number, r: { balance_due: number }) => s + r.balance_due, 0)
-        setCustomerOutstanding(total)
-        setLoadingOutstanding(false)
+        setCustomerAmountOwed(Number(data?.amount_owed ?? 0))
+        setLoadingAmountOwed(false)
       })
   }, [selectedCustomer, supabase])
 
@@ -906,6 +905,9 @@ export default function NewSalePage() {
                   }}
                   onAddCustomerClick={() => setCustomerFormOpen(true)}
                 />
+                {selectedCustomer && (
+                  <EntityBalanceNote entityType="customer" entityId={selectedCustomer.id} />
+                )}
                 {!selectedCustomer && (
                   <Field className="pt-1">
                     <FieldLabel htmlFor="walkin_name">
@@ -922,7 +924,7 @@ export default function NewSalePage() {
                 {selectedCustomer && (
                   <CustomerInfoPanel
                     customer={selectedCustomer}
-                    outstanding={loadingOutstanding ? 0 : customerOutstanding}
+                    amountOwed={loadingAmountOwed ? 0 : customerAmountOwed}
                   />
                 )}
               </Field>

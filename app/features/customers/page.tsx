@@ -41,7 +41,7 @@ function getInitials(name: string) {
 export default function CustomersPage() {
   const router = useRouter()
   const {
-    customers, kpi, filter, search, loading, kpiLoading,
+    customers, kpi, aging, filter, search, loading, kpiLoading,
     selectedCustomer, sales, recordPayment,
     setSelectedId,
     handleSearchChange, handleFilterChange,
@@ -144,6 +144,44 @@ export default function CustomersPage() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* ── Receivables Aging ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {(aging.length > 0 ? aging : [
+            { bucket: '0-30' as const, invoice_count: 0, total_due: 0 },
+            { bucket: '31-60' as const, invoice_count: 0, total_due: 0 },
+            { bucket: '60+' as const, invoice_count: 0, total_due: 0 },
+          ]).map(({ bucket, invoice_count, total_due }) => {
+            const isAged = bucket === '60+'
+            return (
+              <div
+                key={bucket}
+                className={cn(
+                  'rounded-lg border p-3 space-y-0.5',
+                  isAged && total_due > 0
+                    ? 'border-amber-200 bg-amber-50/40 dark:border-amber-900/50 dark:bg-amber-950/20'
+                    : 'bg-card',
+                )}
+              >
+                <span className={cn(
+                  'text-[10px] font-semibold tracking-wider uppercase block',
+                  isAged && total_due > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground',
+                )}>
+                  {bucket} days
+                </span>
+                <div className={cn(
+                  'text-lg font-bold tabular-nums',
+                  isAged && total_due > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-foreground',
+                )}>
+                  {kpiLoading ? <Skeleton className="h-6 w-24" /> : rupee(total_due)}
+                </div>
+                <span className="text-[11px] text-muted-foreground block">
+                  {kpiLoading ? '…' : `${invoice_count} open invoice${invoice_count === 1 ? '' : 's'}`}
+                </span>
+              </div>
+            )
+          })}
         </div>
       </div>
 
@@ -326,9 +364,19 @@ export default function CustomersPage() {
 
                       {/* Status */}
                       <TableCell className="px-3 py-3 text-center align-middle">
-                        <Badge variant={c.is_active ? 'default' : 'secondary'} className="h-5 px-2 text-[10px] font-semibold uppercase tracking-wider">
-                          {c.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
+                        <div className="inline-flex flex-wrap items-center justify-center gap-1.5">
+                          <Badge variant={c.is_active ? 'default' : 'secondary'} className="h-5 px-2 text-[10px] font-semibold uppercase tracking-wider">
+                            {c.is_active ? 'Active' : 'Inactive'}
+                          </Badge>
+                          {c.overdue_60_amount > 0 && (
+                            <Badge
+                              variant="outline"
+                              className="h-5 px-1.5 text-[10px] font-semibold uppercase tracking-wider border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400"
+                            >
+                              Overdue
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
 
                       {/* Actions */}

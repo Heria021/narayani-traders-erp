@@ -511,7 +511,15 @@ export function ProductForm({ open, product, categories, onClose, onSubmit }: Pr
 
                       <Field>
                         <FieldLabel htmlFor="minimum-stock">Minimum Stock</FieldLabel>
-                        <FieldDescription>Low-stock alert threshold.</FieldDescription>
+                        <FieldDescription>
+                          Low-stock alert threshold.
+                          {Number(form.minimum_stock) === 0 && (
+                            <span className="block mt-1 text-amber-600 dark:text-amber-400">
+                              0 means you&apos;ll only be alerted once stock is fully out. Consider
+                              setting a buffer (e.g. 5–10 units) to reorder in time.
+                            </span>
+                          )}
+                        </FieldDescription>
                         <Input
                           id="minimum-stock"
                           type="number"

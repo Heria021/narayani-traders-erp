@@ -2,10 +2,11 @@
 
 import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Printer, X } from 'lucide-react'
+import { Printer, X, CreditCard } from 'lucide-react'
 import type { SaleWithItems } from './types'
 import { PAYMENT_METHOD_LABELS } from './types'
 import { SHOP } from '@/lib/config/shop'
+import { cn } from '@/lib/utils'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const FLOAT_DUST = 0.001
@@ -40,11 +41,12 @@ interface Props {
   open: boolean
   sale: SaleWithItems | null
   onClose: () => void
+  onRecordPayment?: () => void
 }
 
 // ─── InvoiceModal ─────────────────────────────────────────────────────────────
 
-export function InvoiceModal({ open, sale, onClose }: Props) {
+export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
   useEffect(() => {
     if (!open) return
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -119,6 +121,11 @@ export function InvoiceModal({ open, sale, onClose }: Props) {
         .inv-table colgroup .col-qty { width: 70px; }
         .inv-table colgroup .col-rate{ width: 80px; }
         .inv-table colgroup .col-amt { width: 88px; }
+        .inv-table colgroup .col-profit { width: 72px; }
+        .inv-col-profit { }
+        @media print {
+          .inv-col-profit { display: none; }
+        }
         .inv-table th { padding: .4rem .35rem; font-size: .6rem; font-weight: 700; color: #6b5e52; text-transform: uppercase; letter-spacing: .04em; border-bottom: 2px solid #e2d8cf; text-align: left; }
         .inv-table th.r { text-align: right; }
         .inv-table td { padding: .45rem .35rem; border-bottom: 1px solid #f0ebe6; font-size: .82rem; color: #1a1612; vertical-align: top; }
@@ -175,6 +182,17 @@ export function InvoiceModal({ open, sale, onClose }: Props) {
               </span>
             </div>
             <div className="flex items-center gap-2">
+              {hasBalance && onRecordPayment && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onRecordPayment}
+                  className="h-8 px-3 text-xs gap-1.5"
+                >
+                  <CreditCard className="size-3.5" />
+                  Record Payment
+                </Button>
+              )}
               <Button
                 variant="default"
                 size="sm"
@@ -275,6 +293,7 @@ export function InvoiceModal({ open, sale, onClose }: Props) {
                     <col className="col-qty" />
                     <col className="col-rate" />
                     <col className="col-amt" />
+                    <col className="col-profit" />
                   </colgroup>
                   <thead>
                     <tr>
@@ -283,6 +302,7 @@ export function InvoiceModal({ open, sale, onClose }: Props) {
                       <th className="r">Qty</th>
                       <th className="r">Rate</th>
                       <th className="r">Amount</th>
+                      <th className="r inv-col-profit">Profit</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -316,6 +336,9 @@ export function InvoiceModal({ open, sale, onClose }: Props) {
                           <td className="r">{qtyDisplay}</td>
                           <td className="r">{rupee(item.unit_price)}</td>
                           <td className="r">{rupee(lineBase)}</td>
+                          <td className={cn('r inv-col-profit', item.line_profit < 0 && 'text-red-600')}>
+                            {rupee(item.line_profit)}
+                          </td>
                         </tr>
                       )
                     })}
