@@ -202,25 +202,31 @@ comment on column sales.balance_due    is 'grand_total − amount_paid. Positive
 -- quantity is ALWAYS in base units.
 -- ─────────────────────────────────────────────────────────────────────────────
 create table sale_items (
-  id          uuid          primary key default gen_random_uuid(),
-  sale_id     uuid          not null references sales    (id) on delete cascade,
-  product_id  uuid          not null references products (id),
+  id                    uuid          primary key default gen_random_uuid(),
+  sale_id               uuid          not null references sales    (id) on delete cascade,
+  product_id            uuid          not null references products (id),
 
-  sell_mode   sell_mode     not null default 'unit',
-  box_count   integer       check (box_count > 0),      -- number of boxes (null when sell_mode = unit)
-  quantity    numeric(12,3) not null,                   -- ALWAYS base units: boxes × units_per_box, or direct qty
-  unit_price  numeric(12,2) not null,                   -- price used (unit price or box price per sell_mode)
-  tax_rate    numeric(5,2)  not null default 0,         -- GST % on this line
-  line_total  numeric(12,2) not null,                   -- quantity × unit_price (before tax)
+  sell_mode             sell_mode     not null default 'unit',
+  box_count             integer       check (box_count > 0),      -- number of boxes (null when sell_mode = unit)
+  quantity              numeric(12,3) not null,                   -- ALWAYS base units: boxes × units_per_box, or direct qty
+  unit_price            numeric(12,2) not null,                   -- price used (unit price or box price per sell_mode)
+  cost_price_at_sale    numeric(12,2) not null,                   -- snapshot of per-unit cost at time of sale
+  tax_rate              numeric(5,2)  not null default 0,         -- GST % on this line
+  line_total            numeric(12,2) not null,                   -- quantity × unit_price (before tax)
 
   constraint chk_box_count check (
     (sell_mode = 'unit'::sell_mode and box_count is null)
     or
     (sell_mode = 'box'::sell_mode  and box_count is not null)
-  )
+  ),
+  constraint chk_cost_price_at_sale_nonneg check (cost_price_at_sale >= 0)
 );
-comment on table  sale_items          is 'Line items for each sales invoice.';
-comment on column sale_items.quantity is 'Always in base units. For boxes: boxes × units_per_box.';
+comment on table  sale_items                       is 'Line items for each sales invoice.';
+comment on column sale_items.quantity              is 'Always in base units. For boxes: boxes × units_per_box.';
+comment on column sale_items.cost_price_at_sale    is 'Snapshot of the product''s per-unit cost (base units) at the moment of sale.
+   Captured from products.purchase_price (or box_purchase_price / units_per_box
+   if sold in box mode). Never recalculated after insert — protects historical
+   profit accuracy even if purchase_price changes later.';
 
 -- Example: Selling 2 boxes of pens (12 units/box) at ₹110/box
 --   sell_mode = 'box', box_count = 2, quantity = 24, unit_price = 110, line_total = 220
@@ -462,7 +468,85 @@ create trigger trg_suppliers_updated_at
 
 
 -- =============================================================================
--- SECTION 7 — AUTO-CREATE PROFILE ON AUTH SIGN-UP
+-- SECTION 7 — COST SNAPSHOT TRIGGER ON sale_items
+-- Auto-populates cost_price_at_sale from products at the moment of insert.
+-- Uses security invoker so it runs with the calling user's permissions (RLS).
+-- =============================================================================
+
+create or replace function set_cost_price_at_sale()
+returns trigger
+language plpgsql
+security invoker
+as $$
+declare
+  v_purchase_price     numeric(12,2);
+  v_box_purchase_price numeric(12,2);
+  v_units_per_box      integer;
+begin
+  -- If the app already supplied a cost (e.g. manual override), respect it
+  if new.cost_price_at_sale is not null then
+    return new;
+  end if;
+
+  select purchase_price, box_purchase_price, units_per_box
+  into v_purchase_price, v_box_purchase_price, v_units_per_box
+  from products
+  where id = new.product_id;
+
+  if new.sell_mode = 'box' and v_units_per_box is not null and v_box_purchase_price is not null then
+    new.cost_price_at_sale := v_box_purchase_price / v_units_per_box;
+  else
+    new.cost_price_at_sale := coalesce(v_purchase_price, 0);
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger trg_sale_items_cost_snapshot
+  before insert on sale_items
+  for each row execute function set_cost_price_at_sale();
+
+
+-- =============================================================================
+-- SECTION 7b — PURCHASE PRICE SYNC ON purchase_items INSERT
+-- Keeps products.purchase_price / box_purchase_price at the latest purchase price.
+-- Insert-only: editing historical purchase_items rows does not ripple back.
+-- =============================================================================
+
+create or replace function sync_product_purchase_price()
+returns trigger
+language plpgsql
+security invoker
+as $$
+begin
+  if new.buy_mode = 'unit' then
+    update products
+    set purchase_price = new.unit_price
+    where id = new.product_id;
+
+  elsif new.buy_mode = 'box' then
+    update products
+    set box_purchase_price = new.unit_price,
+        purchase_price     = case
+                                when units_per_box > 0
+                                  then new.unit_price / units_per_box
+                                else purchase_price
+                              end
+    where id = new.product_id;
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger trg_sync_product_purchase_price
+  after insert on purchase_items
+  for each row execute function sync_product_purchase_price();
+
+
+-- =============================================================================
+-- SECTION 8 — AUTO-CREATE PROFILE ON AUTH SIGN-UP
 -- Trigger fires when a new row is inserted into auth.users.
 -- Security definer + empty search_path = Supabase recommended pattern.
 -- =============================================================================
@@ -491,7 +575,7 @@ create trigger on_auth_user_created
 
 
 -- =============================================================================
--- SECTION 8 — SEED OWNER PROFILE
+-- SECTION 9 — SEED OWNER PROFILE
 -- Insert the owner row (safe to re-run — ON CONFLICT does nothing).
 -- =============================================================================
 
@@ -506,7 +590,7 @@ on conflict (id) do nothing;
 
 
 -- =============================================================================
--- SECTION 9 — INVENTORY PROCEDURES / FUNCTIONS
+-- SECTION 10 — INVENTORY PROCEDURES / FUNCTIONS
 -- =============================================================================
 
 create or replace function increment_stock(p_product_id uuid, p_delta numeric)
@@ -622,6 +706,57 @@ grant select, insert, update, delete on supplier_payments to authenticated;
 
 
 -- =============================================================================
+-- CUSTOMER BALANCES (view)
+-- Single source of truth for receivables per customer.
+-- amount_owed = opening_balance + total_billed − total_paid
+--   +ve = customer owes you · −ve = advance credit (they overpaid)
+-- =============================================================================
+
+create or replace view customer_balances as
+select
+  c.id,
+  c.name,
+  c.phone,
+  c.email,
+  c.address,
+  c.city,
+  c.state,
+  c.postal_code,
+  c.gstin,
+  c.opening_balance,
+  c.created_at,
+  c.updated_at,
+
+  coalesce(s.total_billed, 0)::numeric(12,2)        as total_billed,
+  coalesce(p.total_paid, 0)::numeric(12,2)          as total_paid,
+  coalesce(p.unapplied_advance, 0)::numeric(12,2)   as unapplied_advance,
+
+  (c.opening_balance + coalesce(s.total_billed, 0) - coalesce(p.total_paid, 0))
+    ::numeric(12,2) as amount_owed
+
+from customers c
+left join (
+  select customer_id, sum(grand_total) as total_billed
+  from sales
+  group by customer_id
+) s on s.customer_id = c.id
+left join (
+  select
+    customer_id,
+    sum(amount) as total_paid,
+    sum(amount) filter (where sale_id is null) as unapplied_advance
+  from payments
+  group by customer_id
+) p on p.customer_id = c.id;
+
+comment on view customer_balances is
+  'Receivables per customer. amount_owed = opening_balance + total_billed − total_paid.
+   unapplied_advance = payments not yet linked to a specific sale.';
+
+grant select on customer_balances to authenticated;
+
+
+-- =============================================================================
 -- SUPPLIER BALANCES (view)
 -- Single source of truth for payables per supplier.
 -- amount_owed = opening_balance + total_purchased − total_paid
@@ -642,9 +777,14 @@ select
   s.opening_balance,
   s.created_at,
   s.updated_at,
-  coalesce(p.total_purchased, 0)::numeric(12, 2) as total_purchased,
-  coalesce(sp.total_paid, 0)::numeric(12, 2)    as total_paid,
-  (s.opening_balance + coalesce(p.total_purchased, 0) - coalesce(sp.total_paid, 0))::numeric(12, 2) as amount_owed
+
+  coalesce(p.total_purchased, 0)::numeric(12,2)      as total_purchased,
+  coalesce(sp.total_paid, 0)::numeric(12,2)          as total_paid,
+  coalesce(sp.unapplied_advance, 0)::numeric(12,2)   as unapplied_advance,
+
+  (s.opening_balance + coalesce(p.total_purchased, 0) - coalesce(sp.total_paid, 0))
+    ::numeric(12,2) as amount_owed
+
 from suppliers s
 left join (
   select supplier_id, sum(grand_total) as total_purchased
@@ -652,12 +792,16 @@ left join (
   group by supplier_id
 ) p on p.supplier_id = s.id
 left join (
-  select supplier_id, sum(amount) as total_paid
+  select
+    supplier_id,
+    sum(amount) as total_paid,
+    sum(amount) filter (where purchase_id is null) as unapplied_advance
   from supplier_payments
   group by supplier_id
 ) sp on sp.supplier_id = s.id;
 
 comment on view supplier_balances is
-  'Payables per supplier. amount_owed = opening_balance + total_purchased − total_paid.';
+  'Payables per supplier. amount_owed = opening_balance + total_purchased − total_paid.
+   unapplied_advance = supplier_payments not yet linked to a specific purchase.';
 
 grant select on supplier_balances to authenticated;

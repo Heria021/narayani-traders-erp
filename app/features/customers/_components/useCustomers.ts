@@ -4,11 +4,12 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import {
-  type Customer, type CustomerWithStats, type Sale, type Payment,
+  type CustomerWithStats, type Sale, type Payment,
   type LedgerEntry, type CustomerKpi, type CustomerFormValues,
   type PaymentFormValues, type CustomerFilter, EMPTY_CUSTOMER_FORM,
 } from './types'
-import { computeNetOwed, isWalkinCustomer, customerDisplayName } from './ledger'
+import { mapBalanceRow, sumPositiveAmountOwed, type CustomerBalanceRow } from './balances'
+import { isWalkinCustomer, customerDisplayName } from './ledger'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 const num = (v: string | number) => Number(v) || 0
@@ -20,7 +21,7 @@ export function useCustomers() {
 
   // ── list state ──────────────────────────────────────────────────────────────
   const [customers,    setCustomers]    = useState<CustomerWithStats[]>([])
-  const [kpi,          setKpi]          = useState<CustomerKpi>({ total_active: 0, total_outstanding: 0, total_collected: 0 })
+  const [kpi,          setKpi]          = useState<CustomerKpi>({ total_active: 0, amount_owed: 0, total_collected: 0 })
   const [filter,       setFilter]       = useState<CustomerFilter>('all')
   const [search,       setSearch]       = useState('')
   const [loading,      setLoading]      = useState(true)
@@ -40,38 +41,18 @@ export function useCustomers() {
   const fetchKpi = useCallback(async () => {
     setKpiLoading(true)
     const [
+      { data: rows },
       { data: custs },
-      { data: salesData },
-      { data: paymentsData },
     ] = await Promise.all([
-      supabase.from('customers').select('id, is_active, opening_balance'),
-      supabase.from('sales').select('customer_id, grand_total'),
-      supabase.from('payments').select('customer_id, amount'),
+      supabase.from('customer_balances').select('amount_owed, total_paid'),
+      supabase.from('customers').select('id, is_active'),
     ])
 
-    const billedMap = new Map<string, number>()
-    for (const s of salesData ?? []) {
-      billedMap.set(s.customer_id, (billedMap.get(s.customer_id) ?? 0) + s.grand_total)
-    }
-    const paidMap = new Map<string, number>()
-    for (const p of paymentsData ?? []) {
-      paidMap.set(p.customer_id, (paidMap.get(p.customer_id) ?? 0) + p.amount)
-    }
-
-    let totalOutstanding = 0
-    for (const c of custs ?? []) {
-      const net = computeNetOwed(
-        c.opening_balance,
-        billedMap.get(c.id) ?? 0,
-        paidMap.get(c.id) ?? 0,
-      )
-      if (net > 0) totalOutstanding += net
-    }
-
+    const balances = rows ?? []
     setKpi({
-      total_active:      (custs ?? []).filter(c => c.is_active).length,
-      total_outstanding: totalOutstanding,
-      total_collected:   (paymentsData ?? []).reduce((sum, p) => sum + p.amount, 0),
+      total_active:    (custs ?? []).filter(c => c.is_active).length,
+      amount_owed:     sumPositiveAmountOwed(balances),
+      total_collected: balances.reduce((sum, r) => sum + r.total_paid, 0),
     })
     setKpiLoading(false)
   }, [supabase])
@@ -83,44 +64,20 @@ export function useCustomers() {
   ) => {
     setLoading(true)
 
-    // Fetch all customers + their sales aggregates
-    const { data: custs, error } = await supabase
-      .from('customers')
-      .select('*')
-      .order('name')
+    const [{ data: rows, error }, { data: extras }] = await Promise.all([
+      supabase.from('customer_balances').select('*').order('name'),
+      supabase.from('customers').select('id, is_active, credit_limit'),
+    ])
 
-    if (error || !custs) { console.error(error); setLoading(false); return }
+    if (error || !rows) { console.error(error); setLoading(false); return }
 
-    // Aggregate outstanding per customer from sales table
-    const { data: salesAgg } = await supabase
-      .from('sales')
-      .select('customer_id, grand_total')
+    const extraMap = new Map(
+      (extras ?? []).map(e => [e.id, { is_active: e.is_active, credit_limit: e.credit_limit }]),
+    )
 
-    // Aggregate total payments per customer
-    const { data: payAgg } = await supabase
-      .from('payments')
-      .select('customer_id, amount')
-
-    const salesMap = new Map<string, number>()
-    for (const s of salesAgg ?? []) {
-      salesMap.set(s.customer_id, (salesMap.get(s.customer_id) ?? 0) + s.grand_total)
-    }
-
-    const payMap = new Map<string, number>()
-    for (const p of payAgg ?? []) {
-      payMap.set(p.customer_id, (payMap.get(p.customer_id) ?? 0) + p.amount)
-    }
-
-    let enriched: CustomerWithStats[] = custs.map(c => {
-      const totalBilled = salesMap.get(c.id) ?? 0
-      const totalPaid = payMap.get(c.id) ?? 0
-      return {
-        ...c,
-        total_billed:      totalBilled,
-        total_paid:        totalPaid,
-        total_outstanding: computeNetOwed(c.opening_balance, totalBilled, totalPaid),
-      }
-    })
+    let enriched: CustomerWithStats[] = (rows as CustomerBalanceRow[]).map(row =>
+      mapBalanceRow(row, extraMap.get(row.id) ?? { is_active: true, credit_limit: null }),
+    )
 
     // Apply search
     if (s.trim()) {
@@ -136,7 +93,7 @@ export function useCustomers() {
     // Apply filter
     if (f === 'active')      enriched = enriched.filter(c => c.is_active)
     if (f === 'inactive')    enriched = enriched.filter(c => !c.is_active)
-    if (f === 'outstanding') enriched = enriched.filter(c => c.total_outstanding > 0.001)
+    if (f === 'outstanding') enriched = enriched.filter(c => c.amount_owed > 0.001)
 
     setCustomers(enriched)
     setLoading(false)

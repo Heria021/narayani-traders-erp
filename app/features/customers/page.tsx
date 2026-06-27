@@ -110,7 +110,7 @@ export default function CustomersPage() {
             },
             {
               label: 'Total Outstanding',
-              value: kpiLoading ? null : kpi.total_outstanding,
+              value: kpiLoading ? null : kpi.amount_owed,
               format: rupee,
               desc: 'Outstanding ledger balance',
               icon: <IndianRupee className="size-4" />,
@@ -248,7 +248,7 @@ export default function CustomersPage() {
               <TableBody>
                 {customers.map(c => {
                   const limit = c.credit_limit ?? 0
-                  const outstanding = Math.max(0, c.total_outstanding)
+                  const outstanding = Math.max(0, c.amount_owed)
                   const overLimit = limit > 0 && outstanding >= limit
                   const nearLimit = limit > 0 && outstanding >= limit * 0.8
                   const location = [c.city, c.state].filter(Boolean).join(', ')

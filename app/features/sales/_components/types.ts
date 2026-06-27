@@ -19,7 +19,8 @@ export interface SaleProduct {
   unit_name: string
   selling_price: number
   box_selling_price: number | null
-  purchase_price: number       // kept for reference
+  purchase_price: number           // per-unit cost (base units)
+  box_purchase_price: number | null // per-box cost (used for box-mode cost snapshot)
   has_box: boolean
   box_name: string | null
   units_per_box: number | null
@@ -64,8 +65,11 @@ export interface SaleItem {
   box_count: number | null
   quantity: number               // always base units
   unit_price: number
+  cost_price_at_sale: number     // snapshot of per-unit cost at time of sale
   tax_rate: number
   line_total: number
+  // derived
+  line_profit: number            // quantity × (unit_price - cost_price_at_sale)
 }
 
 export interface PaymentRecord {
@@ -92,6 +96,8 @@ export interface SaleKpi {
   this_month: number
   total_outstanding: number
   total_collected: number
+  gross_profit: number           // sum of quantity × (unit_price - cost_price_at_sale) all-time
+  profit_margin_pct: number      // gross_profit / total_revenue × 100
 }
 
 // ─── Form types ───────────────────────────────────────────────────────────────

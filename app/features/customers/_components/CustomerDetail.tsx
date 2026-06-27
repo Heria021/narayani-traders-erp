@@ -69,7 +69,7 @@ export function CustomerDetail({
   }
 
   const limit = customer.credit_limit ?? 0
-  const netOwed = customer.total_outstanding
+  const netOwed = customer.amount_owed
   const creditUsedPct = limit > 0 ? Math.min(100, (Math.max(0, netOwed) / limit) * 100) : 0
 
   const creditBarColor =
@@ -148,12 +148,28 @@ export function CustomerDetail({
       </div>
 
       {/* ── Metric KPIs Dashboard Row ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
+      <div className={cn(
+        'grid grid-cols-1 gap-4 shrink-0',
+        customer.unapplied_advance > 0 ? 'sm:grid-cols-2 lg:grid-cols-5' : 'sm:grid-cols-2 lg:grid-cols-4',
+      )}>
         {[
           { label: 'Opening Balance', value: customer.opening_balance, desc: 'Balance at account setup', cls: '' },
           { label: 'Total Billed', value: customer.total_billed, desc: 'Sum of all sales invoices', cls: '' },
-          { label: 'Total Paid', value: customer.total_paid, desc: 'Sum of all collected payments', cls: 'text-emerald-600 dark:text-emerald-400' },
-          { label: 'Net Owed', value: netOwed, desc: 'Current outstanding balance', cls: netOwed > 0 ? 'text-amber-600 dark:text-amber-400 font-bold' : 'text-emerald-600 dark:text-emerald-400 font-bold' },
+          {
+            label: 'Total Paid',
+            value: customer.total_paid,
+            desc: customer.unapplied_advance > 0
+              ? `Includes ${rupee(customer.unapplied_advance)} unapplied advance`
+              : 'Sum of all collected payments',
+            cls: 'text-emerald-600 dark:text-emerald-400',
+          },
+          ...(customer.unapplied_advance > 0 ? [{
+            label: 'Unapplied Advance',
+            value: customer.unapplied_advance,
+            desc: 'Payments not yet linked to an invoice',
+            cls: 'text-sky-600 dark:text-sky-400',
+          }] : []),
+          { label: 'Amount Owed', value: netOwed, desc: 'Current outstanding balance', cls: netOwed > 0 ? 'text-amber-600 dark:text-amber-400 font-bold' : 'text-emerald-600 dark:text-emerald-400 font-bold' },
         ].map(({ label, value, desc, cls }) => (
           <div key={label} className="border rounded-lg p-4 space-y-1 bg-card">
             <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase block">
@@ -271,7 +287,7 @@ function LedgerSkeleton() {
 function LedgerTable({
   entries, customer, onViewInvoice,
 }: { entries: LedgerEntry[]; customer: CustomerWithStats; onViewInvoice: (saleId: string) => void }) {
-  const netOwed = customer.total_outstanding
+  const netOwed = customer.amount_owed
   let runningBalance = netOwed
 
   return (

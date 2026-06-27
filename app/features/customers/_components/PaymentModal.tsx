@@ -67,7 +67,7 @@ export function PaymentModal({ open, customer, unpaidSales, onClose, onSubmit }:
     if (errors[key]) setErrors(e => ({ ...e, [key]: undefined }))
   }
 
-  const netOwed = customer?.total_outstanding ?? 0
+  const netOwed = customer?.amount_owed ?? 0
   const amountNum = Number(values.amount) || 0
   const linkedSale = values.sale_id
     ? unpaidSales.find(s => s.id === values.sale_id) ?? null

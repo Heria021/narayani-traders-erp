@@ -18,9 +18,10 @@ export interface Customer {
 }
 
 export interface CustomerWithStats extends Customer {
-  total_outstanding: number   // net owed: opening_balance + total_billed − total_paid
-  total_billed:      number   // SUM(sales.grand_total)
-  total_paid:        number   // SUM(payments.amount)
+  total_billed:      number   // from customer_balances view
+  total_paid:        number   // from customer_balances view
+  unapplied_advance: number   // from customer_balances view
+  amount_owed:       number   // from customer_balances view: opening_balance + total_billed − total_paid
 }
 
 export interface Sale {
@@ -54,9 +55,9 @@ export type LedgerEntry =
   | { kind: 'payment';  date: string; amount: number; payment: Payment; invoice_number?: string }
 
 export interface CustomerKpi {
-  total_active:      number
-  total_outstanding: number
-  total_collected:   number
+  total_active:    number
+  amount_owed:     number   // sum of positive receivables
+  total_collected: number
 }
 
 export interface CustomerFormValues {

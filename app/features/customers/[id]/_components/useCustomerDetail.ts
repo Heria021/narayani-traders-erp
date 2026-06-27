@@ -11,7 +11,8 @@ import type {
   CustomerFormValues,
   PaymentFormValues,
 } from '../../_components/types'
-import { computeNetOwed, isWalkinCustomer } from '../../_components/ledger'
+import { mapBalanceRow, type CustomerBalanceRow } from '../../_components/balances'
+import { isWalkinCustomer } from '../../_components/ledger'
 import type { SaleWithItems, SaleItem, PaymentRecord } from '../../../sales/_components/types'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -63,19 +64,21 @@ export function useCustomerDetail(id: string) {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const enrichedItems: SaleItem[] = (items ?? []).map((i: any) => ({
-      id:           i.id,
-      sale_id:      i.sale_id,
-      product_id:   i.product_id,
-      product_name: i.products?.name ?? '—',
-      unit_name:    i.products?.unit_name ?? 'unit',
-      box_name:     i.products?.box_name ?? null,
-      units_per_box:i.products?.units_per_box ?? null,
-      sell_mode:    i.sell_mode,
-      box_count:    i.box_count,
-      quantity:     i.quantity,
-      unit_price:   i.unit_price,
-      tax_rate:     i.tax_rate,
-      line_total:   i.line_total,
+      id:                 i.id,
+      sale_id:            i.sale_id,
+      product_id:         i.product_id,
+      product_name:       i.products?.name ?? '—',
+      unit_name:          i.products?.unit_name ?? 'unit',
+      box_name:           i.products?.box_name ?? null,
+      units_per_box:      i.products?.units_per_box ?? null,
+      sell_mode:          i.sell_mode,
+      box_count:          i.box_count,
+      quantity:           i.quantity,
+      unit_price:         i.unit_price,
+      cost_price_at_sale: i.cost_price_at_sale,
+      tax_rate:           i.tax_rate,
+      line_total:         i.line_total,
+      line_profit:        i.quantity * (i.unit_price - i.cost_price_at_sale),
     }))
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -105,20 +108,23 @@ export function useCustomerDetail(id: string) {
   const fetchAll = useCallback(async () => {
     setLoading(true)
 
-    // 1. Customer row
-    const { data: cust, error: custError } = await supabase
-      .from('customers')
-      .select('*')
-      .eq('id', id)
-      .single()
+    const [
+      { data: bal, error: balError },
+      { data: extra, error: extraError },
+    ] = await Promise.all([
+      supabase.from('customer_balances').select('*').eq('id', id).single(),
+      supabase.from('customers').select('is_active, credit_limit').eq('id', id).single(),
+    ])
 
-    if (custError || !cust) {
+    if (balError || extraError || !bal || !extra) {
       setNotFound(true)
       setLoading(false)
       return
     }
 
-    // 2. Fetch sales
+    setCustomer(mapBalanceRow(bal as CustomerBalanceRow, extra))
+
+    // Fetch sales
     const { data: salesData } = await supabase
       .from('sales')
       .select('*')
@@ -134,16 +140,6 @@ export function useCustomerDetail(id: string) {
 
     const salesList = (salesData ?? []) as Sale[]
     const paymentsList = (paymentsData ?? []) as Payment[]
-
-    const totalBilled = salesList.reduce((sum, s) => sum + s.grand_total, 0)
-    const totalPaid = paymentsList.reduce((sum, p) => sum + p.amount, 0)
-
-    setCustomer({
-      ...cust,
-      total_billed:      totalBilled,
-      total_paid:        totalPaid,
-      total_outstanding: computeNetOwed(cust.opening_balance, totalBilled, totalPaid),
-    })
 
     setSales(salesList)
     setPayments(paymentsList)

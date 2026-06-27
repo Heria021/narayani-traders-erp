@@ -1,14 +1,5 @@
 import { WALKIN_CUSTOMER_NAME } from '../../sales/_components/types'
 
-/** Net receivable: opening_balance + total_billed − total_paid (+ve = customer owes you). */
-export function computeNetOwed(
-  openingBalance: number,
-  totalBilled: number,
-  totalPaid: number,
-): number {
-  return openingBalance + totalBilled - totalPaid
-}
-
 export function isWalkinCustomer(name: string): boolean {
   return name === WALKIN_CUSTOMER_NAME
 }

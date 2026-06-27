@@ -64,6 +64,7 @@ export function useSales() {
   // ── KPI state ───────────────────────────────────────────────────────────────
   const [kpi,        setKpi]        = useState<SaleKpi>({
     today_sales: 0, this_month: 0, total_outstanding: 0, total_collected: 0,
+    gross_profit: 0, profit_margin_pct: 0,
   })
   const [kpiLoading, setKpiLoading] = useState(true)
 
@@ -84,11 +85,17 @@ export function useSales() {
       { data: allSales },
       { data: todaySales },
       { data: monthSales },
+      { data: profitItems },
     ] = await Promise.all([
       supabase.from('sales').select('grand_total, amount_paid, balance_due, payment_status'),
       supabase.from('sales').select('grand_total').eq('sale_date', t),
       supabase.from('sales').select('grand_total').gte('sale_date', som),
+      supabase.from('sale_items').select('quantity, unit_price, cost_price_at_sale'),
     ])
+
+    const totalRevenue   = (profitItems ?? []).reduce((s, r) => s + r.quantity * r.unit_price, 0)
+    const grossProfit    = (profitItems ?? []).reduce((s, r) => s + r.quantity * (r.unit_price - r.cost_price_at_sale), 0)
+    const profitMargin   = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0
 
     setKpi({
       today_sales:       (todaySales ?? []).reduce((s, r) => s + r.grand_total, 0),
@@ -97,6 +104,8 @@ export function useSales() {
         .filter(r => r.payment_status !== 'paid')
         .reduce((s, r) => s + r.balance_due, 0),
       total_collected:   (allSales ?? []).reduce((s, r) => s + r.amount_paid, 0),
+      gross_profit:      grossProfit,
+      profit_margin_pct: profitMargin,
     })
     setKpiLoading(false)
   }, [supabase])
@@ -222,19 +231,21 @@ export function useSales() {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const enrichedItems: SaleItem[] = (items ?? []).map((i: any) => ({
-      id:           i.id,
-      sale_id:      i.sale_id,
-      product_id:   i.product_id,
-      product_name: i.products?.name ?? '—',
-      unit_name:    i.products?.unit_name ?? 'unit',
-      box_name:     i.products?.box_name ?? null,
-      units_per_box:i.products?.units_per_box ?? null,
-      sell_mode:    i.sell_mode,
-      box_count:    i.box_count,
-      quantity:     i.quantity,
-      unit_price:   i.unit_price,
-      tax_rate:     i.tax_rate,
-      line_total:   i.line_total,
+      id:                 i.id,
+      sale_id:            i.sale_id,
+      product_id:         i.product_id,
+      product_name:       i.products?.name ?? '—',
+      unit_name:          i.products?.unit_name ?? 'unit',
+      box_name:           i.products?.box_name ?? null,
+      units_per_box:      i.products?.units_per_box ?? null,
+      sell_mode:          i.sell_mode,
+      box_count:          i.box_count,
+      quantity:           i.quantity,
+      unit_price:         i.unit_price,
+      cost_price_at_sale: i.cost_price_at_sale,
+      tax_rate:           i.tax_rate,
+      line_total:         i.line_total,
+      line_profit:        i.quantity * (i.unit_price - i.cost_price_at_sale),
     }))
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

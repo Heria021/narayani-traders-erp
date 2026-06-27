@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Plus, IndianRupee, TrendingUp, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { Plus, IndianRupee, TrendingUp, AlertTriangle, CheckCircle2, BadgeDollarSign } from 'lucide-react'
 
 import { useSales } from './_components/useSales'
 import { SalesTable } from './_components/SalesTable'
@@ -72,7 +72,7 @@ export default function SalesPage() {
         </div>
 
         {/* ── KPI Strip ──────────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
 
           {/* Card 1 — Today's Sales (primary) */}
           <div className="rounded-xl border border-violet-100 dark:border-violet-950/40 bg-violet-50/30 dark:bg-violet-950/10 p-4 space-y-2 relative overflow-hidden">
@@ -154,8 +154,32 @@ export default function SalesPage() {
             </div>
           </div>
 
+          {/* Card 5 — Gross Profit (new) */}
+          <div className="rounded-xl border border-emerald-100 dark:border-emerald-950/40 bg-emerald-50/30 dark:bg-emerald-950/10 p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold tracking-wider text-emerald-700/80 dark:text-emerald-400/80 uppercase">
+                Gross Profit
+              </span>
+              <div className="size-7 rounded-lg bg-emerald-100 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                <BadgeDollarSign className="size-4" />
+              </div>
+            </div>
+            <div className="space-y-0.5">
+              <div className="text-2xl font-bold tracking-tight text-emerald-900 dark:text-emerald-200">
+                {kpiLoading ? <Skeleton className="h-8 w-24" /> : rupee(kpi.gross_profit)}
+              </div>
+              <span className="text-xs text-emerald-600/70 dark:text-emerald-400/60 block font-medium">
+                {kpiLoading
+                  ? <Skeleton className="h-3 w-16 inline-block" />
+                  : `${kpi.profit_margin_pct.toFixed(1)}% margin · all-time`
+                }
+              </span>
+            </div>
+          </div>
+
         </div>
       </div>
+
 
       {/* ── Table ───────────────────────────────────────────────────────────── */}
       <div className="min-h-0 min-w-0 flex-1 overflow-hidden">

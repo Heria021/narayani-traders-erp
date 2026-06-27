@@ -11,7 +11,7 @@ import type {
 } from '../_components/types'
 import { WALKIN_CUSTOMER_NAME } from '../_components/types'
 
-const PRODUCT_SELECT = 'id, name, sku, unit_name, selling_price, box_selling_price, purchase_price, has_box, box_name, units_per_box, gst_rate, current_stock, track_inventory, is_active'
+const PRODUCT_SELECT = 'id, name, sku, unit_name, selling_price, box_selling_price, purchase_price, box_purchase_price, has_box, box_name, units_per_box, gst_rate, current_stock, track_inventory, is_active'
 
 function sortByName<T extends { name: string }>(rows: T[]): T[] {
   return [...rows].sort((a, b) => a.name.localeCompare(b.name, 'en-IN', { sensitivity: 'base' }))

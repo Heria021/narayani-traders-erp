@@ -714,21 +714,32 @@ export default function NewSalePage() {
 
   function buildPreviewSale(): SaleWithItems {
     const displayName = selectedCustomer?.name ?? (header.walkin_name.trim() || 'Walk-in Customer')
-    const items: SaleItem[] = validRows.map(r => ({
-      id: r.id,
-      sale_id: '',
-      product_id: r.product!.id,
-      product_name: r.product!.name,
-      unit_name: r.product!.unit_name,
-      box_name: r.product!.box_name,
-      units_per_box: r.product!.units_per_box,
-      sell_mode: r.sell_mode,
-      box_count: r.sell_mode === 'box' ? num(r.qty_input) : null,
-      quantity: computeBaseUnits(r),
-      unit_price: num(r.unit_price),
-      tax_rate: num(r.tax_rate),
-      line_total: computeLineTotal(r),
-    }))
+    const items: SaleItem[] = validRows.map(r => {
+      const prod = r.product!
+      // Mirror the DB trigger: derive per-unit cost in base-unit terms
+      const costPerUnit =
+        r.sell_mode === 'box' && prod.units_per_box && prod.box_purchase_price != null
+          ? prod.box_purchase_price / prod.units_per_box
+          : (prod.purchase_price ?? 0)
+      const qty = computeBaseUnits(r)
+      return {
+        id: r.id,
+        sale_id: '',
+        product_id: prod.id,
+        product_name: prod.name,
+        unit_name: prod.unit_name,
+        box_name: prod.box_name,
+        units_per_box: prod.units_per_box,
+        sell_mode: r.sell_mode,
+        box_count: r.sell_mode === 'box' ? num(r.qty_input) : null,
+        quantity: qty,
+        unit_price: num(r.unit_price),
+        cost_price_at_sale: costPerUnit,
+        tax_rate: num(r.tax_rate),
+        line_total: computeLineTotal(r),
+        line_profit: qty * (num(r.unit_price) - costPerUnit),
+      }
+    })
 
     const fakePayment: PaymentRecord | undefined = paidAmt > 0 ? {
       id: 'preview',
