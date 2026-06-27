@@ -417,6 +417,26 @@ export default function PublicHomePage() {
     return () => clearInterval(timer)
   }, [])
 
+  // - Section 02 visualizer mouse hover parallax values -
+  const s2HoverX = useMotionValue(0)
+  const s2HoverY = useMotionValue(0)
+  const s2CardRef = useRef<HTMLDivElement>(null)
+
+  const s2BgX = useSpring(useTransform(s2HoverX, [-1, 1], ["-2%", "2%"]), { stiffness: 180, damping: 24 })
+  const s2BgY = useSpring(useTransform(s2HoverY, [-1, 1], ["-2%", "2%"]), { stiffness: 180, damping: 24 })
+
+  const handleS2Move = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = s2CardRef.current?.getBoundingClientRect()
+    if (!rect) return
+    s2HoverX.set(((e.clientX - rect.left) / rect.width - 0.5) * 2)
+    s2HoverY.set(((e.clientY - rect.top) / rect.height - 0.5) * 2)
+  }, [s2HoverX, s2HoverY])
+
+  const handleS2Leave = useCallback(() => {
+    s2HoverX.set(0)
+    s2HoverY.set(0)
+  }, [s2HoverX, s2HoverY])
+
   // - Studio scroll parallax hook -
   const aboutStudioRef = useRef<HTMLElement>(null)
   const { scrollYProgress: studioScrollY } = useScroll({
@@ -651,7 +671,6 @@ export default function PublicHomePage() {
           {/* Section label */}
           <div className="flex items-center gap-3 mb-14">
             <span className="text-[10px] md:text-xs font-bold tracking-[0.3em] text-white/45 uppercase">02 / What We Do</span>
-            <div className="h-px w-8 bg-white/20" />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
@@ -661,9 +680,6 @@ export default function PublicHomePage() {
                 <h2 className="text-4xl md:text-5xl font-extralight tracking-tight uppercase leading-none text-white mb-4">
                   <AnimatedText text="Our Core Services" />
                 </h2>
-                <p className="text-white/55 font-light text-sm md:text-base leading-relaxed">
-                  We bridge the gap between design theory and tactile execution. Our range of disciplines ensures accuracy at every scale.
-                </p>
               </div>
 
               <div className="flex flex-col border-t border-white/10">
@@ -686,149 +702,72 @@ export default function PublicHomePage() {
                         )}
                       </AnimatePresence>
 
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex gap-6 items-start">
-                          {/* Service number */}
-                          <span className={`text-sm font-mono tracking-widest transition-colors duration-300 mt-1 ${isActive ? "text-white" : "text-white/30"}`}>
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex gap-6 items-center">
+                          
+                          {/* Service number — matches Section 05 mono extralight style */}
+                          <span className={`text-3xl md:text-4xl font-extralight font-mono tracking-wider w-16 shrink-0 transition-colors duration-300 ${isActive ? "text-white/55" : "text-white/20"}`}>
                             {service.num}
                           </span>
 
-                          <div className="flex flex-col gap-2">
-                            {/* Service title */}
-                            <h3 className={`text-xl md:text-2xl font-light uppercase tracking-wide transition-all duration-300 ${isActive ? "text-white translate-x-1" : "text-white/60"}`}>
-                              {service.title.split(" ").map((w, i) => (
-                                <span key={i} className={i % 2 === 1 ? "font-bold" : "font-light"}>
-                                  {w}{" "}
-                                </span>
-                              ))}
-                            </h3>
-
-                            {/* Service description (collapsible accordion style) */}
-                            <motion.div
-                              initial={false}
-                              animate={{
-                                height: isActive ? "auto" : 0,
-                                opacity: isActive ? 1 : 0,
-                                marginTop: isActive ? 8 : 0,
-                              }}
-                              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                              className="overflow-hidden pr-6"
-                            >
-                              <p className="text-white/50 text-xs md:text-sm font-light leading-relaxed">
-                                {service.desc}
-                              </p>
-                            </motion.div>
-                          </div>
-                        </div>
-
-                        {/* Arrow icon */}
-                        <div className="relative overflow-hidden w-6 h-6 flex items-center justify-center shrink-0">
-                          <ArrowRight
-                            className={`h-4 w-4 transition-all duration-300 ${isActive ? "translate-x-0 rotate-0 text-white" : "-translate-x-4 -rotate-45 text-white/20 group-hover:translate-x-0 group-hover:rotate-0 group-hover:text-white/50"}`}
-                          />
+                          {/* Service title — matches Section 05 light uppercase style */}
+                          <h3 className={`text-lg md:text-xl font-light uppercase tracking-wide transition-colors duration-300 ${isActive ? "text-white" : "text-white/70"}`}>
+                            {service.title}
+                          </h3>
                         </div>
                       </div>
                     </div>
                   )
                 })}
               </div>
+
             </div>
 
-            {/* RIGHT - Dynamic sticky visualization canvas */}
-            <div className="lg:col-span-5 lg:sticky lg:top-28 mt-8 lg:mt-0">
-              <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden border border-white/10 bg-[#0d0d0d] shadow-2xl group">
-
-                {/* Visualizer blueprint grid background lines */}
-                <div
-                  className="absolute inset-0 opacity-10 pointer-events-none z-10"
-                  style={{
-                    backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px)",
-                    backgroundSize: "20px 20px"
-                  }}
-                />
-
-                {/* Blueprint technical markings */}
-                <div className="absolute top-4 left-4 z-20 font-mono text-[8px] text-white/30 select-none pointer-events-none uppercase tracking-widest flex flex-col gap-1">
-                  <div>STUDIO SPEC // REF_002_{SERVICES[activeService].num}</div>
-                  <div>SCALE: 1:25 @ A3</div>
-                </div>
-
-                <div className="absolute top-4 right-4 z-20 font-mono text-[8px] text-white/30 select-none pointer-events-none uppercase tracking-widest">
-                  LOC: BIDASAR_HQ
-                </div>
-
-                <div className="absolute bottom-4 left-4 z-20 font-mono text-[8px] text-white/30 select-none pointer-events-none uppercase tracking-widest">
-                  SYS: STABLE_OP_3.5
-                </div>
-
-                {/* Animated active image */}
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={activeService}
-                    initial={{ opacity: 0, scale: 1.08, filter: "blur(10px)" }}
-                    animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-                    exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
-                    transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-                    className="absolute inset-0 w-full h-full"
-                  >
-                    {SERVICES[activeService].image && (
-                      <img
-                        src={SERVICES[activeService].image}
-                        alt={SERVICES[activeService].title}
-                        className="w-full h-full object-cover grayscale brightness-90 group-hover:grayscale-0 transition-all duration-700"
-                      />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
-                  </motion.div>
-                </AnimatePresence>
-
-                {/* Technical crosshair overlays */}
-                <div className="absolute inset-0 pointer-events-none z-20">
-                  {/* Top-left corner bracket */}
-                  <div className="absolute top-2 left-2 w-3 h-3 border-t border-l border-white/20" />
-                  {/* Top-right corner bracket */}
-                  <div className="absolute top-2 right-2 w-3 h-3 border-t border-r border-white/20" />
-                  {/* Bottom-left corner bracket */}
-                  <div className="absolute bottom-2 left-2 w-3 h-3 border-b border-l border-white/20" />
-                  {/* Bottom-right corner bracket */}
-                  <div className="absolute bottom-2 right-2 w-3 h-3 border-b border-r border-white/20" />
-                </div>
+            {/* RIGHT - Dynamic sticky visualization canvas with mouse hover movement and description at the bottom */}
+            <div className="lg:col-span-5 lg:sticky lg:top-28 mt-8 lg:mt-0 flex flex-col gap-6">
+              <div 
+                ref={s2CardRef}
+                onMouseMove={handleS2Move}
+                onMouseLeave={handleS2Leave}
+                className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden border border-white/10 bg-[#0d0d0d] shadow-2xl group cursor-pointer"
+              >
+                <motion.div
+                  className="absolute inset-[-6%] w-[112%] h-[112%]"
+                  style={{ x: s2BgX, y: s2BgY, willChange: "transform" }}
+                >
+                  <AnimatePresence mode="wait">
+                    <motion.img
+                      key={activeService}
+                      initial={{ opacity: 0, scale: 1.05, filter: "blur(8px)" }}
+                      animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+                      exit={{ opacity: 0, scale: 0.95, filter: "blur(8px)" }}
+                      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                      src={SERVICES[activeService].image}
+                      alt={SERVICES[activeService].title}
+                      className="w-full h-full object-cover"
+                    />
+                  </AnimatePresence>
+                </motion.div>
               </div>
 
-              {/* Dynamic Service details / metadata footer below the visualization */}
-              <motion.div
-                key={activeService}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-                className="mt-6 p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex flex-col gap-4"
-              >
-                <div className="flex justify-between items-center border-b border-white/10 pb-3">
-                  <span className="text-[10px] font-mono text-white/35 uppercase tracking-wider">Deliverables</span>
-                  <span className="text-xs text-white/70 font-light font-mono">
-                    {activeService === 0 && "2D Layouts, Site Maps"}
-                    {activeService === 1 && "Exterior/Interior CGI, 4K Stills"}
-                    {activeService === 2 && "Material Boards, Lighting Moods"}
-                    {activeService === 3 && "Master Planning, Road Networks"}
-                    {activeService === 4 && "Orientation Maps, Energy Audits"}
-                    {activeService === 5 && "Structural Details, HVAC Sheets"}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-mono text-white/35 uppercase tracking-wider">Execution Tools</span>
-                  <span className="text-xs text-white/70 font-light font-mono">
-                    {activeService === 0 && "AutoCAD, SpacePlanner"}
-                    {activeService === 1 && "3ds Max, V-Ray, Corona"}
-                    {activeService === 2 && "Sketchup, Photoshop, Fohn"}
-                    {activeService === 3 && "ArcGIS, Civil 3D, AutoCAD"}
-                    {activeService === 4 && "Vastu Compass, Solar Angles"}
-                    {activeService === 5 && "Revit, AutoCAD, Tekla"}
-                  </span>
-                </div>
-              </motion.div>
+              {/* Dedicated stable-height description block below the image to prevent layout shift */}
+              <div className="pt-2 min-h-[90px] flex flex-col justify-start">
+                <AnimatePresence mode="wait">
+                  <motion.p
+                    key={activeService}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.3 }}
+                    className="text-white/55 text-sm md:text-base font-light leading-relaxed"
+                  >
+                    {SERVICES[activeService].desc}
+                  </motion.p>
+                </AnimatePresence>
+              </div>
             </div>
-          </div>
 
+          </div>
         </div>
       </section>
 
