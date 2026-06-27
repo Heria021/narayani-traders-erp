@@ -22,6 +22,15 @@ import {
   Search,
   Layers,
 } from "lucide-react"
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card"
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -657,6 +666,8 @@ function ProjectRow({
 
 // ─── Photo Card ───────────────────────────────────────────────────────────────
 
+const MotionCard = motion.create(Card)
+
 function PhotoCard({ project }: { project: Project }) {
   const hoverX = useMotionValue(0)
   const hoverY = useMotionValue(0)
@@ -678,11 +689,11 @@ function PhotoCard({ project }: { project: Project }) {
   }, [hoverX, hoverY])
 
   return (
-    <motion.article
+    <MotionCard
       ref={cardRef}
       onMouseMove={handleMove}
       onMouseLeave={handleLeave}
-      className="group relative overflow-hidden rounded-3xl bg-[#0d0d0d] border border-white/8"
+      className="group relative overflow-hidden rounded-3xl bg-[#0d0d0d] border border-white/8 p-0 ring-0 shadow-none"
       style={{ height: 460 }}
       whileHover="hover"
       initial="rest"
@@ -708,60 +719,46 @@ function PhotoCard({ project }: { project: Project }) {
         variants={{ rest: { y: 0 }, hover: { y: -8 } }}
         transition={{ duration: 0.45, ease: EASE_EXPO }}
       >
-        <motion.span
-          className="text-[9px] font-bold tracking-[0.24em] text-white/0 uppercase mb-2 overflow-hidden"
-          variants={{ rest: { opacity: 0, height: 0 }, hover: { opacity: 0.45, height: "auto" } }}
-          transition={{ duration: 0.3 }}
-        >
-          {project.category} &nbsp;·&nbsp; {project.year}
-        </motion.span>
+        <CardHeader className="p-0 gap-0 space-y-0 mb-2 border-b-0">
+          <CardDescription className="text-[9px] font-bold tracking-[0.24em] uppercase text-white/35 block border-0 p-0 mb-1">
+            <motion.span
+              className="block overflow-hidden"
+              variants={{ rest: { opacity: 0, height: 0 }, hover: { opacity: 0.45, height: "auto" } }}
+              transition={{ duration: 0.3 }}
+            >
+              {project.category} &nbsp;·&nbsp; {project.year}
+            </motion.span>
+          </CardDescription>
+          <CardTitle className="text-3xl font-light tracking-wide text-white uppercase leading-tight p-0 m-0 border-0">
+            {project.title}
+          </CardTitle>
+        </CardHeader>
 
-        <h3 className="text-3xl font-light tracking-wide text-white uppercase leading-tight mb-2">
-          {project.title}
-        </h3>
-
-        <motion.div
-          variants={{ rest: { opacity: 0, height: 0, y: 8 }, hover: { opacity: 1, height: "auto", y: 0 } }}
-          transition={{ duration: 0.4, ease: EASE_EXPO }}
-          style={{ overflow: "hidden" }}
-          className="flex flex-col gap-4"
-        >
-          <p className="text-white/60 text-xs font-light leading-relaxed max-w-sm">
-            {project.description}
-          </p>
-          <div className="flex items-center justify-between pt-3 border-t border-white/10">
-            <span className="flex items-center gap-1.5 text-[10px] font-light text-white/40">
-              <MapPin className="h-3 w-3 shrink-0" />
-              {project.location}
-            </span>
-            <Link href={`/projects/${project.slug}`}
-              className="flex items-center gap-1 text-[10px] font-semibold tracking-widest uppercase text-white/80 hover:text-white transition-colors"
-              onClick={e => e.stopPropagation()}>
-              Explore <ArrowRight className="h-3 w-3" />
-            </Link>
-          </div>
-        </motion.div>
+        <CardContent className="p-0 border-0">
+          <motion.div
+            variants={{ rest: { opacity: 0, height: 0, y: 8 }, hover: { opacity: 1, height: "auto", y: 0 } }}
+            transition={{ duration: 0.4, ease: EASE_EXPO }}
+            style={{ overflow: "hidden" }}
+            className="flex flex-col gap-4"
+          >
+            <p className="text-white/60 text-xs font-light leading-relaxed max-w-sm">
+              {project.description}
+            </p>
+            <CardFooter className="flex items-center justify-between pt-3 border-t border-white/10 p-0">
+              <span className="flex items-center gap-1.5 text-[10px] font-light text-white/40">
+                <MapPin className="h-3 w-3 shrink-0" />
+                {project.location}
+              </span>
+              <Link href={`/projects/${project.slug}`}
+                className="flex items-center gap-1 text-[10px] font-semibold tracking-widest uppercase text-white/80 hover:text-white transition-colors"
+                onClick={e => e.stopPropagation()}>
+                Explore <ArrowRight className="h-3 w-3" />
+              </Link>
+            </CardFooter>
+          </motion.div>
+        </CardContent>
       </motion.div>
-
-      <motion.div
-        className="absolute top-5 right-5 z-30 pointer-events-none"
-        variants={{ rest: { opacity: 0, scale: 0.8 }, hover: { opacity: 1, scale: 1 } }}
-        transition={{ duration: 0.35, ease: EASE_EXPO }}
-      >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M24 0 L0 0 L0 24" stroke="rgba(255,255,255,0.35)" strokeWidth="1" />
-        </svg>
-      </motion.div>
-      <motion.div
-        className="absolute bottom-5 left-5 z-30 pointer-events-none"
-        variants={{ rest: { opacity: 0, scale: 0.8 }, hover: { opacity: 1, scale: 1 } }}
-        transition={{ duration: 0.35, ease: EASE_EXPO, delay: 0.05 }}
-      >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M0 24 L24 24 L24 0" stroke="rgba(255,255,255,0.35)" strokeWidth="1" />
-        </svg>
-      </motion.div>
-    </motion.article>
+    </MotionCard>
   )
 }
 
@@ -772,8 +769,8 @@ function ArtCard({ project, artPaths }: { project: Project; artPaths: string }) 
   const paths = artPaths.trim().split("\n").map(p => p.trim()).filter(Boolean)
 
   return (
-    <motion.article
-      className="group relative overflow-hidden rounded-3xl border border-white/8 bg-[#0d0d0d]"
+    <MotionCard
+      className="group relative overflow-hidden rounded-3xl border border-white/8 bg-[#0d0d0d] p-0 ring-0 shadow-none"
       style={{ height: 460 }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -786,16 +783,16 @@ function ArtCard({ project, artPaths }: { project: Project; artPaths: string }) 
       <div className="relative h-full flex flex-col md:flex-row">
 
         <div className="flex flex-col justify-between p-8 md:w-[42%] shrink-0 border-r border-white/6">
-          <div>
-            <span className="text-[9px] font-bold tracking-[0.24em] text-white/35 uppercase block mb-6">
+          <CardHeader className="p-0 gap-0 space-y-0">
+            <CardDescription className="text-[9px] font-bold tracking-[0.24em] text-white/35 uppercase block mb-6 border-0 p-0">
               {project.category} &nbsp;·&nbsp; {project.year}
-            </span>
-            <h3 className="text-2xl font-light tracking-wide text-white uppercase leading-tight">
+            </CardDescription>
+            <CardTitle className="text-2xl font-light tracking-wide text-white uppercase leading-tight p-0 m-0 border-0">
               {project.title}
-            </h3>
-          </div>
+            </CardTitle>
+          </CardHeader>
 
-          <div className="flex flex-col gap-6 mt-6">
+          <CardContent className="p-0 flex flex-col gap-6 mt-6 border-0">
             <p className="text-white/50 text-[11px] font-light leading-relaxed">
               {project.subtitle}
             </p>
@@ -803,11 +800,13 @@ function ArtCard({ project, artPaths }: { project: Project; artPaths: string }) 
               <MapPin className="h-3 w-3 shrink-0" />
               <span>{project.location}</span>
             </div>
-            <Link href={`/projects/${project.slug}`}
-              className="inline-flex items-center gap-1.5 text-[10px] font-semibold tracking-widest uppercase text-white/55 hover:text-white transition-colors duration-200">
-              View Project <ArrowRight className="h-3 w-3" />
-            </Link>
-          </div>
+            <CardFooter className="p-0 border-0">
+              <Link href={`/projects/${project.slug}`}
+                className="inline-flex items-center gap-1.5 text-[10px] font-semibold tracking-widest uppercase text-white/55 hover:text-white transition-colors duration-200">
+                View Project <ArrowRight className="h-3 w-3" />
+              </Link>
+            </CardFooter>
+          </CardContent>
         </div>
 
         <div className="flex-1 relative overflow-hidden flex items-center justify-center p-6">
@@ -839,7 +838,7 @@ function ArtCard({ project, artPaths }: { project: Project; artPaths: string }) 
           />
         </div>
       </div>
-    </motion.article>
+    </MotionCard>
   )
 }
 
