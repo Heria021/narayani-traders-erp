@@ -12,7 +12,26 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Calendar, Building2, FileText, Package } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import type { PurchaseWithItems } from './types'
+
+const PAYMENT_STATUS_STYLE = {
+  paid:    'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900',
+  partial: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900',
+  pending: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900',
+} as const
+
+function PaymentSummaryBadge({ status }: { status: PurchaseWithItems['payment_status'] }) {
+  const label = status.charAt(0).toUpperCase() + status.slice(1)
+  return (
+    <span className={cn(
+      'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold capitalize ml-auto',
+      PAYMENT_STATUS_STYLE[status],
+    )}>
+      {label}
+    </span>
+  )
+}
 
 const rupee = (n: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2 }).format(n)
@@ -218,6 +237,36 @@ function PurchaseContent({ purchase: p }: { purchase: PurchaseWithItems }) {
                 </TableCell>
                 <TableCell className="text-right text-base font-bold tabular-nums align-middle py-4 text-foreground pr-4">
                   {rupee(p.grand_total)}
+                </TableCell>
+              </TableRow>
+
+              <TableRow className="bg-muted/5 hover:bg-muted/5 border-t border-dashed border-muted-foreground/20">
+                <TableCell colSpan={4} className="text-right font-medium text-muted-foreground align-middle py-3">
+                  Amount Paid
+                </TableCell>
+                <TableCell className="text-right font-semibold tabular-nums align-middle py-3 text-emerald-600 dark:text-emerald-400 pr-4">
+                  {rupee(p.amount_paid)}
+                </TableCell>
+              </TableRow>
+
+              <TableRow className="bg-muted/5 hover:bg-muted/5">
+                <TableCell colSpan={4} className="text-right font-medium text-muted-foreground align-middle py-3">
+                  Balance Due
+                </TableCell>
+                <TableCell className={cn(
+                  'text-right font-semibold tabular-nums align-middle py-3 pr-4',
+                  p.balance_due > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-foreground',
+                )}>
+                  {rupee(p.balance_due)}
+                </TableCell>
+              </TableRow>
+
+              <TableRow className="bg-muted/5 hover:bg-muted/5">
+                <TableCell colSpan={4} className="text-right font-medium text-muted-foreground align-middle py-3">
+                  Payment Status
+                </TableCell>
+                <TableCell className="text-right align-middle py-3 pr-4">
+                  <PaymentSummaryBadge status={p.payment_status} />
                 </TableCell>
               </TableRow>
             </TableBody>

@@ -33,6 +33,9 @@ export interface Purchase {
   tax_amount: number
   discount_amount: number
   grand_total: number
+  amount_paid: number
+  balance_due: number
+  payment_status: 'paid' | 'partial' | 'pending'
   notes: string | null
   created_at: string
   item_count?: number          // COUNT(purchase_items) — included on list

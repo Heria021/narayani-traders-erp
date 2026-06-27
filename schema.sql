@@ -763,7 +763,9 @@ grant select on customer_balances to authenticated;
 --   +ve = you owe the supplier · −ve = advance credit (you overpaid)
 -- =============================================================================
 
-create or replace view supplier_balances as
+drop view if exists supplier_balances;
+
+create view supplier_balances as
 select
   s.id,
   s.name,
@@ -781,13 +783,17 @@ select
   coalesce(p.total_purchased, 0)::numeric(12,2)      as total_purchased,
   coalesce(sp.total_paid, 0)::numeric(12,2)          as total_paid,
   coalesce(sp.unapplied_advance, 0)::numeric(12,2)   as unapplied_advance,
+  p.last_purchase_date,
 
   (s.opening_balance + coalesce(p.total_purchased, 0) - coalesce(sp.total_paid, 0))
     ::numeric(12,2) as amount_owed
 
 from suppliers s
 left join (
-  select supplier_id, sum(grand_total) as total_purchased
+  select
+    supplier_id,
+    sum(grand_total) as total_purchased,
+    max(purchase_date) as last_purchase_date
   from purchases
   group by supplier_id
 ) p on p.supplier_id = s.id

@@ -12,22 +12,33 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
-  Plus, Search, Phone, Mail, MapPin, Building2, MoreHorizontal, Pencil, Trash2, Truck
+  Plus, Search, Phone, Mail, MapPin, Building2, MoreHorizontal, Pencil, Trash2, Truck,
+  ChevronUp, ChevronDown, ChevronsUpDown,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSuppliers } from './_components/useSuppliers'
 import { SupplierForm } from './_components/SupplierForm'
-import type { SupplierWithStats, SupplierFormValues } from './_components/types'
+import type { SupplierWithStats, SupplierFormValues, SupplierSortField } from './_components/types'
 
 const rupee = (n: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(n)
 
+const fmtPurchaseDate = (d: string) =>
+  new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+
+function SortIcon({ field, current, dir }: { field: SupplierSortField; current: SupplierSortField; dir: 'asc' | 'desc' }) {
+  if (field !== current) return <ChevronsUpDown className="size-3 text-muted-foreground/40" />
+  return dir === 'desc'
+    ? <ChevronDown className="size-3 text-foreground" />
+    : <ChevronUp className="size-3 text-foreground" />
+}
+
 export default function SuppliersPage() {
   const router = useRouter()
   const {
-    suppliers, kpi, search, loading, kpiLoading,
+    suppliers, kpi, aging, search, outstandingOnly, sortField, sortDir, loading, kpiLoading,
     selectedSupplier, setSelectedId,
-    handleSearchChange,
+    handleSearchChange, handleOutstandingToggle, handleSort,
     addSupplier, updateSupplier, deleteSupplier,
   } = useSuppliers()
 
@@ -98,6 +109,11 @@ export default function SuppliersPage() {
             <span className="text-xs text-muted-foreground block font-medium">
               Across all suppliers
             </span>
+            {!kpiLoading && kpi.total_input_gst > 0 && (
+              <span className="text-[11px] text-muted-foreground/80 block pt-0.5">
+                Input GST paid: {rupee(kpi.total_input_gst)}
+              </span>
+            )}
           </div>
 
           {/* Card 3 — Amount Owed */}
@@ -127,16 +143,54 @@ export default function SuppliersPage() {
               {loading ? <Skeleton className="h-6 w-10 mt-0.5" /> : suppliers.length}
             </div>
             <span className="text-xs text-muted-foreground block font-medium">
-              {search ? 'Matching your search' : 'All suppliers'}
+              {search || outstandingOnly ? 'Matching filters' : 'All suppliers'}
             </span>
           </div>
+        </div>
+
+        {/* ── Payables Aging ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {(aging.length > 0 ? aging : [
+            { bucket: '0-30' as const, invoice_count: 0, total_due: 0 },
+            { bucket: '31-60' as const, invoice_count: 0, total_due: 0 },
+            { bucket: '60+' as const, invoice_count: 0, total_due: 0 },
+          ]).map(({ bucket, invoice_count, total_due }) => {
+            const isAged = bucket === '60+'
+            return (
+              <div
+                key={bucket}
+                className={cn(
+                  'rounded-lg border p-3 space-y-0.5',
+                  isAged && total_due > 0
+                    ? 'border-amber-200 bg-amber-50/40 dark:border-amber-900/50 dark:bg-amber-950/20'
+                    : 'bg-card',
+                )}
+              >
+                <span className={cn(
+                  'text-[10px] font-semibold tracking-wider uppercase block',
+                  isAged && total_due > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground',
+                )}>
+                  {bucket} days
+                </span>
+                <div className={cn(
+                  'text-lg font-bold tabular-nums',
+                  isAged && total_due > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-foreground',
+                )}>
+                  {kpiLoading ? <Skeleton className="h-6 w-24" /> : rupee(total_due)}
+                </div>
+                <span className="text-[11px] text-muted-foreground block">
+                  {kpiLoading ? '…' : `${invoice_count} open invoice${invoice_count === 1 ? '' : 's'}`}
+                </span>
+              </div>
+            )
+          })}
         </div>
       </div>
 
       {/* ── Supplier Table Card ────────────────────────────────────────── */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card">
         {/* Toolbar: Search inside the card */}
-        <div className="flex shrink-0 items-center justify-between border-b px-4 py-2.5">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b px-4 py-2.5">
           <div className="relative min-w-0 shrink-0 sm:w-[min(320px,40vw)]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground/50 pointer-events-none" />
             <input
@@ -151,19 +205,34 @@ export default function SuppliersPage() {
               )}
             />
           </div>
+          <Button
+            type="button"
+            variant={outstandingOnly ? 'default' : 'outline'}
+            size="sm"
+            onClick={handleOutstandingToggle}
+            className="h-8 text-xs font-medium shrink-0"
+          >
+            Show only outstanding
+          </Button>
         </div>
 
         {/* Scrollable Table Viewport */}
         <div className="min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain [scrollbar-width:thin] [&_[data-slot=table-container]]:overflow-visible">
           {loading ? (
-            <Table className="w-full min-w-[900px] border-separate border-spacing-0 text-sm">
+            <Table className="w-full min-w-[1000px] border-separate border-spacing-0 text-sm">
               <TableHeader className="bg-card shrink-0 sticky top-0 z-10">
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="pl-4 py-2 text-left font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Supplier</TableHead>
                   <TableHead className="px-3 py-2 text-left font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Location</TableHead>
                   <TableHead className="px-3 py-2 text-left font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">GSTIN</TableHead>
                   <TableHead className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Total Purchased</TableHead>
-                  <TableHead className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Amount Owed</TableHead>
+                  <TableHead className="px-3 py-2 text-left font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Last Purchase</TableHead>
+                  <TableHead className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">
+                    <button type="button" className="inline-flex items-center gap-1 ml-auto hover:text-foreground" onClick={() => handleSort('amount_owed')}>
+                      Amount Owed
+                      <SortIcon field="amount_owed" current={sortField} dir={sortDir} />
+                    </button>
+                  </TableHead>
                   <TableHead className="w-10 pl-3 pr-4 py-2 text-right border-b border-border/40 bg-card sticky top-0 z-10" />
                 </TableRow>
               </TableHeader>
@@ -185,6 +254,7 @@ export default function SuppliersPage() {
                     <TableCell className="px-3 py-3"><Skeleton className="h-4 w-28" /></TableCell>
                     <TableCell className="px-3 py-3"><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell className="px-3 py-3 text-right"><Skeleton className="ml-auto h-4 w-16" /></TableCell>
+                    <TableCell className="px-3 py-3"><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell className="px-3 py-3 text-right"><Skeleton className="ml-auto h-4 w-16" /></TableCell>
                     <TableCell className="py-3 pl-3 pr-4"><Skeleton className="size-7 rounded-md ml-auto" /></TableCell>
                   </TableRow>
@@ -195,23 +265,29 @@ export default function SuppliersPage() {
             <div className="flex flex-col items-center justify-center h-full gap-3 py-16 text-center">
               <Building2 className="size-10 text-muted-foreground/30" />
               <p className="text-sm font-medium text-muted-foreground">
-                {search ? 'No suppliers match your search.' : 'No suppliers yet.'}
+                {search || outstandingOnly ? 'No suppliers match your filters.' : 'No suppliers yet.'}
               </p>
-              {!search && (
+              {!search && !outstandingOnly && (
                 <p className="text-xs text-muted-foreground/70">
                   Add your first supplier to start recording purchases.
                 </p>
               )}
             </div>
           ) : (
-            <Table className="w-full min-w-[900px] border-separate border-spacing-0 text-sm">
+            <Table className="w-full min-w-[1000px] border-separate border-spacing-0 text-sm">
               <TableHeader className="bg-card shrink-0 sticky top-0 z-10">
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="pl-4 py-2 text-left font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Supplier</TableHead>
                   <TableHead className="px-3 py-2 text-left font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Location</TableHead>
                   <TableHead className="px-3 py-2 text-left font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">GSTIN</TableHead>
                   <TableHead className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Total Purchased</TableHead>
-                  <TableHead className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Amount Owed</TableHead>
+                  <TableHead className="px-3 py-2 text-left font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Last Purchase</TableHead>
+                  <TableHead className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">
+                    <button type="button" className="inline-flex items-center gap-1 ml-auto hover:text-foreground" onClick={() => handleSort('amount_owed')}>
+                      Amount Owed
+                      <SortIcon field="amount_owed" current={sortField} dir={sortDir} />
+                    </button>
+                  </TableHead>
                   <TableHead className="w-10 pl-3 pr-4 py-2 text-right border-b border-border/40 bg-card sticky top-0 z-10" />
                 </TableRow>
               </TableHeader>
@@ -277,13 +353,22 @@ export default function SuppliersPage() {
                         {s.total_purchased > 0 ? rupee(s.total_purchased) : <span className="text-muted-foreground/30">—</span>}
                       </TableCell>
 
+                      {/* Last Purchase */}
+                      <TableCell className="px-3 py-3 align-middle text-xs text-muted-foreground">
+                        {s.last_purchase_date
+                          ? fmtPurchaseDate(s.last_purchase_date)
+                          : <span className="text-muted-foreground/40">—</span>}
+                      </TableCell>
+
                       {/* Amount Owed */}
                       <TableCell className="px-3 py-3 text-right align-middle tabular-nums font-semibold">
                         <span className={cn(
                           'text-xs font-bold tabular-nums',
-                          owed > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400',
+                          owed > 0 ? 'text-amber-600 dark:text-amber-400' :
+                          owed < 0 ? 'text-emerald-600 dark:text-emerald-400' :
+                          'text-muted-foreground/40',
                         )}>
-                          {owed > 0 ? rupee(owed) : '—'}
+                          {owed !== 0 ? rupee(owed) : '—'}
                         </span>
                       </TableCell>
 

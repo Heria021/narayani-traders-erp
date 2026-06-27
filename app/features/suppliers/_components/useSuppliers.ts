@@ -7,62 +7,131 @@ import { toast } from 'sonner'
 import {
   type SupplierWithStats, type Purchase,
   type PurchaseItem, type SupplierProduct, type SupplierKpi,
-  type SupplierFormValues,
+  type SupplierFormValues, type PayablesAgingBucket,
+  type SupplierSortField, type SupplierSortDir,
 } from './types'
-import { mapBalanceRow, sumPositiveAmountOwed, type SupplierBalanceRow } from './balances'
+import { mapBalanceRow, mapPurchaseRow, sumPositiveAmountOwed, type SupplierBalanceRow } from './balances'
+
+function bucketAge(purchaseDate: string): PayablesAgingBucket['bucket'] {
+  const days = Math.floor(
+    (Date.now() - new Date(purchaseDate).getTime()) / (1000 * 60 * 60 * 24),
+  )
+  if (days <= 30) return '0-30'
+  if (days <= 60) return '31-60'
+  return '60+'
+}
+
+function sortSuppliers(
+  rows: SupplierWithStats[],
+  field: SupplierSortField,
+  dir: SupplierSortDir,
+): SupplierWithStats[] {
+  const mult = dir === 'asc' ? 1 : -1
+  return [...rows].sort((a, b) => {
+    if (field === 'name') {
+      return mult * a.name.localeCompare(b.name)
+    }
+    if (field === 'amount_owed') {
+      return mult * (a.amount_owed - b.amount_owed)
+    }
+    if (field === 'total_purchased') {
+      return mult * (a.total_purchased - b.total_purchased)
+    }
+    // last_purchase_date — nulls last
+    const aDate = a.last_purchase_date ?? ''
+    const bDate = b.last_purchase_date ?? ''
+    if (!aDate && !bDate) return 0
+    if (!aDate) return 1
+    if (!bDate) return -1
+    return mult * aDate.localeCompare(bDate)
+  })
+}
 
 // ─── hook ─────────────────────────────────────────────────────────────────────
 export function useSuppliers() {
   const supabase = createClient()
 
   // ── list state ──────────────────────────────────────────────────────────────
-  const [suppliers,    setSuppliers]    = useState<SupplierWithStats[]>([])
-  const [kpi,          setKpi]          = useState<SupplierKpi>({ total_count: 0, total_purchased: 0, amount_owed: 0 })
-  const [search,       setSearch]       = useState('')
-  const [loading,      setLoading]      = useState(true)
-  const [kpiLoading,   setKpiLoading]   = useState(true)
+  const [suppliers,         setSuppliers]         = useState<SupplierWithStats[]>([])
+  const [kpi,               setKpi]               = useState<SupplierKpi>({
+    total_count: 0, total_purchased: 0, amount_owed: 0, total_input_gst: 0,
+  })
+  const [aging,             setAging]             = useState<PayablesAgingBucket[]>([])
+  const [search,            setSearch]            = useState('')
+  const [outstandingOnly,   setOutstandingOnly]   = useState(false)
+  const [sortField,         setSortField]         = useState<SupplierSortField>('amount_owed')
+  const [sortDir,           setSortDir]           = useState<SupplierSortDir>('desc')
+  const [loading,           setLoading]           = useState(true)
+  const [kpiLoading,        setKpiLoading]        = useState(true)
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // ── detail state ─────────────────────────────────────────────────────────────
   const [selectedId,       setSelectedId]       = useState<string | null>(null)
   const [purchases,        setPurchases]        = useState<Purchase[]>([])
-  const [purchaseItems,    setPurchaseItems]    = useState<PurchaseItem[]>([])  // all items for selected supplier's purchases
+  const [purchaseItems,    setPurchaseItems]    = useState<PurchaseItem[]>([])
   const [supplierProducts, setSupplierProducts] = useState<SupplierProduct[]>([])
   const [detailLoading,    setDetailLoading]    = useState(false)
 
-  // ── derived ───────────────────────────────────────────────────────────────────
   const selectedSupplier = suppliers.find(s => s.id === selectedId) ?? null
 
-  // ── fetch KPIs ───────────────────────────────────────────────────────────────
+  // ── fetch KPIs + aging + GST ────────────────────────────────────────────────
   const fetchKpi = useCallback(async () => {
     setKpiLoading(true)
-    const { data: rows } = await supabase
-      .from('supplier_balances')
-      .select('amount_owed, total_purchased')
+    const [
+      { data: balanceRows },
+      { data: gstRows },
+      { data: openPurchases },
+    ] = await Promise.all([
+      supabase.from('supplier_balances').select('amount_owed, total_purchased'),
+      supabase.from('purchases').select('tax_amount'),
+      supabase.from('purchases').select('purchase_date, balance_due').gt('balance_due', 0),
+    ])
 
-    const balances = rows ?? []
+    const balances = balanceRows ?? []
     setKpi({
       total_count:     balances.length,
       total_purchased: balances.reduce((sum, r) => sum + r.total_purchased, 0),
       amount_owed:     sumPositiveAmountOwed(balances),
+      total_input_gst: (gstRows ?? []).reduce((sum, r) => sum + (Number(r.tax_amount) || 0), 0),
     })
+
+    const bucketMap = new Map<PayablesAgingBucket['bucket'], PayablesAgingBucket>([
+      ['0-30',  { bucket: '0-30',  invoice_count: 0, total_due: 0 }],
+      ['31-60', { bucket: '31-60', invoice_count: 0, total_due: 0 }],
+      ['60+',   { bucket: '60+',   invoice_count: 0, total_due: 0 }],
+    ])
+    for (const row of openPurchases ?? []) {
+      const bucket = bucketAge(row.purchase_date)
+      const entry = bucketMap.get(bucket)!
+      entry.invoice_count += 1
+      entry.total_due += Number(row.balance_due) || 0
+    }
+    setAging(Array.from(bucketMap.values()))
+
     setKpiLoading(false)
   }, [supabase])
 
-  // ── fetch supplier list with purchase aggregates ──────────────────────────────
-  const fetchSuppliers = useCallback(async (s: string = search) => {
+  // ── fetch supplier list ───────────────────────────────────────────────────────
+  const fetchSuppliers = useCallback(async (
+    s: string = search,
+    outstanding: boolean = outstandingOnly,
+    field: SupplierSortField = sortField,
+    dir: SupplierSortDir = sortDir,
+  ) => {
     setLoading(true)
 
     const { data: rows, error } = await supabase
       .from('supplier_balances')
       .select('*')
-      .order('name')
 
     if (error || !rows) { console.error(error); setLoading(false); return }
 
     let enriched: SupplierWithStats[] = (rows as SupplierBalanceRow[]).map(mapBalanceRow)
 
-    // Client-side search
+    if (outstanding) {
+      enriched = enriched.filter(sup => sup.amount_owed > 0)
+    }
+
     if (s.trim()) {
       const q = s.toLowerCase()
       enriched = enriched.filter(sup =>
@@ -72,24 +141,33 @@ export function useSuppliers() {
       )
     }
 
+    enriched = sortSuppliers(enriched, field, dir)
+
     setSuppliers(enriched)
     setLoading(false)
-  }, [supabase, search])
+  }, [supabase, search, outstandingOnly, sortField, sortDir])
 
   // ── fetch supplier detail ─────────────────────────────────────────────────────
   const fetchDetail = useCallback(async (supplierId: string) => {
     setDetailLoading(true)
 
-    // Get all purchases for this supplier
     const { data: purch } = await supabase
       .from('purchases')
       .select('*')
       .eq('supplier_id', supplierId)
       .order('purchase_date', { ascending: false })
 
-    const purchList = (purch ?? []) as Purchase[]
+    const purchList: Purchase[] = (purch ?? []).map(row => ({
+      id:              row.id,
+      supplier_id:     row.supplier_id,
+      purchase_number: row.purchase_number,
+      purchase_date:   row.purchase_date,
+      grand_total:     Number(row.grand_total),
+      notes:           row.notes,
+      created_at:      row.created_at,
+      ...mapPurchaseRow(row as Record<string, unknown>),
+    }))
 
-    // Get purchase items for all those purchases
     const purchIds = purchList.map(p => p.id)
     let allItems: PurchaseItem[] = []
 
@@ -111,14 +189,12 @@ export function useSuppliers() {
       }))
     }
 
-    // Attach item counts to purchases
     const itemCountMap = new Map<string, number>()
     for (const item of allItems) {
       itemCountMap.set(item.purchase_id, (itemCountMap.get(item.purchase_id) ?? 0) + 1)
     }
     const purchWithCounts = purchList.map(p => ({ ...p, item_count: itemCountMap.get(p.id) ?? 0 }))
 
-    // Build per-product summary
     const productMap = new Map<string, { name: string; unit: string; qty: number; last: string }>()
     for (const item of allItems) {
       const purchase = purchList.find(p => p.id === item.purchase_id)
@@ -150,7 +226,6 @@ export function useSuppliers() {
     setDetailLoading(false)
   }, [supabase])
 
-  // ── initial load ─────────────────────────────────────────────────────────────
   useEffect(() => {
     fetchKpi()
     fetchSuppliers()
@@ -163,14 +238,28 @@ export function useSuppliers() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId])
 
-  // ── search ───────────────────────────────────────────────────────────────────
   const handleSearchChange = useCallback((v: string) => {
     setSearch(v)
     if (searchTimer.current) clearTimeout(searchTimer.current)
-    searchTimer.current = setTimeout(() => fetchSuppliers(v), 300)
-  }, [fetchSuppliers])
+    searchTimer.current = setTimeout(() => fetchSuppliers(v, outstandingOnly, sortField, sortDir), 300)
+  }, [fetchSuppliers, outstandingOnly, sortField, sortDir])
 
-  // ── mutations ─────────────────────────────────────────────────────────────────
+  const handleOutstandingToggle = useCallback(() => {
+    setOutstandingOnly(prev => {
+      const next = !prev
+      fetchSuppliers(search, next, sortField, sortDir)
+      return next
+    })
+  }, [fetchSuppliers, search, sortField, sortDir])
+
+  const handleSort = useCallback((field: SupplierSortField) => {
+    const nextDir: SupplierSortDir =
+      field === sortField ? (sortDir === 'desc' ? 'asc' : 'desc') : 'desc'
+    setSortField(field)
+    setSortDir(nextDir)
+    fetchSuppliers(search, outstandingOnly, field, nextDir)
+  }, [fetchSuppliers, search, outstandingOnly, sortField, sortDir])
+
   const addSupplier = useCallback(async (values: SupplierFormValues): Promise<boolean> => {
     const { data, error } = await supabase
       .from('suppliers')
@@ -237,10 +326,11 @@ export function useSuppliers() {
   }, [supabase, fetchSuppliers, fetchKpi, selectedId])
 
   return {
-    suppliers, kpi, search, loading, kpiLoading,
+    suppliers, kpi, aging, search, outstandingOnly, sortField, sortDir,
+    loading, kpiLoading,
     selectedId, selectedSupplier, purchases, purchaseItems, supplierProducts, detailLoading,
     setSelectedId,
-    handleSearchChange,
+    handleSearchChange, handleOutstandingToggle, handleSort,
     addSupplier, updateSupplier, deleteSupplier,
   }
 }

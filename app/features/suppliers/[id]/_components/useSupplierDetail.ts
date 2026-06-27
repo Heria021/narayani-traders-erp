@@ -13,7 +13,7 @@ import type {
   SupplierPayment,
   SupplierPaymentFormValues,
 } from '../../_components/types'
-import { mapBalanceRow, type SupplierBalanceRow } from '../../_components/balances'
+import { mapBalanceRow, mapPurchaseRow, type SupplierBalanceRow } from '../../_components/balances'
 import type { PurchaseWithItems } from '../../../purchases/_components/types'
 
 export function useSupplierDetail(id: string) {
@@ -79,7 +79,16 @@ export function useSupplierDetail(id: string) {
       .eq('supplier_id', id)
       .order('purchase_date', { ascending: false })
 
-    const purchList = (purch ?? []) as Purchase[]
+    const purchList: Purchase[] = (purch ?? []).map(row => ({
+      id:              row.id,
+      supplier_id:     row.supplier_id,
+      purchase_number: row.purchase_number,
+      purchase_date:   row.purchase_date,
+      grand_total:     Number(row.grand_total),
+      notes:           row.notes,
+      created_at:      row.created_at,
+      ...mapPurchaseRow(row as Record<string, unknown>),
+    }))
 
     // 4. Purchase items
     const purchIds = purchList.map(p => p.id)
@@ -199,6 +208,7 @@ export function useSupplierDetail(id: string) {
       tax_amount: p.tax_amount,
       discount_amount: p.discount_amount,
       grand_total: p.grand_total,
+      ...mapPurchaseRow(p as Record<string, unknown>),
       notes: p.notes,
       created_at: p.created_at,
       items: enrichedItems,

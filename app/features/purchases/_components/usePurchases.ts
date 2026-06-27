@@ -9,6 +9,7 @@ import {
   DEFAULT_FILTERS, ROWS_PER_PAGE,
 } from './types'
 import { rollbackReferencedStock } from '@/lib/services/stockMovement'
+import { mapPurchaseRow } from '../../suppliers/_components/balances'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -98,7 +99,9 @@ export function usePurchases() {
       .from('purchases')
       .select(`
         id, supplier_id, purchase_number, purchase_date,
-        subtotal, tax_amount, discount_amount, grand_total, notes, created_at,
+        subtotal, tax_amount, discount_amount, grand_total,
+        amount_paid, balance_due, payment_status,
+        notes, created_at,
         suppliers!inner(name)
       `, { count: 'exact' })
 
@@ -130,20 +133,20 @@ export function usePurchases() {
       }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let rows: Purchase[] = (data ?? []).map((p: any) => ({
-      id: p.id,
-      supplier_id: p.supplier_id,
-      supplier_name: p.suppliers?.name ?? '—',
-      purchase_number: p.purchase_number,
-      purchase_date: p.purchase_date,
-      subtotal: p.subtotal,
-      tax_amount: p.tax_amount,
-      discount_amount: p.discount_amount,
-      grand_total: p.grand_total,
-      notes: p.notes,
-      created_at: p.created_at,
-      item_count: itemCountMap.get(p.id) ?? 0,
+    let rows: Purchase[] = (data ?? []).map((p: Record<string, unknown>) => ({
+      id: p.id as string,
+      supplier_id: p.supplier_id as string,
+      supplier_name: (p.suppliers as { name: string } | null)?.name ?? '—',
+      purchase_number: p.purchase_number as string,
+      purchase_date: p.purchase_date as string,
+      subtotal: Number(p.subtotal),
+      tax_amount: Number(p.tax_amount),
+      discount_amount: Number(p.discount_amount),
+      grand_total: Number(p.grand_total),
+      notes: p.notes as string | null,
+      created_at: p.created_at as string,
+      item_count: itemCountMap.get(p.id as string) ?? 0,
+      ...mapPurchaseRow(p),
     }))
 
     if (f.search.trim()) {
@@ -195,21 +198,21 @@ export function usePurchases() {
       line_total: i.line_total,
     }))
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const p = purchase as any
+    const p = purchase as Record<string, unknown>
     setDetailData({
-      id: p.id,
-      supplier_id: p.supplier_id,
-      supplier_name: p.suppliers?.name ?? '—',
-      purchase_number: p.purchase_number,
-      purchase_date: p.purchase_date,
-      subtotal: p.subtotal,
-      tax_amount: p.tax_amount,
-      discount_amount: p.discount_amount,
-      grand_total: p.grand_total,
-      notes: p.notes,
-      created_at: p.created_at,
+      id: p.id as string,
+      supplier_id: p.supplier_id as string,
+      supplier_name: (p.suppliers as { name: string } | null)?.name ?? '—',
+      purchase_number: p.purchase_number as string,
+      purchase_date: p.purchase_date as string,
+      subtotal: Number(p.subtotal),
+      tax_amount: Number(p.tax_amount),
+      discount_amount: Number(p.discount_amount),
+      grand_total: Number(p.grand_total),
+      notes: p.notes as string | null,
+      created_at: p.created_at as string,
       items: enrichedItems,
+      ...mapPurchaseRow(p),
     })
     setDetailLoading(false)
   }, [supabase])

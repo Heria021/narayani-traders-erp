@@ -16,10 +16,14 @@ export interface Supplier {
 }
 
 export interface SupplierWithStats extends Supplier {
-  total_purchased: number   // from supplier_balances view
-  total_paid:      number   // from supplier_balances view
-  amount_owed:     number   // from supplier_balances view: opening_balance + total_purchased − total_paid
+  total_purchased:     number   // from supplier_balances view
+  total_paid:          number   // from supplier_balances view
+  unapplied_advance:   number   // from supplier_balances view
+  last_purchase_date:  string | null
+  amount_owed:         number   // from supplier_balances view: opening_balance + total_purchased − total_paid
 }
+
+export type PurchasePaymentStatus = 'paid' | 'partial' | 'pending'
 
 export interface Purchase {
   id:              string
@@ -27,6 +31,9 @@ export interface Purchase {
   purchase_number: string | null
   purchase_date:   string
   grand_total:     number
+  amount_paid:     number
+  balance_due:     number
+  payment_status:  PurchasePaymentStatus
   notes:           string | null
   created_at:      string
   item_count?:     number   // populated client-side
@@ -53,10 +60,20 @@ export interface SupplierProduct {
 }
 
 export interface SupplierKpi {
-  total_count:      number
-  total_purchased:  number
-  amount_owed:      number
+  total_count:       number
+  total_purchased:   number
+  amount_owed:       number
+  total_input_gst:   number
 }
+
+export interface PayablesAgingBucket {
+  bucket:         '0-30' | '31-60' | '60+'
+  invoice_count:  number
+  total_due:      number
+}
+
+export type SupplierSortField = 'name' | 'amount_owed' | 'total_purchased' | 'last_purchase_date'
+export type SupplierSortDir   = 'asc' | 'desc'
 
 export interface SupplierFormValues {
   name:            string

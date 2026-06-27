@@ -16,7 +16,25 @@ import {
   Phone, Mail, MapPin, Building2,
   Pencil, Trash2, MoreHorizontal, CreditCard,
 } from 'lucide-react'
-import type { SupplierWithStats, Purchase, SupplierProduct, SupplierPayment } from './types'
+import type { SupplierWithStats, Purchase, SupplierProduct, SupplierPayment, PurchasePaymentStatus } from './types'
+
+const PAYMENT_STATUS_STYLE: Record<PurchasePaymentStatus, string> = {
+  paid:    'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900',
+  partial: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900',
+  pending: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900',
+}
+
+function PaymentStatusBadge({ status }: { status: PurchasePaymentStatus }) {
+  const label = status.charAt(0).toUpperCase() + status.slice(1)
+  return (
+    <span className={cn(
+      'inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold capitalize',
+      PAYMENT_STATUS_STYLE[status],
+    )}>
+      {label}
+    </span>
+  )
+}
 
 const rupee = (n: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(n)
@@ -112,24 +130,17 @@ export function SupplierDetail({ supplier, purchases, supplierProducts, payments
       </div>
 
       {/* ── Metric KPIs Dashboard Row ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 shrink-0">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
         {[
           { label: 'Opening Balance', value: supplier.opening_balance, desc: 'Owed balance at setup', cls: '' },
           { label: 'Total Purchased', value: supplier.total_purchased, desc: 'Sum of all supplier bills', cls: '' },
-          {
-            label: 'Amount Owed',
-            value: supplier.amount_owed,
-            desc: 'Current outstanding balance',
-            cls: supplier.amount_owed > 0
-              ? 'text-amber-600 dark:text-amber-400 font-bold'
-              : 'text-emerald-600 dark:text-emerald-400 font-bold',
-          },
+          { label: 'Total Paid', value: supplier.total_paid, desc: 'Sum of all payments made', cls: 'text-emerald-600 dark:text-emerald-400' },
         ].map(({ label, value, desc, cls }) => (
           <div key={label} className="border rounded-lg p-4 space-y-1 bg-card">
             <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase block">
               {label}
             </span>
-            <div className={cn("text-xl font-bold tracking-tight tabular-nums", cls)}>
+            <div className={cn('text-xl font-bold tracking-tight tabular-nums', cls)}>
               {rupee(value)}
             </div>
             <span className="text-xs text-muted-foreground block font-medium">
@@ -137,6 +148,29 @@ export function SupplierDetail({ supplier, purchases, supplierProducts, payments
             </span>
           </div>
         ))}
+
+        {/* Amount Owed — with optional unapplied advance subline */}
+        <div className="border rounded-lg p-4 space-y-1 bg-card">
+          <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase block">
+            Amount Owed
+          </span>
+          <div className={cn(
+            'text-xl font-bold tracking-tight tabular-nums',
+            supplier.amount_owed > 0
+              ? 'text-amber-600 dark:text-amber-400'
+              : 'text-emerald-600 dark:text-emerald-400',
+          )}>
+            {rupee(supplier.amount_owed)}
+          </div>
+          <span className="text-xs text-muted-foreground block font-medium">
+            Current outstanding balance
+          </span>
+          {supplier.unapplied_advance > 0 && (
+            <span className="text-[11px] text-muted-foreground/80 block">
+              includes {rupee(supplier.unapplied_advance)} unapplied advance
+            </span>
+          )}
+        </div>
       </div>
 
       {/* ── Bottom Section: Purchases, Products & Payments Card ── */}
@@ -169,7 +203,7 @@ export function SupplierDetail({ supplier, purchases, supplierProducts, payments
         {/* Tables area with internal scrolling */}
         <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:thin] p-0 [&_[data-slot=table-container]]:overflow-visible">
           {activeTab === 'purchases' && (
-            loading ? <TableSkeleton cols={5} /> : purchases.length === 0 ? <EmptyState message="No purchases recorded from this supplier yet." /> : (
+            loading ? <TableSkeleton cols={6} /> : purchases.length === 0 ? <EmptyState message="No purchases recorded from this supplier yet." /> : (
               <PurchasesTable purchases={purchases} onViewPurchase={onViewPurchase} />
             )
           )}
@@ -226,7 +260,8 @@ function PurchasesTable({ purchases, onViewPurchase }: { purchases: Purchase[]; 
           <TableHead className="px-3 py-2 text-left font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Purchase No.</TableHead>
           <TableHead className="px-3 py-2 text-center font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Items</TableHead>
           <TableHead className="px-3 py-2 text-right font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Amount</TableHead>
-          <TableHead className="px-3 py-2 text-center font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Status</TableHead>
+          <TableHead className="px-3 py-2 text-center font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10">Delivery</TableHead>
+          <TableHead className="px-3 py-2 text-center font-semibold text-xs text-muted-foreground border-b border-border/40 bg-card sticky top-0 z-10 pr-4">Payment</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -256,6 +291,9 @@ function PurchasesTable({ purchases, onViewPurchase }: { purchases: Purchase[]; 
               <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900">
                 Received
               </span>
+            </TableCell>
+            <TableCell className="py-3 px-3 text-center align-middle pr-4">
+              <PaymentStatusBadge status={p.payment_status} />
             </TableCell>
           </TableRow>
         ))}

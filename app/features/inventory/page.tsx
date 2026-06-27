@@ -31,6 +31,7 @@ import { PurchaseDetail } from '../purchases/_components/PurchaseDetail'
 import { InvoiceDetailSheet } from '../customers/_components/InvoiceDetailSheet'
 import type { InventoryItem } from './_components/types'
 import type { PurchaseWithItems } from '../purchases/_components/types'
+import { mapPurchaseRow } from '../suppliers/_components/balances'
 import type { SaleWithItems } from '../sales/_components/types'
 import { cn } from '@/lib/utils'
 
@@ -218,20 +219,21 @@ export default function InventoryPage() {
           line_total: i.line_total,
         }))
 
-        const p = purchase as any
+        const p = purchase as Record<string, unknown>
         setPurchaseDetail({
-          id: p.id,
-          supplier_id: p.supplier_id,
-          supplier_name: p.suppliers?.name ?? '—',
-          purchase_number: p.purchase_number,
-          purchase_date: p.purchase_date,
-          subtotal: p.subtotal,
-          tax_amount: p.tax_amount,
-          discount_amount: p.discount_amount,
-          grand_total: p.grand_total,
-          notes: p.notes,
-          created_at: p.created_at,
+          id: p.id as string,
+          supplier_id: p.supplier_id as string,
+          supplier_name: (p.suppliers as { name: string } | null)?.name ?? '—',
+          purchase_number: p.purchase_number as string,
+          purchase_date: p.purchase_date as string,
+          subtotal: Number(p.subtotal),
+          tax_amount: Number(p.tax_amount),
+          discount_amount: Number(p.discount_amount),
+          grand_total: Number(p.grand_total),
+          notes: p.notes as string | null,
+          created_at: p.created_at as string,
           items: enrichedItems,
+          ...mapPurchaseRow(p),
         })
       } catch (err) {
         console.error(err)
