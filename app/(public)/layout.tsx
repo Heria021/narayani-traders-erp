@@ -11,12 +11,12 @@ export default function PublicLayout({
       {/* Navigation Header */}
       <header className="absolute top-0 left-0 right-0 z-50 border-b border-white/10 bg-black/10 backdrop-blur-sm px-6 md:px-12 py-5 flex items-center justify-between">
         <div className="flex items-center gap-12">
-          <Link href="/" className="font-bold text-lg tracking-[0.2em] text-white hover:opacity-85 transition-opacity">
-            HARIOM STUDIO
+          <Link href="/" className="font-bold text-sm md:text-base tracking-[0.2em] text-white hover:opacity-85 transition-opacity uppercase">
+            JR SUTHAR & DESIGNS
           </Link>
           <nav className="hidden md:flex items-center gap-8 text-sm">
             <Link href="/" className="text-white/70 hover:text-white font-medium transition-colors">Home</Link>
-            <Link href="/projects" className="text-white/70 hover:text-white font-medium transition-colors">Projects</Link>
+            <Link href="/#projects" className="text-white/70 hover:text-white font-medium transition-colors">Projects</Link>
             <Link href="/about" className="text-white/70 hover:text-white font-medium transition-colors">About</Link>
             <Link href="/contact" className="text-white/70 hover:text-white font-medium transition-colors">Contact</Link>
           </nav>
