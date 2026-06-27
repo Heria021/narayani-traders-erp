@@ -1,580 +1,612 @@
 "use client"
 
-import { useState } from "react"
-import { motion, AnimatePresence } from "motion/react"
+import { useRef } from "react"
+import {
+  motion,
+  useScroll,
+  useTransform,
+  useMotionValue,
+  useSpring,
+  useInView,
+} from "motion/react"
 import Link from "next/link"
-import { Compass, Eye, Feather, MessageSquare, ArrowRight, UserCheck, GraduationCap, Award, Briefcase, FileText } from "lucide-react"
+import { ArrowRight, ArrowUpRight, MapPin } from "lucide-react"
 
-// Stagger variant for container scroll triggers
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-    },
-  },
-}
+/* ─── EASING ─────────────────────────────────────────── */
+const EXPO = [0.76, 0, 0.24, 1] as const
+const OVERSHOOT = [0.34, 1.56, 0.64, 1] as const
 
-// Fade up text items
-const fadeUpVariants = {
-  hidden: { opacity: 0, y: 30 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: "spring" as const,
-      stiffness: 70,
-      damping: 15,
-      duration: 0.6,
-    },
-  },
-}
-
-// Left column container staggers
-const leftStaggerContainer = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.08,
-    },
-  },
-}
-
-// Right column image reveal
-const imageRevealVariants = {
-  hidden: { opacity: 0, x: 40, scale: 0.95 },
-  show: {
-    opacity: 1,
-    x: 0,
-    scale: 1,
-    transition: {
-      type: "spring" as const,
-      stiffness: 50,
-      damping: 14,
-      duration: 0.8,
-    },
-  },
-}
-
-// Pillar card animations
-const pillarVariants = {
-  hidden: { opacity: 0, y: 40, scale: 0.96 },
-  show: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: {
-      type: "spring" as const,
-      stiffness: 60,
-      damping: 14,
-      duration: 0.7,
-    },
-  },
-}
-
-// Process steps entry (slide in from left)
-const stepVariants = {
-  hidden: { opacity: 0, x: -30, y: 10 },
-  show: {
-    opacity: 1,
-    x: 0,
-    y: 0,
-    transition: {
-      type: "spring" as const,
-      stiffness: 70,
-      damping: 15,
-      duration: 0.6,
-    },
-  },
-}
-
-// Footer callout banner entry
-const calloutVariants = {
-  hidden: { opacity: 0, y: 40, scale: 0.97 },
-  show: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: {
-      type: "spring" as const,
-      stiffness: 50,
-      damping: 15,
-      duration: 0.8,
-    },
-  },
-}
-
+/* ─── DATA ───────────────────────────────────────────── */
 const PILLARS = [
-  {
-    icon: Compass,
-    title: "Spatial Intelligence",
-    description: "Every line drawn serves a functional intent. We maximize natural airflows, daylight paths, and ergonomic efficiencies within minimalist shells.",
-  },
-  {
-    icon: Eye,
-    title: "Cinematic Visualization",
-    description: "High-fidelity photorealistic rendering is our second language. We iterate with materials, lighting configurations, and layouts in digital space first.",
-  },
-  {
-    icon: Feather,
-    title: "Material Authenticity",
-    description: "We lean heavily into raw honesty: board-formed concrete, textured local clay, warm timber grains, and slate stone. True textures need no decoration.",
-  },
-  {
-    icon: MessageSquare,
-    title: "Process Transparency",
-    description: "Supported by our dedicated portfolio tracking and CRM workspaces, clients remain aligned on specifications, scope adjustments, and progress facts.",
-  },
+  { num: "01", title: "Spatial\nIntelligence",   body: "Every line serves functional intent — maximizing airflows, daylight paths, and ergonomic efficiency within minimalist shells." },
+  { num: "02", title: "Cinematic\nVisualization", body: "High-fidelity photorealistic rendering is our second language. We iterate in digital space before a single wall is raised." },
+  { num: "03", title: "Material\nAuthenticity",   body: "Board-formed concrete, local clay, warm timber, slate stone. True textures need no decoration." },
+  { num: "04", title: "Process\nTransparency",    body: "Clients stay aligned on specifications and scope adjustments through our dedicated tracking workspace." },
 ]
 
-const PROCESS_STEPS = [
-  {
-    num: "01",
-    phase: "Ideation & Spatial Study",
-    description: "We analyze site solar paths, wind direction, structural boundaries, and client functional requirements. This results in fundamental floor layouts.",
-  },
-  {
-    num: "02",
-    phase: "3D Visualization",
-    description: "We translate layouts into 3D environments. We experiment with physical materials, interior specifications, and custom light maps to refine the spaces.",
-  },
-  {
-    num: "03",
-    phase: "Technical Blueprinting",
-    description: "Once visuals are locked, we generate meticulous architectural working drawings, material catalogs, and scheduling documents for construction teams.",
-  },
-  {
-    num: "04",
-    phase: "Curation & Handover",
-    description: "Throughout construction, we review structural details and resolve scope adjustments transparently until keys are handed over.",
-  },
+const PROCESS = [
+  { num: "01", phase: "Ideation & Spatial Study",  body: "Site solar paths, wind direction, structural boundaries, client requirements — distilled into fundamental floor layouts." },
+  { num: "02", phase: "3D Visualization",           body: "Layouts enter 3D. Materials, light maps, and interior specs are iterated in digital space until the spaces breathe." },
+  { num: "03", phase: "Technical Blueprinting",     body: "Architectural working drawings, material catalogs, scheduling documents — every dimension locked for construction teams." },
+  { num: "04", phase: "Curation & Handover",        body: "Structural reviews and scope refinements continue transparently through construction, until keys change hands." },
 ]
 
-const DESIGNER_TABS = ["Education", "Software Skills", "Strengths"]
+const MARQUEE = ["Spatial Intelligence","Material Honesty","Cinematic Renders","Structural Clarity","Rajasthan","Bidasar Studio","Architectural Drafting","3D Visualization"]
 
-export default function AboutPage() {
-  const [activeTab, setActiveTab] = useState("Education")
+const DISCIPLINES = ["Architectural Design","Photorealistic Rendering","Technical Drafting","Spatial Planning","Material Sourcing","Site Analysis"]
+
+/* ─── CHAR REVEAL ────────────────────────────────────── */
+function CharReveal({
+  text,
+  className = "",
+  delay = 0,
+  stagger = 0.028,
+}: {
+  text: string
+  className?: string
+  delay?: number
+  stagger?: number
+}) {
+  return (
+    <span className={`inline-block overflow-hidden leading-none ${className}`}>
+      <motion.span
+        className="inline-flex"
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, margin: "-60px" }}
+      >
+        {text.split("").map((ch, i) => (
+          <motion.span
+            key={i}
+            className="inline-block"
+            style={{ whiteSpace: ch === " " ? "pre" : "normal" }}
+            variants={{
+              hidden: { y: "105%", opacity: 0 },
+              show: {
+                y: "0%",
+                opacity: 1,
+                transition: { duration: 0.65, ease: EXPO, delay: delay + i * stagger },
+              },
+            }}
+          >
+            {ch}
+          </motion.span>
+        ))}
+      </motion.span>
+    </span>
+  )
+}
+
+/* ─── LINE REVEAL (thin elements) ────────────────────── */
+function LineReveal({ delay = 0, className = "" }: { delay?: number; className?: string }) {
+  return (
+    <motion.div
+      className={`h-px bg-white/15 origin-left ${className}`}
+      initial={{ scaleX: 0 }}
+      whileInView={{ scaleX: 1 }}
+      viewport={{ once: true }}
+      transition={{ duration: 1.1, ease: EXPO, delay }}
+    />
+  )
+}
+
+/* ─── FADE LINE (paragraph) ─────────────────────────── */
+function FadeUp({
+  children,
+  delay = 0,
+  className = "",
+}: {
+  children: React.ReactNode
+  delay?: number
+  className?: string
+}) {
+  return (
+    <motion.div
+      className={className}
+      initial={{ opacity: 0, y: 18 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-40px" }}
+      transition={{ duration: 0.7, ease: EXPO, delay }}
+    >
+      {children}
+    </motion.div>
+  )
+}
+
+/* ─── MAGNETIC ───────────────────────────────────────── */
+function Magnetic({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const x = useMotionValue(0)
+  const y = useMotionValue(0)
+  const sx = useSpring(x, { stiffness: 180, damping: 18 })
+  const sy = useSpring(y, { stiffness: 180, damping: 18 })
 
   return (
-    <div className="min-h-screen bg-[#060606] text-white pt-32 pb-20 overflow-x-hidden">
-      
-      {/* 1. Hero / Split-Screen Story Section */}
-      <div className="max-w-7xl mx-auto px-6 md:px-12 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center mb-28">
-        
-        {/* Left Column Story */}
-        <motion.div 
-          variants={leftStaggerContainer}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: "-100px" }}
-          className="lg:col-span-7 flex flex-col gap-6 md:gap-8"
-        >
-          <motion.span variants={fadeUpVariants} className="text-[10px] md:text-xs font-bold tracking-[0.3em] text-white/50 uppercase">
-            Our Identity
-          </motion.span>
-          <motion.h1 variants={fadeUpVariants} className="text-4xl md:text-6xl lg:text-7xl font-extralight tracking-tight uppercase leading-none">
-            Jr Suthar <span className="font-bold block">& Designs</span>
-          </motion.h1>
-          <motion.div variants={fadeUpVariants} className="h-[2px] w-16 bg-white/20" />
-          <motion.p variants={fadeUpVariants} className="text-white/80 font-light text-base md:text-lg leading-relaxed max-w-xl">
-            We are an architectural design, visualization, and drafting studio based in Rajasthan, India. Led by Ramesh Suthar, our practice is dedicated to sculpting space, structural details, and photorealistic lighting into beautiful, built realities.
-          </motion.p>
-          <motion.p variants={fadeUpVariants} className="text-white/60 font-light text-sm md:text-base leading-relaxed max-w-xl">
-            Supported by Narayani Traders' project supply structures, we provide end-to-end design coordination: combining raw structural honesty with absolute material sourcing transparency.
-          </motion.p>
-        </motion.div>
+    <motion.div
+      ref={ref}
+      style={{ x: sx, y: sy }}
+      onMouseMove={(e) => {
+        const r = ref.current!.getBoundingClientRect()
+        x.set((e.clientX - r.left - r.width / 2) * 0.07)
+        y.set((e.clientY - r.top - r.height / 2) * 0.07)
+      }}
+      onMouseLeave={() => { x.set(0); y.set(0) }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  )
+}
 
-        {/* Right Column Image */}
-        <motion.div 
-          variants={imageRevealVariants}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: "-80px" }}
-          className="lg:col-span-5 relative h-[350px] md:h-[480px] w-full rounded-2xl overflow-hidden border border-white/10 group bg-zinc-950"
-        >
-          <div 
-            className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-out scale-100 group-hover:scale-103"
-            style={{ backgroundImage: `url('/website_stock_images/pexels-ahmetcotur-27626177.jpg')` }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10" />
-          <div className="absolute bottom-6 left-6 z-20 flex items-center gap-2">
-            <span className="text-[10px] font-mono tracking-widest text-white/60 uppercase">
-              STUDIO INTERIOR CONCEPT
-            </span>
-          </div>
-        </motion.div>
-
-      </div>
-
-      {/* 2. Designer Profile Section (Ramesh Suthar) */}
-      <div className="max-w-7xl mx-auto px-6 md:px-12 mb-32">
-        <div className="flex flex-col gap-4 mb-16 text-center md:text-left">
-          <span className="text-[10px] font-bold tracking-[0.3em] text-white/50 uppercase">
-            The Visionary
+/* ─── MARQUEE ────────────────────────────────────────── */
+function Marquee() {
+  const double = [...MARQUEE, ...MARQUEE]
+  return (
+    <div className="relative overflow-hidden border-y border-white/[0.06] py-3.5 my-28 select-none">
+      {/* Forward row */}
+      <motion.div
+        className="flex gap-14 whitespace-nowrap"
+        animate={{ x: ["0%", "-50%"] }}
+        transition={{ duration: 32, repeat: Infinity, ease: "linear" }}
+      >
+        {double.map((t, i) => (
+          <span key={i} className="flex items-center gap-14 text-[10px] font-bold tracking-[0.32em] uppercase text-white/25">
+            {t}<span className="text-white/10">✦</span>
           </span>
-          <h2 className="text-3xl md:text-5xl font-light tracking-tight uppercase leading-none">
-            Ramesh <span className="font-bold">Suthar</span>
-          </h2>
-          <p className="text-white/40 text-xs md:text-sm font-light">
-            Lead Architect, Visualizer & Director of Jr Suthar & Designs.
-          </p>
+        ))}
+      </motion.div>
+      {/* Ghost reverse row */}
+      <motion.div
+        className="flex gap-14 whitespace-nowrap mt-2.5 opacity-30"
+        animate={{ x: ["-50%", "0%"] }}
+        transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
+      >
+        {double.map((t, i) => (
+          <span key={i} className="flex items-center gap-14 text-[9px] font-light tracking-[0.25em] uppercase text-white/15">
+            {t}<span className="text-white/8">·</span>
+          </span>
+        ))}
+      </motion.div>
+    </div>
+  )
+}
+
+/* ─── PILLAR CARD ────────────────────────────────────── */
+function PillarCard({ p, i }: { p: typeof PILLARS[0]; i: number }) {
+  return (
+    <Magnetic>
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-40px" }}
+        transition={{ duration: 0.75, ease: EXPO, delay: i * 0.09 }}
+        className="group relative overflow-hidden rounded-xl border border-white/[0.07] bg-zinc-950 p-7 flex flex-col gap-0 cursor-default min-h-[220px]"
+      >
+        {/* Ghost numeral */}
+        <span className="absolute -right-3 -bottom-6 text-[110px] font-black leading-none text-white/[0.025] select-none pointer-events-none transition-all duration-700 group-hover:text-white/[0.055]">
+          {p.num}
+        </span>
+
+        {/* Number tag */}
+        <span className="text-[9px] font-mono tracking-[0.35em] text-white/20 mb-6">{p.num}</span>
+
+        {/* Title — always visible */}
+        <h3 className="text-lg font-semibold uppercase tracking-wide leading-tight text-white whitespace-pre-line mb-0">
+          {p.title}
+        </h3>
+
+        {/* Body — hidden by default, slides up on hover */}
+        <div className="overflow-hidden">
+          <motion.p
+            className="text-xs font-light text-white/40 leading-relaxed mt-4"
+            initial={{ y: "100%", opacity: 0 }}
+            whileHover={{ y: "0%", opacity: 1 }}
+            transition={{ duration: 0.45, ease: EXPO }}
+          >
+            {p.body}
+          </motion.p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-          
-          {/* Profile Photo Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ type: "spring", stiffness: 60, damping: 15 }}
-            className="lg:col-span-4 flex flex-col items-center gap-6 p-6 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-sm"
-          >
-            <div className="relative w-48 h-48 md:w-56 md:h-56 rounded-full overflow-hidden border border-white/20 bg-zinc-950 group">
-              {/* Profile Image (points to /ramesh.jpg, with elegant fallback) */}
-              <div 
-                className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-out scale-100 group-hover:scale-105"
-                style={{ 
-                  backgroundImage: "url('/ramesh.jpg')", 
-                  // If image is missing, it will display the initials layout below
-                }}
-              />
-              {/* Fallback Display if image file is not found yet */}
-              <div className="absolute inset-0 flex items-center justify-center bg-zinc-900 border border-white/5 group-hover:bg-zinc-800 transition-colors">
-                <span className="text-4xl font-extralight tracking-widest text-white/30">RS</span>
-              </div>
-            </div>
+        {/* Bottom line reveal on hover */}
+        <motion.div
+          className="absolute bottom-0 left-0 h-[1.5px] bg-white origin-left"
+          initial={{ scaleX: 0 }}
+          whileHover={{ scaleX: 1 }}
+          transition={{ duration: 0.5, ease: EXPO }}
+        />
+      </motion.div>
+    </Magnetic>
+  )
+}
 
-            <div className="text-center flex flex-col gap-1.5">
-              <span className="text-xl font-medium tracking-wide">Ramesh Suthar</span>
-              <span className="text-xs font-light text-white/50 uppercase tracking-widest">Lead Architect</span>
-              <span className="text-[10px] text-white/40 font-mono">Bidasar, Rajasthan, India</span>
-            </div>
+/* ─── PROCESS STEP ───────────────────────────────────── */
+function ProcessStep({ s, i }: { s: typeof PROCESS[0]; i: number }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const inView = useInView(ref, { once: true, margin: "-60px" })
 
-            <div className="w-full h-[1px] bg-white/5 my-2" />
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0 }}
+      whileInView={{ opacity: 1 }}
+      viewport={{ once: true, margin: "-60px" }}
+      transition={{ duration: 0.5, delay: i * 0.1 }}
+      className="group flex gap-8 items-start py-8 border-b border-white/[0.06] last:border-0 hover:border-white/[0.12] transition-colors duration-500"
+    >
+      {/* Animated large number */}
+      <motion.span
+        className="text-[56px] md:text-[72px] font-black leading-none text-white/[0.06] group-hover:text-white/[0.14] transition-colors duration-500 shrink-0 w-20 md:w-24 select-none"
+        animate={inView ? { opacity: [0, 1], scale: [0.7, 1] } : {}}
+        transition={{ duration: 0.7, ease: OVERSHOOT, delay: i * 0.1 + 0.2 }}
+      >
+        {s.num}
+      </motion.span>
 
-            {/* Resume Button */}
-            <a
-              href="/resume.pdf"
-              target="_blank"
-              className="w-full flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-wider bg-white text-black hover:bg-white/90 py-3.5 rounded-full transition-all duration-300 active:scale-98 shadow-md hover:scale-102"
+      <div className="flex flex-col gap-2 pt-2">
+        {/* Phase title with char reveal on hover */}
+        <h3 className="text-base md:text-lg font-semibold uppercase tracking-wide text-white/80 group-hover:text-white transition-colors duration-400">
+          {s.phase}
+        </h3>
+        <motion.p
+          className="text-sm font-light text-white/35 leading-relaxed max-w-md"
+          initial={{ opacity: 0, y: 6 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, ease: EXPO, delay: i * 0.1 + 0.25 }}
+        >
+          {s.body}
+        </motion.p>
+      </div>
+
+      {/* Arrow — appears on hover */}
+      <motion.div
+        className="ml-auto mt-2 shrink-0 text-white/10 group-hover:text-white/40 transition-colors duration-400"
+        initial={false}
+        animate={{ x: 0, y: 0 }}
+        whileHover={{ x: 2, y: -2 }}
+      >
+        <ArrowUpRight className="h-5 w-5" />
+      </motion.div>
+    </motion.div>
+  )
+}
+
+/* ─── PAGE ───────────────────────────────────────────── */
+export default function AboutPage() {
+  const heroRef = useRef<HTMLDivElement>(null)
+  const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] })
+  const imgY = useTransform(scrollYProgress, [0, 1], ["0%", "22%"])
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.6], [1, 0])
+
+  return (
+    <div className="min-h-screen bg-[#060606] text-white pt-24 pb-20 overflow-x-hidden">
+
+      {/* ══ 1. HERO ══════════════════════════════════════ */}
+      <div ref={heroRef} className="max-w-7xl mx-auto px-6 md:px-12 mb-4">
+        <motion.div style={{ opacity: heroOpacity }}>
+
+          {/* Eyebrow */}
+          <FadeUp className="flex items-center gap-3 mb-10">
+            <div className="h-px w-6 bg-white/20" />
+            <span className="text-[9px] font-bold tracking-[0.38em] uppercase text-white/30 flex items-center gap-1.5">
+              <MapPin className="h-2.5 w-2.5" />
+              Rajasthan, India · Est. 2019
+            </span>
+          </FadeUp>
+
+          {/* Hero headline — character-level reveal */}
+          <div className="mb-10 overflow-hidden">
+            <h1 className="text-[clamp(52px,10vw,120px)] font-extralight uppercase tracking-[-0.02em] leading-[0.88] text-white">
+              <CharReveal text="Jr Suthar" delay={0.05} stagger={0.035} />
+              <br />
+              <CharReveal text="& Designs" delay={0.25} stagger={0.035} className="font-black" />
+            </h1>
+          </div>
+
+          <LineReveal delay={0.7} className="mb-10 w-14" />
+
+          {/* Two-column sub area */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-end">
+            <FadeUp delay={0.55} className="md:col-span-5 text-white/55 font-light text-base leading-relaxed">
+              An architectural design, visualization, and drafting studio dedicated to sculpting space and photorealistic
+              light into built realities.
+            </FadeUp>
+
+            {/* Stat trio */}
+            <motion.div
+              className="md:col-span-7 flex items-end justify-start md:justify-end gap-12"
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true }}
+              variants={{
+                hidden: {},
+                show: { transition: { staggerChildren: 0.1, delayChildren: 0.65 } },
+              }}
             >
-              <FileText className="h-4 w-4" />
-              View Resume
-            </a>
+              {[["6+","Years Active"],["40+","Projects"],["M.Arch","Qualification"]].map(([v, l]) => (
+                <motion.div
+                  key={l}
+                  variants={{ hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: EXPO } } }}
+                  className="flex flex-col gap-1"
+                >
+                  <span className="text-3xl font-bold text-white leading-none">{v}</span>
+                  <span className="text-[9px] font-light tracking-[0.3em] uppercase text-white/30">{l}</span>
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
+
+          {/* Hero image — parallax */}
+          <motion.div
+            initial={{ clipPath: "inset(0 0 100% 0)" }}
+            animate={{ clipPath: "inset(0 0 0% 0)" }}
+            transition={{ duration: 1.2, ease: EXPO, delay: 0.4 }}
+            className="relative mt-14 w-full h-[52vw] max-h-[520px] rounded-xl overflow-hidden"
+          >
+            <motion.div
+              className="absolute inset-0 bg-cover bg-center scale-[1.08]"
+              style={{ backgroundImage: "url('/website_stock_images/pexels-ahmetcotur-27626177.jpg')", y: imgY }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#060606]/70 via-transparent to-transparent" />
+
+            {/* Corner label */}
+            <motion.span
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1.4 }}
+              className="absolute bottom-5 right-5 text-[9px] font-mono tracking-[0.3em] uppercase text-white/35"
+            >
+              Studio · Bidasar, Rajasthan
+            </motion.span>
           </motion.div>
 
-          {/* Details & Tabs Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ type: "spring", stiffness: 60, damping: 15, delay: 0.15 }}
-            className="lg:col-span-8 p-6 md:p-8 rounded-3xl bg-zinc-950 border border-white/5 min-h-[380px] flex flex-col gap-8"
-          >
-            {/* Tab Toggles */}
-            <div className="flex items-center gap-2 border-b border-white/10 pb-4 overflow-x-auto scrollbar-none">
-              {DESIGNER_TABS.map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`relative px-4 py-2 text-xs md:text-sm font-light rounded-full transition-all duration-300 cursor-pointer ${
-                    activeTab === tab ? "text-black z-10 font-medium" : "text-white/60 hover:text-white"
-                  }`}
+        </motion.div>
+      </div>
+
+      <Marquee />
+
+      {/* ══ 2. THE VISIONARY ═════════════════════════════ */}
+      <div className="max-w-7xl mx-auto px-6 md:px-12 mb-32">
+        <FadeUp className="flex items-center gap-4 mb-16">
+          <div className="h-px w-6 bg-white/15" />
+          <span className="text-[9px] font-bold tracking-[0.38em] uppercase text-white/25">The Visionary</span>
+        </FadeUp>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-start">
+
+          {/* Portrait */}
+          <div className="lg:col-span-4">
+            <motion.div
+              initial={{ clipPath: "inset(0 0 100% 0)" }}
+              whileInView={{ clipPath: "inset(0 0 0% 0)" }}
+              viewport={{ once: true, margin: "-60px" }}
+              transition={{ duration: 1.1, ease: EXPO }}
+              className="relative w-full aspect-[4/5] rounded-xl overflow-hidden bg-zinc-900"
+            >
+              <motion.div
+                className="absolute inset-0 bg-cover bg-center"
+                style={{ backgroundImage: "url('/ramesh.jpg')" }}
+                initial={{ scale: 1.1 }}
+                whileInView={{ scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 1.5, ease: EXPO }}
+              />
+              {/* Fallback */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <span className="text-[90px] font-black text-white/[0.03] tracking-widest select-none">RS</span>
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-t from-[#060606]/80 via-transparent to-transparent" />
+            </motion.div>
+
+            {/* Name under photo */}
+            <div className="mt-5 overflow-hidden">
+              <CharReveal text="Ramesh Suthar" delay={0.2} stagger={0.025}
+                className="text-2xl font-bold uppercase tracking-tight text-white" />
+            </div>
+            <FadeUp delay={0.35} className="flex items-center gap-2 mt-2">
+              <span className="text-[9px] font-light tracking-[0.3em] uppercase text-white/30 border border-white/10 rounded-full px-2.5 py-1">
+                Lead Architect
+              </span>
+              <span className="text-white/15 text-xs">·</span>
+              <span className="text-[9px] font-mono text-white/25 flex items-center gap-1">
+                <MapPin className="h-2.5 w-2.5" />Bidasar, RJ
+              </span>
+            </FadeUp>
+          </div>
+
+          {/* Editorial right */}
+          <div className="lg:col-span-8 flex flex-col gap-12">
+
+            {/* Pull quote */}
+            <motion.blockquote
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: "-40px" }}
+              transition={{ duration: 0.9, ease: EXPO }}
+              className="pl-5 border-l border-white/12 text-xl md:text-2xl font-light italic text-white/70 leading-relaxed"
+            >
+              "Architecture is not built in software. It's born in the silence between a site visit and the first
+              sketch."
+            </motion.blockquote>
+
+            {/* Bio */}
+            <FadeUp delay={0.1} className="flex flex-col gap-4">
+              <p className="text-sm font-light text-white/50 leading-relaxed">
+                Ramesh Suthar is the founder and lead architect of Jr Suthar & Designs. With over six years of
+                practice rooted in Rajasthan, he brings structural rigour and cinematic sensibility to every
+                project — from residential dwellings to large commercial developments.
+              </p>
+              <p className="text-sm font-light text-white/30 leading-relaxed">
+                Holding a post-graduate degree in Advanced Computational Architecture, his approach is shaped by raw
+                material honesty. He believes a building should not disguise itself — it should own the land it stands on.
+              </p>
+            </FadeUp>
+
+            <LineReveal delay={0.15} />
+
+            {/* Education — minimal timeline */}
+            <div className="flex flex-col gap-0">
+              <FadeUp className="text-[9px] font-bold tracking-[0.38em] uppercase text-white/20 mb-5">
+                Education
+              </FadeUp>
+              {[
+                { year: "2018–19", title: "Master of Architecture" },
+                { year: "2014–19", title: "Bachelor of Architecture" },
+                { year: "2010–14", title: "Higher Secondary — Science" },
+              ].map((e, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -10 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, ease: EXPO, delay: i * 0.09 }}
+                  className="group flex items-center gap-6 py-3.5 border-b border-white/[0.05] hover:border-white/[0.12] transition-colors duration-400 last:border-0"
                 >
-                  {activeTab === tab && (
-                    <motion.div
-                      layoutId="activeDesignerTab"
-                      className="absolute inset-0 bg-white rounded-full -z-10"
-                      transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                    />
-                  )}
-                  {tab}
-                </button>
+                  <span className="text-[9px] font-mono text-white/20 w-12 shrink-0 group-hover:text-white/45 transition-colors duration-400">{e.year}</span>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-white/60 group-hover:text-white transition-colors duration-400">{e.title}</span>
+                  <ArrowUpRight className="h-3 w-3 text-white/0 group-hover:text-white/30 ml-auto shrink-0 transition-all duration-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                </motion.div>
               ))}
             </div>
 
-            {/* Tab content panel */}
-            <div className="flex-1 flex flex-col justify-center">
-              <AnimatePresence mode="wait">
-                {activeTab === "Education" && (
-                  <motion.div
-                    key="education"
-                    initial={{ opacity: 0, x: 10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -10 }}
-                    transition={{ duration: 0.25 }}
-                    className="flex flex-col gap-6"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center text-white/50 shrink-0">
-                        <GraduationCap className="h-4 w-4" />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-medium tracking-wide text-white uppercase">Master's Degree</span>
-                          <span className="text-[10px] px-2 py-0.5 bg-white/10 rounded-full font-mono text-white/80">2018–19</span>
-                        </div>
-                        <p className="text-xs font-light text-white/50">Post-graduate study specializing in Advanced Computational Architecture & Spatial Curation.</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-4">
-                      <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center text-white/50 shrink-0">
-                        <GraduationCap className="h-4 w-4" />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-medium tracking-wide text-white uppercase">Bachelor's Degree</span>
-                          <span className="text-[10px] px-2 py-0.5 bg-white/10 rounded-full font-mono text-white/80">2014–19</span>
-                        </div>
-                        <p className="text-xs font-light text-white/50">Comprehensive studies in spatial planning, architectural detailing, structural systems, and landscaping.</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-4">
-                      <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center text-white/50 shrink-0">
-                        <Award className="h-4 w-4" />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-medium tracking-wide text-white uppercase">High School Certificate</span>
-                          <span className="text-[10px] px-2 py-0.5 bg-white/10 rounded-full font-mono text-white/80">2010–14</span>
-                        </div>
-                        <p className="text-xs font-light text-white/50">Secondary education centered on science, high mathematics, and technical drafting foundations.</p>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                {activeTab === "Software Skills" && (
-                  <motion.div
-                    key="software"
-                    initial={{ opacity: 0, x: 10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -10 }}
-                    transition={{ duration: 0.25 }}
-                    className="flex flex-col gap-5 w-full justify-center"
-                  >
-                    {/* Skill 1 */}
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center justify-between text-xs font-medium uppercase tracking-wider">
-                        <span>Revit</span>
-                        <span className="text-white/60 font-mono">Expert (95%)</span>
-                      </div>
-                      <div className="h-[4px] w-full bg-white/10 rounded-full overflow-hidden">
-                        <motion.div 
-                          initial={{ width: 0 }}
-                          whileInView={{ width: "95%" }}
-                          viewport={{ once: true }}
-                          transition={{ duration: 1, ease: "easeOut" }}
-                          className="h-full bg-white"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Skill 2 */}
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center justify-between text-xs font-medium uppercase tracking-wider">
-                        <span>ArchiCAD</span>
-                        <span className="text-white/60 font-mono">Intermediate (80%)</span>
-                      </div>
-                      <div className="h-[4px] w-full bg-white/10 rounded-full overflow-hidden">
-                        <motion.div 
-                          initial={{ width: 0 }}
-                          whileInView={{ width: "80%" }}
-                          viewport={{ once: true }}
-                          transition={{ duration: 1, ease: "easeOut" }}
-                          className="h-full bg-white/80"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Skill 3 */}
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center justify-between text-xs font-medium uppercase tracking-wider">
-                        <span>Adobe Creative Suite</span>
-                        <span className="text-white/60 font-mono">Intermediate (75%)</span>
-                      </div>
-                      <div className="h-[4px] w-full bg-white/10 rounded-full overflow-hidden">
-                        <motion.div 
-                          initial={{ width: 0 }}
-                          whileInView={{ width: "75%" }}
-                          viewport={{ once: true }}
-                          transition={{ duration: 1, ease: "easeOut" }}
-                          className="h-full bg-white/65"
-                        />
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                {activeTab === "Strengths" && (
-                  <motion.div
-                    key="strengths"
-                    initial={{ opacity: 0, x: 10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -10 }}
-                    transition={{ duration: 0.25 }}
-                    className="grid grid-cols-2 gap-4"
-                  >
-                    {[
-                      "Passion for design",
-                      "3D rendering & lighting",
-                      "Attention to detail",
-                      "Problem solving",
-                      "Critical thinking",
-                      "Project management",
-                    ].map((strength, idx) => (
-                      <div key={idx} className="flex items-center gap-3 p-3.5 rounded-xl border border-white/5 bg-white/5 hover:border-white/10 transition-colors">
-                        <Briefcase className="h-4 w-4 text-white/50 shrink-0" />
-                        <span className="text-xs md:text-sm font-light text-white/80">{strength}</span>
-                      </div>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </motion.div>
-
-        </div>
-      </div>
-
-      {/* 3. Core Pillars Section */}
-      <div className="bg-[#0a0a0a] border-y border-white/5 py-24 mb-28">
-        <div className="max-w-7xl mx-auto px-6 md:px-12 flex flex-col items-center gap-16">
-          
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.6 }}
-            className="w-full text-center max-w-xl flex flex-col gap-4"
-          >
-            <span className="text-[10px] font-bold tracking-[0.25em] text-white/40 uppercase">
-              Foundational Focus
-            </span>
-            <h2 className="text-3xl md:text-4xl font-light tracking-wide uppercase">
-              Our Core Pillars
-            </h2>
-            <p className="text-white/50 text-xs md:text-sm font-light leading-relaxed">
-              Every detail is engineered to blend high-fidelity visuals with clear communication systems.
-            </p>
-          </motion.div>
-
-          {/* Pillars Grid */}
-          <motion.div 
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, margin: "-60px" }}
-            className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-            style={{ perspective: 1000 }}
-          >
-            {PILLARS.map((pillar, idx) => (
-              <motion.div
-                key={idx}
-                variants={pillarVariants}
-                className="group relative p-6 md:p-8 rounded-2xl bg-zinc-950/50 hover:bg-zinc-950 border border-white/5 hover:border-white/10 transition-all duration-300 flex flex-col gap-5 hover:translate-y-[-6px] hover:shadow-2xl hover:shadow-black/40"
-              >
-                <div className="h-10 w-10 rounded-xl bg-white/5 group-hover:bg-white text-white/70 group-hover:text-black flex items-center justify-center transition-all duration-300">
-                  <pillar.icon className="h-5 w-5" />
-                </div>
-                <h3 className="text-lg font-light tracking-wide text-white uppercase mt-2">
-                  {pillar.title}
-                </h3>
-                <p className="text-white/50 font-light text-xs md:text-sm leading-relaxed">
-                  {pillar.description}
-                </p>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </div>
-
-      {/* 4. The Design Process Section */}
-      <div className="max-w-7xl mx-auto px-6 md:px-12 mb-28 flex flex-col gap-16">
-        
-        <motion.div 
-          initial={{ opacity: 0, y: 25 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.6 }}
-          className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/10 pb-8"
-        >
-          <div className="flex flex-col gap-3">
-            <span className="text-[10px] font-bold tracking-[0.25em] text-white/50 uppercase">
-              How We Work
-            </span>
-            <h2 className="text-3xl md:text-5xl font-light tracking-tight uppercase">
-              The Studio <span className="font-bold">Process</span>
-            </h2>
-          </div>
-          <p className="text-white/50 font-light text-xs md:text-sm max-w-md leading-relaxed">
-            From initial structural parameters to physical materials styling, our workflow is structured to guarantee execution integrity.
-          </p>
-        </motion.div>
-
-        {/* Process Steps Stagger */}
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: "-60px" }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
-        >
-          {PROCESS_STEPS.map((step, idx) => (
+            {/* Discipline chips */}
             <motion.div
-              key={idx}
-              variants={stepVariants}
-              className="flex flex-col gap-4 border-l border-white/10 pl-6 relative group"
+              className="flex flex-wrap gap-2"
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true }}
+              variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06, delayChildren: 0.1 } } }}
             >
-              {/* Highlight number */}
-              <span className="text-3xl md:text-4xl font-bold tracking-tight text-white/10 group-hover:text-white/30 transition-colors duration-300">
-                {step.num}
-              </span>
-              <h3 className="text-base md:text-lg font-semibold tracking-wide text-white uppercase group-hover:text-white transition-colors duration-300">
-                {step.phase}
-              </h3>
-              <p className="text-white/50 font-light text-xs md:text-sm leading-relaxed">
-                {step.description}
-              </p>
+              {DISCIPLINES.map((d) => (
+                <motion.span
+                  key={d}
+                  variants={{ hidden: { opacity: 0, scale: 0.88 }, show: { opacity: 1, scale: 1, transition: { duration: 0.35, ease: OVERSHOOT } } }}
+                  className="text-[10px] font-light tracking-wide text-white/35 border border-white/[0.07] rounded-full px-3 py-1.5 hover:border-white/18 hover:text-white/60 transition-all duration-300 cursor-default"
+                >
+                  {d}
+                </motion.span>
+              ))}
             </motion.div>
-          ))}
-        </motion.div>
+
+          </div>
+        </div>
       </div>
 
-      {/* 5. Large Philosophy Quote Callout */}
-      <div className="max-w-7xl mx-auto px-6 md:px-12">
-        <motion.div 
-          variants={calloutVariants}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: "-60px" }}
-          className="relative w-full py-16 md:py-24 rounded-3xl overflow-hidden bg-white/5 border border-white/10 backdrop-blur-sm px-6 md:px-16 flex flex-col md:flex-row items-center justify-between gap-12"
-        >
-          <div className="flex flex-col gap-4 max-w-2xl">
-            <span className="text-[10px] font-bold tracking-[0.3em] text-white/40 uppercase flex items-center gap-1.5">
-              <UserCheck className="h-3.5 w-3.5 text-white/50" />
-              Philosophy in Action
-            </span>
-            <p className="text-white/90 font-light italic text-base md:text-2xl leading-relaxed">
-              "We believe that a built space should not fight its environment. Light should not just illuminate a room; it should compose its texture."
-            </p>
-            <span className="text-[11px] font-semibold tracking-wider text-white/50 uppercase mt-2">
-              &mdash; Ramesh Suthar, Jr Suthar & Designs
-            </span>
+      {/* ══ 3. PILLARS ═══════════════════════════════════ */}
+      <div className="border-y border-white/[0.05] py-24 mb-28">
+        <div className="max-w-7xl mx-auto px-6 md:px-12">
+
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
+            <div>
+              <FadeUp className="flex items-center gap-3 mb-5">
+                <div className="h-px w-5 bg-white/15" />
+                <span className="text-[9px] font-bold tracking-[0.38em] uppercase text-white/25">Foundational Focus</span>
+              </FadeUp>
+              <h2 className="text-4xl md:text-5xl font-light uppercase tracking-tight leading-none">
+                <CharReveal text="Our Core" delay={0.05} stagger={0.03} />
+                {" "}
+                <CharReveal text="Pillars" delay={0.3} stagger={0.03} className="font-black" />
+              </h2>
+            </div>
+            <FadeUp delay={0.15} className="text-white/30 text-xs font-light max-w-[240px] leading-relaxed md:text-right">
+              Hover each pillar to reveal the principle.
+            </FadeUp>
           </div>
 
-          <Link
-            href="/contact"
-            className="group flex items-center gap-2 text-xs md:text-sm font-semibold tracking-wider uppercase bg-white text-black hover:bg-white/90 px-6 md:px-8 py-3.5 md:py-4 rounded-full transition-all duration-300 shadow-lg hover:scale-105 shrink-0"
-          >
-            Start a Consultation
-            <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-          </Link>
+          {/* 4-column equal grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {PILLARS.map((p, i) => <PillarCard key={i} p={p} i={i} />)}
+          </div>
+        </div>
+      </div>
+
+      {/* ══ 4. PROCESS ═══════════════════════════════════ */}
+      <div className="max-w-7xl mx-auto px-6 md:px-12 mb-28">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-10 mb-4">
+          <div>
+            <FadeUp className="flex items-center gap-3 mb-5">
+              <div className="h-px w-5 bg-white/15" />
+              <span className="text-[9px] font-bold tracking-[0.38em] uppercase text-white/25">How We Work</span>
+            </FadeUp>
+            <h2 className="text-4xl md:text-6xl font-light uppercase tracking-tight leading-none">
+              <CharReveal text="The Studio" delay={0.05} stagger={0.028} />
+              <br />
+              <CharReveal text="Process" delay={0.32} stagger={0.028} className="font-black" />
+            </h2>
+          </div>
+          <FadeUp delay={0.1} className="text-white/30 text-xs font-light max-w-[260px] leading-relaxed">
+            From site analysis to key handover — every phase built for execution integrity.
+          </FadeUp>
+        </div>
+
+        <div className="flex flex-col">
+          {PROCESS.map((s, i) => <ProcessStep key={i} s={s} i={i} />)}
+        </div>
+      </div>
+
+      {/* ══ 5. PHILOSOPHY ════════════════════════════════ */}
+      <div className="max-w-7xl mx-auto px-6 md:px-12">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.9, ease: EXPO }}
+          className="relative rounded-2xl overflow-hidden border border-white/[0.07]"
+        >
+          {/* BG image */}
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: "url('/website_stock_images/pexels-ahmetcotur-27626177.jpg')" }}
+          />
+          <div className="absolute inset-0 bg-[#060606]/88" />
+
+          <div className="relative z-10 px-8 md:px-16 py-16 md:py-20 flex flex-col md:flex-row items-start md:items-end justify-between gap-12">
+            <div className="flex flex-col gap-6 max-w-2xl">
+              <span className="text-[9px] font-bold tracking-[0.38em] uppercase text-white/25">Philosophy</span>
+
+              {/* Char-by-char quote reveal */}
+              <blockquote className="text-white/80 font-light italic text-xl md:text-[28px] leading-relaxed">
+                <CharReveal
+                  text="We believe that a built space should not fight its environment."
+                  delay={0.1}
+                  stagger={0.018}
+                />
+                <br />
+                <CharReveal
+                  text="Light should not illuminate — it should compose texture."
+                  delay={0.6}
+                  stagger={0.018}
+                />
+              </blockquote>
+
+              <FadeUp delay={0.9} className="text-[10px] font-semibold tracking-[0.3em] uppercase text-white/30">
+                — Ramesh Suthar, Jr Suthar & Designs
+              </FadeUp>
+            </div>
+
+            {/* CTA */}
+            <Magnetic>
+              <Link
+                href="/contact"
+                className="group relative flex items-center gap-3 text-[11px] font-bold tracking-[0.25em] uppercase border border-white/20 text-white hover:border-white/50 px-7 py-4 rounded-full transition-all duration-400 hover:bg-white hover:text-black overflow-hidden"
+              >
+                <motion.span
+                  className="absolute inset-0 bg-white origin-left"
+                  initial={{ scaleX: 0 }}
+                  whileHover={{ scaleX: 1 }}
+                  transition={{ duration: 0.4, ease: EXPO }}
+                />
+                <span className="relative z-10">Start a Consultation</span>
+                <motion.span
+                  className="relative z-10"
+                  animate={{ x: [0, 4, 0] }}
+                  transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
+                >
+                  <ArrowRight className="h-4 w-4" />
+                </motion.span>
+              </Link>
+            </Magnetic>
+          </div>
         </motion.div>
       </div>
 

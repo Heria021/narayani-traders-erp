@@ -18,12 +18,9 @@ import {
 import Link from "next/link"
 import {
   ArrowRight,
-  ChevronLeft,
-  ChevronRight,
   MapPin,
   Search,
   Layers,
-  MousePointerClick,
 } from "lucide-react"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -175,24 +172,12 @@ const PROJECT_ART = [
    M 20 140 L 220 140`,
 ]
 
-// ─── Slideshow variants ────────────────────────────────────────────────────────
-
-const slideVariants: Variants = {
-  enter: { opacity: 0, y: 18 },
-  center: { opacity: 1, y: 0, transition: { duration: 0.55, ease: EASE_EXPO } },
-  exit: { opacity: 0, y: -12, transition: { duration: 0.28, ease: "easeIn" } },
-}
-
 // ─── Wavy spine path generator ─────────────────────────────────────────────────
-// Builds one continuous curvilinear path that snakes left/right across the
-// full height of the archive list, in normalised viewBox units (0–100 wide).
-// Rows alternate sides, so the curve gently sways toward whichever card is
-// the "art" card vs "photo" card for that row.
 
 function buildSpinePath(rowCount: number, rowUnitHeight = 100) {
   if (rowCount <= 0) return ""
   const midX = 50
-  const swing = 14 // how far the curve sways left/right, in viewBox units
+  const swing = 14
   let d = `M ${midX} 0`
   for (let i = 0; i < rowCount; i++) {
     const yStart = i * rowUnitHeight
@@ -200,12 +185,113 @@ function buildSpinePath(rowCount: number, rowUnitHeight = 100) {
     const yEnd = yStart + rowUnitHeight
     const dir = i % 2 === 0 ? 1 : -1
     const cx = midX + dir * swing
-    // Smooth S-curve through the row's midpoint, settling back at center by row end
     d += ` C ${midX} ${yStart + rowUnitHeight * 0.18}, ${cx} ${yMid - rowUnitHeight * 0.12}, ${cx} ${yMid}`
     d += ` C ${cx} ${yMid + rowUnitHeight * 0.12}, ${midX} ${yEnd - rowUnitHeight * 0.18}, ${midX} ${yEnd}`
   }
   return d
 }
+
+// ─── Hero copy — swap the HERO_COPY object to change variant ─────────────────
+//
+//  Option 1 · Philosophy (active below)
+//  Option 2 · Capability  → eyebrow: "Full-Service Architectural Studio"
+//                            headline: ["Precision-Crafted", "Architecture."]
+//                            body: "From brutalist concrete structures to sustainable glass retreats, we deliver full-scale architectural visualization, planning, and design integration."
+//                            cta1: { label: "Our Methodology", href: "/methodology" }
+//                            cta2: { label: "Let's Collaborate", href: "/contact" }
+//  Option 3 · Impact      → eyebrow: "Architecture for Future Living"
+//                            headline: ["Designing for the", "Future of Living."]
+//                            body: "We create immersive environments defined by light, natural materials, and structural integrity. Your vision, engineered to exceed expectations."
+//                            cta1: { label: "Explore Our Expertise", href: "#projects" }
+//                            cta2: { label: "Inquire", href: "/contact" }
+
+const HERO_COPY_A = {
+  eyebrow: "Architecture · Interior · Environment",
+  // Each string in headline becomes its own line.
+  // Odd-indexed words within a line render in bold (matching the site's existing typographic voice).
+  headline: ["We Architecture", "Exceptional Spaces."],
+  body: "Bridging the gap between raw materiality and refined comfort. We specialise in bespoke residential and commercial designs that harmonise with their environment.",
+  cta1: { label: "Our Methodology", href: "/methodology" },
+  cta2: { label: "Start a Project", href: "/contact" },
+  // Slide ticker label shown at the far right of the bottom bar
+  tickerLabel: "Selected Works",
+}
+
+const HERO_COPY_B = {
+  eyebrow: "Philosophy · Structure · Light",
+  headline: ["Light Composes", "Refined Textures."],
+  body: "We believe that a built space should not fight its environment. Light should not illuminate — it should compose texture, defining human experience through structural integrity.",
+  cta1: { label: "Our Methodology", href: "/methodology" },
+  cta2: { label: "Start a Project", href: "/contact" },
+  tickerLabel: "Selected Works",
+}
+
+const containerVariants: Variants = {
+  initial: {},
+  animate: {
+    transition: {
+      staggerChildren: 0.12,
+    },
+  },
+  exit: {
+    transition: {
+      staggerChildren: 0.06,
+      staggerDirection: -1,
+    },
+  },
+}
+
+const childVariants: Variants = {
+  initial: {
+    opacity: 0,
+    y: 15,
+    filter: "blur(12px)",
+  },
+  animate: {
+    opacity: 1,
+    y: 0,
+    filter: "blur(0px)",
+    transition: {
+      duration: 0.85,
+      ease: EASE_EXPO,
+    },
+  },
+  exit: {
+    opacity: 0,
+    y: -15,
+    filter: "blur(8px)",
+    transition: {
+      duration: 0.5,
+      ease: EASE_EXPO,
+    },
+  },
+}
+
+const dividerVariants: Variants = {
+  initial: {
+    scaleX: 0,
+    opacity: 0,
+    originX: 0,
+  },
+  animate: {
+    scaleX: 1,
+    opacity: 1,
+    transition: {
+      duration: 0.8,
+      ease: EASE_EXPO,
+    },
+  },
+  exit: {
+    scaleX: 0,
+    opacity: 0,
+    transition: {
+      duration: 0.5,
+      ease: EASE_EXPO,
+    },
+  },
+}
+
+
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
@@ -245,15 +331,11 @@ export default function PublicHomePage() {
   }
 
   const goTo = useCallback((idx: number) => setActiveIndex(idx), [])
-  const handleNext = useCallback(() => goTo((activeIndex + 1) % PROJECTS.length), [activeIndex, goTo])
-  const handlePrev = useCallback(() => goTo((activeIndex - 1 + PROJECTS.length) % PROJECTS.length), [activeIndex, goTo])
 
-  const scrollToProjects = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault()
-    document.getElementById("projects")?.scrollIntoView({ behavior: "smooth" })
-  }
 
   const currentProject = PROJECTS[activeIndex]
+  const isEvenProject = activeIndex % 2 === 1
+  const currentHeroCopy = isEvenProject ? HERO_COPY_B : HERO_COPY_A
 
   const filteredProjects = useMemo(
     () => PROJECTS.filter(p => {
@@ -271,10 +353,14 @@ export default function PublicHomePage() {
     <div className="bg-black text-white w-full min-h-screen">
 
       {/* ══════════════════════════════════════════
-          HERO SLIDESHOW
+          HERO — MISSION-DRIVEN
+          The slideshow is demoted to a full-bleed
+          cinematic backdrop. The firm's philosophy
+          is now the primary content of this section.
       ══════════════════════════════════════════ */}
       <section className="relative h-screen w-full overflow-hidden bg-black">
 
+        {/* ── Background slideshow (unchanged mechanics) ── */}
         <div className="absolute inset-0">
           {PROJECTS.map((p, i) => (
             <div
@@ -289,61 +375,98 @@ export default function PublicHomePage() {
               }}
             />
           ))}
-          <div className="absolute inset-0 bg-gradient-to-r from-black/82 via-black/45 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-black/25" />
+          {/* Heavier left vignette so the firm statement always reads cleanly */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-black/20" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-black/35" />
         </div>
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black to-transparent z-10" />
 
-        <div className="relative z-20 h-full flex flex-col justify-center px-6 md:px-12 pt-24 pb-28">
-          <div className="max-w-3xl flex flex-col gap-6 md:gap-8">
+        {/* ── Primary hero content ── */}
+        <div className="relative z-20 h-full flex flex-col justify-center px-6 md:px-12 pt-24 pb-36">
+          <div className="max-w-4xl flex flex-col gap-7 md:gap-10">
 
             <AnimatePresence mode="wait">
-              <motion.div key={`meta-${activeIndex}`} variants={slideVariants} initial="enter" animate="center" exit="exit"
-                className="flex items-center gap-3 text-xs md:text-sm font-semibold tracking-[0.22em] uppercase text-white/55">
-                <span>{currentProject.category}</span>
-                <span className="h-[3px] w-[3px] rounded-full bg-white/35" />
-                <span>{currentProject.location}</span>
+              <motion.div
+                key={isEvenProject ? "even" : "odd"}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={containerVariants}
+                className="flex flex-col gap-7 md:gap-10"
+              >
+                {/* Eyebrow — firm disciplines */}
+                <motion.p
+                  variants={childVariants}
+                  className="text-[10px] md:text-xs font-bold tracking-[0.28em] uppercase text-white/40"
+                >
+                  {currentHeroCopy.eyebrow}
+                </motion.p>
+
+                {/* Headline — large, typographically weighted */}
+                {/* Odd-indexed words are bold, matching the existing site type system */}
+                <motion.h1
+                  variants={childVariants}
+                  className="text-[clamp(2.6rem,7vw,6rem)] font-extralight tracking-tight leading-[0.93] uppercase"
+                >
+                  {currentHeroCopy.headline.map((line: string, lineIdx: number) => (
+                    <span key={lineIdx} className="block">
+                      {line.split(" ").map((word: string, wordIdx: number) => (
+                        <span
+                          key={wordIdx}
+                          className={wordIdx % 2 === 1 ? "font-bold" : "font-extralight"}
+                        >
+                          {word}{" "}
+                        </span>
+                      ))}
+                    </span>
+                  ))}
+                </motion.h1>
+
+                {/* Divider — thin rule bridges headline and body, a structural accent */}
+                <motion.div
+                  variants={dividerVariants}
+                  className="h-px w-24 bg-white/25"
+                />
+
+                {/* Body — firm philosophy statement */}
+                <motion.p
+                  variants={childVariants}
+                  className="text-white/60 text-base sm:text-lg md:text-xl font-light max-w-xl leading-relaxed"
+                >
+                  {currentHeroCopy.body}
+                </motion.p>
               </motion.div>
             </AnimatePresence>
 
-            <AnimatePresence mode="wait">
-              <motion.h1 key={`title-${activeIndex}`} variants={slideVariants} initial="enter" animate="center" exit="exit"
-                transition={{ duration: 0.65, ease: EASE_EXPO, delay: 0.06 }}
-                className="text-4xl sm:text-5xl md:text-7xl lg:text-[88px] font-extralight tracking-tight leading-[0.95] uppercase">
-                {currentProject.title.split(" ").map((word, i) => (
-                  <span key={i} className={i % 2 === 1 ? "font-bold block" : "font-extralight"}>
-                    {word}{" "}
-                  </span>
-                ))}
-              </motion.h1>
-            </AnimatePresence>
-
-            <AnimatePresence mode="wait">
-              <motion.p key={`sub-${activeIndex}`} variants={slideVariants} initial="enter" animate="center" exit="exit"
-                transition={{ duration: 0.55, ease: EASE_EXPO, delay: 0.1 }}
-                className="text-white/65 text-base sm:text-lg md:text-xl font-light max-w-lg leading-relaxed">
-                {currentProject.subtitle}
-              </motion.p>
-            </AnimatePresence>
-
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, ease: EASE_EXPO, delay: 0.45 }}
-              className="flex flex-wrap items-center gap-4 mt-2">
-              <a href="#projects" onClick={scrollToProjects}
+            {/* CTAs */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: EASE_EXPO, delay: 0.62 }}
+              className="flex flex-wrap items-center gap-4 mt-1"
+            >
+              <Link
+                href={currentHeroCopy.cta1.href}
                 className="group flex items-center gap-2 text-xs md:text-sm font-semibold tracking-widest uppercase bg-white text-black hover:bg-white/92 px-6 md:px-8 py-3.5 md:py-4 rounded-full hover:scale-[1.03] active:scale-[0.98]"
-                style={{ transition: "background-color 200ms, transform 150ms" }}>
-                Explore Portfolio
+                style={{ transition: "background-color 200ms, transform 150ms" }}
+              >
+                {currentHeroCopy.cta1.label}
                 <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-              </a>
-              <Link href="/contact"
-                className="text-xs md:text-sm font-semibold tracking-widest uppercase border border-white/20 hover:border-white/50 bg-white/5 hover:bg-white/8 px-6 md:px-8 py-3.5 md:py-4 rounded-full transition-all duration-200 backdrop-blur-sm">
-                Inquire
+              </Link>
+              <Link
+                href={currentHeroCopy.cta2.href}
+                className="text-xs md:text-sm font-semibold tracking-widest uppercase border border-white/20 hover:border-white/50 bg-white/5 hover:bg-white/8 px-6 md:px-8 py-3.5 md:py-4 rounded-full transition-all duration-200 backdrop-blur-sm"
+              >
+                {currentHeroCopy.cta2.label}
               </Link>
             </motion.div>
           </div>
         </div>
 
+        {/* ── Bottom bar: slide controls + current project ticker ── */}
         <div className="absolute bottom-10 left-6 right-6 md:left-12 md:right-12 z-30 flex flex-col md:flex-row md:items-end justify-between gap-5">
+
+          {/* Dot / progress nav — unchanged */}
           <div className="flex items-center gap-2 md:gap-3">
             {PROJECTS.map((p, idx) => (
               <button key={p.id} onClick={() => goTo(idx)} aria-label={`Slide ${idx + 1}`}
@@ -362,28 +485,11 @@ export default function PublicHomePage() {
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-5">
-            <a href="#projects" onClick={scrollToProjects}
-              className="hidden lg:flex items-center gap-2 text-[10px] tracking-[0.22em] font-semibold text-white/45 hover:text-white/80 uppercase transition-colors duration-200">
-              <MousePointerClick className="h-4 w-4" />
-              Scroll Down
-            </a>
-            <div className="flex items-center gap-2">
-              <button onClick={handlePrev} aria-label="Previous"
-                className="flex items-center justify-center h-9 w-9 rounded-full border border-white/12 hover:border-white/35 bg-black/25 hover:bg-white/10 text-white/55 hover:text-white transition-all duration-200">
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <button onClick={handleNext} aria-label="Next"
-                className="flex items-center justify-center h-9 w-9 rounded-full border border-white/12 hover:border-white/35 bg-black/25 hover:bg-white/10 text-white/55 hover:text-white transition-all duration-200">
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
         </div>
       </section>
 
       {/* ══════════════════════════════════════════
-          PROJECT ARCHIVE
+          PROJECT ARCHIVE  (unchanged)
       ══════════════════════════════════════════ */}
       <section
         id="projects"
@@ -391,7 +497,6 @@ export default function PublicHomePage() {
       >
         <div className="flex flex-col">
 
-          {/* Heading + filters stay readable at a constrained, centered width */}
           <div className="max-w-6xl mx-auto w-full px-6 md:px-12">
             <motion.div
               initial={{ opacity: 0, y: 36 }} whileInView={{ opacity: 1, y: 0 }}
@@ -431,10 +536,6 @@ export default function PublicHomePage() {
             </motion.div>
           </div>
 
-          {/* ── Card list — runs the FULL width of the section (no max-w cap),
-              so the in/out horizontal swing has real room on both sides and
-              the cards never get clipped. Vertical fade is scoped here only,
-              so the heading/filter bar above stays fully visible. ── */}
           <div
             className="relative w-full overflow-x-hidden"
             style={{
@@ -442,8 +543,6 @@ export default function PublicHomePage() {
               maskImage: "linear-gradient(to bottom, transparent, black 6%, black 94%, transparent)",
             }}
           >
-
-            {/* Wavy spine — one continuous SVG path behind all rows */}
             {filteredProjects.length > 0 && (
               <svg
                 className="hidden md:block absolute left-1/2 top-0 -translate-x-1/2 pointer-events-none z-0"
@@ -490,11 +589,12 @@ export default function PublicHomePage() {
   )
 }
 
+// ─── Easing Curves ────────────────────────────────────────────────────────────
+const easeOutQuart = (x: number) => 1 - Math.pow(1 - x, 4)
+const easeInQuart = (x: number) => Math.pow(x, 4)
+const linear = (x: number) => x
+
 // ─── Project Row ──────────────────────────────────────────────────────────────
-// Scroll-linked "center focus" row: opacity / scale / blur all driven
-// continuously by scroll progress relative to the viewport, peaking when
-// the row crosses the vertical center. Rows above/below recede smoothly
-// instead of binary on/off — only one project ever reads as "in focus."
 
 function ProjectRow({
   project,
@@ -508,28 +608,39 @@ function ProjectRow({
   const rowRef = useRef<HTMLDivElement>(null)
   const { scrollYProgress } = useScroll({
     target: rowRef,
-    offset: ["start end", "end start"], // 0 = entering from bottom, 1 = leaving past top
+    offset: ["start end", "end start"],
   })
 
-  const opacity = useTransform(scrollYProgress, [0, 0.32, 0.5, 0.68, 1], [0.18, 0.45, 1, 0.45, 0.18])
-  const scale = useTransform(scrollYProgress, [0, 0.5, 1], [0.93, 1, 0.93])
-  const blurPx = useTransform(scrollYProgress, [0, 0.5, 1], [5, 0, 5])
-  const filter = useTransform(blurPx, (b) => `blur(${b}px)`)
-
-  // Horizontal travel: each column starts off-screen at its own outside edge,
-  // glides inward to meet at center when the row crosses viewport-center,
-  // then continues outward back to that SAME edge as it exits — an
-  // out → in → out sweep rather than a one-way slide.
-  // Left column always travels from/to the left edge, right column from/to the right edge,
-  // regardless of which card (photo or art) currently occupies that column.
-  const leftColX = useTransform(scrollYProgress, [0, 0.5, 1], ["-60%", "0%", "-60%"])
-  const rightColX = useTransform(scrollYProgress, [0, 0.5, 1], ["60%", "0%", "60%"])
+  const opacity = useTransform(
+    scrollYProgress,
+    [0, 0.15, 0.28, 0.45, 0.55, 0.72, 0.85, 1],
+    [0.1, 0.1, 0.55, 1, 1, 0.55, 0.1, 0.1],
+    { ease: [linear, easeOutQuart, easeOutQuart, linear, easeInQuart, easeInQuart, linear] }
+  )
+  const scale = useTransform(
+    scrollYProgress,
+    [0, 0.15, 0.45, 0.55, 0.85, 1],
+    [0.94, 0.94, 1, 1, 0.94, 0.94],
+    { ease: [linear, easeOutQuart, linear, easeInQuart, linear] }
+  )
+  const leftColX = useTransform(
+    scrollYProgress,
+    [0, 0.15, 0.45, 0.55, 0.85, 1],
+    ["-45%", "-45%", "0%", "0%", "-45%", "-45%"],
+    { ease: [linear, easeOutQuart, linear, easeInQuart, linear] }
+  )
+  const rightColX = useTransform(
+    scrollYProgress,
+    [0, 0.15, 0.45, 0.55, 0.85, 1],
+    ["45%", "45%", "0%", "0%", "45%", "45%"],
+    { ease: [linear, easeOutQuart, linear, easeInQuart, linear] }
+  )
 
   return (
     <motion.div
       ref={rowRef}
-      style={{ opacity, scale, filter }}
-      className="relative grid grid-cols-1 md:grid-cols-[1fr_64px_1fr] items-center gap-0 py-10 md:py-14"
+      style={{ opacity, scale, willChange: "transform, opacity" }}
+      className="relative grid grid-cols-1 md:grid-cols-[1fr_64px_1fr] items-center gap-0 py-14 md:py-20"
     >
       <motion.div className="w-full" style={{ x: leftColX }}>
         {isLeft ? <PhotoCard project={project} /> : <ArtCard project={project} artPaths={artPaths} />}
@@ -545,8 +656,6 @@ function ProjectRow({
 }
 
 // ─── Photo Card ───────────────────────────────────────────────────────────────
-// Bigger, calmer: only the title shows at rest. Category, description, and
-// the link all reveal together on hover so the resting state stays clean.
 
 function PhotoCard({ project }: { project: Project }) {
   const hoverX = useMotionValue(0)
@@ -574,7 +683,7 @@ function PhotoCard({ project }: { project: Project }) {
       onMouseMove={handleMove}
       onMouseLeave={handleLeave}
       className="group relative overflow-hidden rounded-3xl bg-[#0d0d0d] border border-white/8"
-      style={{ height: 540 }}
+      style={{ height: 460 }}
       whileHover="hover"
       initial="rest"
     >
@@ -594,7 +703,6 @@ function PhotoCard({ project }: { project: Project }) {
         transition={{ duration: 0.35 }}
       />
 
-      {/* Resting state — title only, kept minimal */}
       <motion.div
         className="absolute inset-0 z-20 flex flex-col justify-end p-8"
         variants={{ rest: { y: 0 }, hover: { y: -8 } }}
@@ -658,8 +766,6 @@ function PhotoCard({ project }: { project: Project }) {
 }
 
 // ─── Art Card ─────────────────────────────────────────────────────────────────
-// Bigger card, lighter meta block — area dropped from the always-visible
-// stack, more breathing room around the line art.
 
 function ArtCard({ project, artPaths }: { project: Project; artPaths: string }) {
   const [hovered, setHovered] = useState(false)
@@ -668,7 +774,7 @@ function ArtCard({ project, artPaths }: { project: Project; artPaths: string }) 
   return (
     <motion.article
       className="group relative overflow-hidden rounded-3xl border border-white/8 bg-[#0d0d0d]"
-      style={{ height: 540 }}
+      style={{ height: 460 }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       whileHover={{ borderColor: "rgba(255,255,255,0.18)" }}
@@ -737,11 +843,7 @@ function ArtCard({ project, artPaths }: { project: Project; artPaths: string }) 
   )
 }
 
-// ─── Art Path — individual animated SVG stroke ────────────────────────────────
-// Curves softened: straight grid/cross-hatch shapes get rounded joins +
-// caps already; for the line-art curvature itself, see PROJECT_ART above —
-// arcs/waves (items 2 and 6) already read as curvilinear, and rounded
-// strokeLinecap/strokeLinejoin keep every corner soft.
+// ─── Art Path ─────────────────────────────────────────────────────────────────
 
 function ArtPath({ d, hovered, delay }: { d: string; hovered: boolean; delay: number }) {
   return (
