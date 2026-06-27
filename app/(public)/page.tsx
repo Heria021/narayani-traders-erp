@@ -5,6 +5,7 @@ import {
   useRef,
   useCallback,
   useMemo,
+  useEffect,
 } from "react"
 import {
   motion,
@@ -32,7 +33,7 @@ import {
 } from "@/components/ui/card"
 
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// - Types -
 
 interface Project {
   id: number
@@ -47,7 +48,7 @@ interface Project {
   area: string
 }
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
+// - Data -
 
 const PROJECTS: Project[] = [
   {
@@ -181,7 +182,7 @@ const PROJECT_ART = [
    M 20 140 L 220 140`,
 ]
 
-// ─── Wavy spine path generator ─────────────────────────────────────────────────
+// - Wavy spine path generator -
 
 function buildSpinePath(rowCount: number, rowUnitHeight = 100) {
   if (rowCount <= 0) return ""
@@ -200,7 +201,7 @@ function buildSpinePath(rowCount: number, rowUnitHeight = 100) {
   return d
 }
 
-// ─── Hero copy — swap the HERO_COPY object to change variant ─────────────────
+// - Hero copy — swap the HERO_COPY object to change variant -
 //
 //  Option 1 · Philosophy (active below)
 //  Option 2 · Capability  → eyebrow: "Full-Service Architectural Studio"
@@ -300,16 +301,59 @@ const dividerVariants: Variants = {
   },
 }
 
+const SERVICES = [
+  {
+    num: "01",
+    icon: "🗺️",
+    image: "/website_stock_images/pexels-aksinfo7-31387268.jpg",
+    title: "Floor Plan Design",
+    desc: "Detailed 2D floor plans crafted for optimal space utilization — rooms, corridors, staircases, and dimensions drawn to execution-ready precision.",
+  },
+  {
+    num: "02",
+    icon: "📐",
+    image: "/website_stock_images/pexels-ahmetcotur-27626177.jpg",
+    title: "3D Architectural Renders",
+    desc: "Photorealistic 3D exterior and interior visualizations that bring your project to life before a single brick is placed.",
+  },
+  {
+    num: "03",
+    icon: "🛋️",
+    image: "/website_stock_images/pexels-ahmetcotur-31817155.jpg",
+    title: "Interior Design",
+    desc: "Bespoke interior concepts — furniture placement, material palettes, lighting moods, and finish boards tailored to your aesthetic.",
+  },
+  {
+    num: "04",
+    icon: "🏘️",
+    image: "/website_stock_images/pexels-abid-ali-150086727-10647324.jpg",
+    title: "Society & Township Planning",
+    desc: "Master planning for residential colonies and townships — road networks, green zones, plot layouts, and common infrastructure.",
+  },
+  {
+    num: "05",
+    icon: "🧭",
+    image: "/website_stock_images/pexels-ahmetcotur-27626174.jpg",
+    title: "Vastu Consultation",
+    desc: "Room orientation, entrance placement, and energy-flow layouts that harmonise Vastu Shastra tradition with modern design.",
+  },
+  {
+    num: "06",
+    icon: "📋",
+    image: "/website_stock_images/pexels-keeganjchecks-12715585.jpg",
+    title: "Technical Drafting & Blueprints",
+    desc: "Construction-ready working drawings, elevation details, section cuts, and structural blueprints documented for contractor execution.",
+  },
+]
 
-
-// ─── Main component ───────────────────────────────────────────────────────────
+// - Main component -
 
 export default function PublicHomePage() {
   const [activeIndex, setActiveIndex] = useState(0)
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [searchQuery, setSearchQuery] = useState("")
 
-  // ── RAF loop for progress bar — zero React re-renders ─────────────────────
+  // - RAF loop for progress bar — zero React re-renders -
   const progressBarRef = useRef<HTMLDivElement>(null)
   const rafRef = useRef<number | null>(null)
   const startTimeRef = useRef<number>(Date.now())
@@ -361,15 +405,15 @@ export default function PublicHomePage() {
   return (
     <div className="bg-black text-white w-full min-h-screen">
 
-      {/* ══════════════════════════════════════════
+      {/* =
           HERO — MISSION-DRIVEN
           The slideshow is demoted to a full-bleed
           cinematic backdrop. The firm's philosophy
           is now the primary content of this section.
-      ══════════════════════════════════════════ */}
+      = */}
       <section className="relative h-screen w-full overflow-hidden bg-black">
 
-        {/* ── Background slideshow (unchanged mechanics) ── */}
+        {/* - Background slideshow (unchanged mechanics) - */}
         <div className="absolute inset-0">
           {PROJECTS.map((p, i) => (
             <div
@@ -390,7 +434,7 @@ export default function PublicHomePage() {
         </div>
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black to-transparent z-10" />
 
-        {/* ── Primary hero content ── */}
+        {/* - Primary hero content - */}
         <div className="relative z-20 h-full flex flex-col justify-center px-6 md:px-12 pt-24 pb-36">
           <div className="max-w-4xl flex flex-col gap-7 md:gap-10">
 
@@ -472,7 +516,7 @@ export default function PublicHomePage() {
           </div>
         </div>
 
-        {/* ── Bottom bar: slide controls + current project ticker ── */}
+        {/* - Bottom bar: slide controls + current project ticker - */}
         <div className="absolute bottom-10 left-6 right-6 md:left-12 md:right-12 z-30 flex flex-col md:flex-row md:items-end justify-between gap-5">
 
           {/* Dot / progress nav — unchanged */}
@@ -497,16 +541,16 @@ export default function PublicHomePage() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════
+      {/* =
           PROJECT ARCHIVE  (unchanged)
-      ══════════════════════════════════════════ */}
+      = */}
       <section
         id="projects"
         className="relative w-full bg-[#060606] py-24 md:py-32 border-t border-white/8"
       >
         <div className="flex flex-col">
 
-          <div className="max-w-6xl mx-auto w-full px-6 md:px-12">
+          <div className="max-w-7xl mx-auto w-full px-6 md:px-12">
             <motion.div
               initial={{ opacity: 0, y: 36 }} whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.7, ease: EASE_EXPO }}
@@ -584,7 +628,7 @@ export default function PublicHomePage() {
                 <motion.div
                   initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                   transition={{ duration: 0.3 }}
-                  className="flex flex-col items-center gap-4 py-24 text-center max-w-6xl mx-auto">
+                  className="flex flex-col items-center gap-4 py-24 text-center max-w-7xl mx-auto">
                   <Layers className="h-9 w-9 text-white/25" />
                   <p className="text-white/40 font-light text-sm">No projects match those filters.</p>
                 </motion.div>
@@ -594,16 +638,259 @@ export default function PublicHomePage() {
 
         </div>
       </section>
+
+      {/* =
+          ABOUT THE STUDIO
+      = */}
+      <section
+        id="about-studio"
+        className="relative w-full bg-black py-24 md:py-32 border-t border-white/8 overflow-hidden"
+      >
+        <div className="max-w-7xl mx-auto w-full px-6 md:px-12 flex flex-col gap-12">
+
+          {/* Row 1: Header, Brief & Redirection Button */}
+          <motion.div
+            initial={{ opacity: 0, y: 36 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.7, ease: EASE_EXPO }}
+            className="flex flex-col gap-6 w-full"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] md:text-xs font-bold tracking-[0.3em] text-white/45 uppercase">02 / The Studio</span>
+              <div className="h-px w-8 bg-white/20" />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-start">
+              <div className="lg:col-span-8">
+                <h2 className="text-4xl md:text-5xl lg:text-6xl font-extralight tracking-tight uppercase leading-tight text-white mb-4">
+                  Sculpting <span className="font-bold">Space</span> <br />
+                  From Our <span className="font-bold">Creative Hub</span>.
+                </h2>
+                <p className="text-white/60 font-light text-sm md:text-base leading-relaxed max-w-3xl">
+                  Rooted in the architectural heritage of Rajasthan, our studio space in Bidasar is a laboratory where computational design, light study, and material honesty converge. We design environments that breathe, blending raw materiality with refined comfort.
+                </p>
+              </div>
+              <div className="lg:col-span-4 flex lg:justify-end lg:items-end h-full pt-4 lg:pt-0">
+                <Link
+                  href="/about"
+                  className="group w-full lg:w-auto inline-flex items-center justify-center gap-3 text-xs font-semibold tracking-widest uppercase border border-white/20 text-white hover:border-white/50 bg-white/5 hover:bg-white/10 px-8 py-4 rounded-full transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <span>Explore Our Story</span>
+                  <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                </Link>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Row 2: Full Width Image Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 36 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.7, ease: EASE_EXPO, delay: 0.15 }}
+            className="w-full"
+          >
+            <OfficePhotoCard image="/website_stock_images/office.jpg" />
+          </motion.div>
+
+        </div>
+      </section>
+
+      {/* ==========================================
+          WHAT WE DO
+          ========================================== */}
+      <section
+        id="what-we-do"
+        className="relative w-full bg-[#060606] py-24 md:py-32 border-t border-white/8 overflow-hidden"
+      >
+        <div className="max-w-7xl mx-auto w-full px-6 md:px-12 flex flex-col gap-16 mb-16">
+          <motion.div
+            initial={{ opacity: 0, y: 36 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.7, ease: EASE_EXPO }}
+            className="flex flex-col gap-3"
+          >
+            <span className="text-[10px] md:text-xs font-bold tracking-[0.3em] text-white/45 uppercase">03 / What We Do</span>
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-extralight tracking-tight uppercase leading-none text-white">
+              Our Core <span className="font-bold">Services</span>
+            </h2>
+            <p className="text-white/55 font-light text-sm md:text-base max-w-xl leading-relaxed mt-1">
+              A comprehensive design integration studio. We shape space, structures, and layouts from concept to execution.
+            </p>
+          </motion.div>
+        </div>
+
+        {/* Curved Infinite Marquee Gallery (Right to Left) */}
+        <div
+          className="relative w-full overflow-hidden py-16 pointer-events-auto"
+          style={{
+            perspective: "800px", // Exaggerates 3D depth to make the curve more visible
+            transformStyle: "preserve-3d",
+            WebkitMaskImage: "linear-gradient(to right, transparent, black 12%, black 88%, transparent)",
+            maskImage: "linear-gradient(to right, transparent, black 12%, black 88%, transparent)",
+          }}
+        >
+          <motion.div
+            style={{
+              display: "flex",
+              gap: "2.5rem",
+              width: "max-content",
+              transformStyle: "preserve-3d",
+              transform: "rotateX(-12.5deg) rotateY(-4deg)", // Tilts the 3D plane significantly to curve the horizontal slide visually
+            }}
+            animate={{ x: [0, -100 / 3 + "%"] }}
+            transition={{
+              x: {
+                repeat: Infinity,
+                repeatType: "loop",
+                duration: 45, // steady speed
+                ease: "linear",
+              },
+            }}
+          >
+            {[...SERVICES, ...SERVICES, ...SERVICES].map((service, idx) => (
+              <ServiceImageCard key={idx} service={service} />
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ==========================================
+          HOW WE DO
+          ========================================== */}
+      <section
+        id="how-we-do"
+        className="relative w-full bg-black py-24 md:py-32 border-t border-white/8 overflow-hidden"
+      >
+        <div className="max-w-7xl mx-auto w-full px-6 md:px-12 flex flex-col gap-16">
+          <motion.div
+            initial={{ opacity: 0, y: 36 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.7, ease: EASE_EXPO }}
+            className="flex flex-col gap-3"
+          >
+            <span className="text-[10px] md:text-xs font-bold tracking-[0.3em] text-white/45 uppercase">04 / How We Do</span>
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-extralight tracking-tight uppercase leading-none text-white">
+              The Studio <span className="font-bold">Process</span>
+            </h2>
+            <p className="text-white/55 font-light text-sm md:text-base max-w-xl leading-relaxed mt-1">
+              From solar paths and local clay brick analysis to detailed execution plans.
+            </p>
+          </motion.div>
+
+          <div className="flex flex-col border-t border-white/10">
+            {[
+              { num: "01", step: "Ideation & Spatial Study", body: "Analyzing solar paths, wind directions, structural boundaries, and client needs — refined into simple floor study drafts." },
+              { num: "02", step: "3D Visualization", body: "Drafts are modeled in 3D. We iterate light maps, physical textures, and raw materials digitally until the space feels alive." },
+              { num: "03", step: "Technical Blueprinting", body: "Detailed working plans, engineering blueprints, material catalogues, and scheduling specs are locked for construction." },
+              { num: "04", step: "Supervision & Handover", body: "We consult with execution and masonry teams, ensuring details are crafted correctly until keys change hands." }
+            ].map((item, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 36 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.2 }}
+                transition={{ duration: 0.7, ease: EASE_EXPO, delay: idx * 0.08 }}
+                className="group flex flex-col md:flex-row justify-between items-start md:items-center py-8 border-b border-white/10 hover:bg-white/[0.01] px-4 md:px-8 transition-colors duration-300"
+              >
+                <div className="flex items-center gap-6 md:gap-12 w-full md:w-auto">
+                  <span className="text-3xl md:text-4xl font-extralight text-white/20 font-mono tracking-wider group-hover:text-white/40 transition-colors duration-300 w-16">
+                    {item.num}
+                  </span>
+                  <h3 className="text-lg md:text-xl font-light uppercase tracking-wide text-white">
+                    {item.step}
+                  </h3>
+                </div>
+                <p className="text-white/50 text-xs md:text-sm font-light leading-relaxed max-w-lg mt-3 md:mt-0 md:ml-12">
+                  {item.body}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ==========================================
+          FOOTER
+          ========================================== */}
+      <footer className="relative w-full bg-[#060606] pt-24 pb-16 border-t border-white/8 overflow-hidden">
+        <div className="max-w-7xl mx-auto w-full px-6 md:px-12 flex flex-col gap-16">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-start">
+            <div className="md:col-span-6 flex flex-col gap-6">
+              <span className="font-bold text-sm md:text-base tracking-[0.2em] text-white uppercase">
+                JR SUTHAR & DESIGNS
+              </span>
+              <p className="text-white/55 font-light text-xs md:text-sm leading-relaxed max-w-sm">
+                Architectural visualization, planning, and bespoke design studio. We shape materials and light to craft environments that harmonize with their surroundings.
+              </p>
+            </div>
+
+            <div className="md:col-span-3 flex flex-col gap-4">
+              <span className="text-[10px] font-bold tracking-[0.2em] text-white/35 uppercase">Navigation</span>
+              <ul className="flex flex-col gap-2.5 text-xs font-light">
+                <li>
+                  <Link href="/" className="text-white/55 hover:text-white transition-colors duration-200">
+                    Home
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/#projects" className="text-white/55 hover:text-white transition-colors duration-200">
+                    Projects
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/about" className="text-white/55 hover:text-white transition-colors duration-200">
+                    About Studio
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/contact" className="text-white/55 hover:text-white transition-colors duration-200">
+                    Inquire & Contact
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            <div className="md:col-span-3 flex flex-col gap-4">
+              <span className="text-[10px] font-bold tracking-[0.2em] text-white/35 uppercase">Studio Office</span>
+              <ul className="flex flex-col gap-2.5 text-xs font-light">
+                <li className="text-white/55">
+                  Bidasar, Rajasthan, India
+                </li>
+                <li>
+                  <a href="mailto:info@jrsuthar.com" className="text-white/55 hover:text-white transition-colors duration-200">
+                    info@jrsuthar.com
+                  </a>
+                </li>
+                <li>
+                  <a href="tel:+919876543210" className="text-white/55 hover:text-white transition-colors duration-200">
+                    +91 98765 43210
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-white/8 pt-8 text-[10px] font-mono text-white/20 uppercase tracking-widest">
+            <span>© {new Date().getFullYear()} JR SUTHAR & DESIGNS.</span>
+            <span>Crafting built realities</span>
+          </div>
+        </div>
+      </footer>
+      <JRSutharWatermark />
     </div>
   )
 }
 
-// ─── Easing Curves ────────────────────────────────────────────────────────────
+// - Easing Curves -
 const easeOutQuart = (x: number) => 1 - Math.pow(1 - x, 4)
 const easeInQuart = (x: number) => Math.pow(x, 4)
 const linear = (x: number) => x
 
-// ─── Project Row ──────────────────────────────────────────────────────────────
+// - Project Row -
 
 function ProjectRow({
   project,
@@ -664,7 +951,7 @@ function ProjectRow({
   )
 }
 
-// ─── Photo Card ───────────────────────────────────────────────────────────────
+// - Photo Card -
 
 const MotionCard = motion.create(Card)
 
@@ -762,7 +1049,216 @@ function PhotoCard({ project }: { project: Project }) {
   )
 }
 
-// ─── Art Card ─────────────────────────────────────────────────────────────────
+// - Office Photo Card -
+
+function OfficePhotoCard({ image }: { image: string }) {
+  const hoverX = useMotionValue(0)
+  const hoverY = useMotionValue(0)
+  const cardRef = useRef<HTMLDivElement>(null)
+
+  const bgX = useSpring(useTransform(hoverX, [-1, 1], ["-1.5%", "1.5%"]), { stiffness: 180, damping: 24 })
+  const bgY = useSpring(useTransform(hoverY, [-1, 1], ["-1.5%", "1.5%"]), { stiffness: 180, damping: 24 })
+
+  const handleMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = cardRef.current?.getBoundingClientRect()
+    if (!rect) return
+    hoverX.set(((e.clientX - rect.left) / rect.width - 0.5) * 2)
+    hoverY.set(((e.clientY - rect.top) / rect.height - 0.5) * 2)
+  }, [hoverX, hoverY])
+
+  const handleLeave = useCallback(() => {
+    hoverX.set(0)
+    hoverY.set(0)
+  }, [hoverX, hoverY])
+
+  return (
+    <MotionCard
+      ref={cardRef}
+      onMouseMove={handleMove}
+      onMouseLeave={handleLeave}
+      className="group relative overflow-hidden rounded-3xl bg-[#0d0d0d] border border-white/8 p-0 ring-0 shadow-none w-full"
+      style={{ height: 600 }}
+      whileHover="hover"
+      initial="rest"
+    >
+      <div className="absolute inset-0 overflow-hidden">
+        <motion.div
+          className="absolute inset-[-4%] bg-cover bg-center"
+          style={{ backgroundImage: `url('${image}')`, x: bgX, y: bgY, willChange: "transform" }}
+          variants={{ rest: { scale: 1 }, hover: { scale: 1.06 } }}
+          transition={{ duration: 0.7, ease: EASE_EXPO }}
+        />
+      </div>
+
+      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent z-10" />
+      <motion.div
+        className="absolute inset-0 bg-black/10 z-10"
+        variants={{ rest: { opacity: 0 }, hover: { opacity: 1 } }}
+        transition={{ duration: 0.35 }}
+      />
+    </MotionCard>
+  )
+}
+
+// - Service Image Card -
+
+function ServiceImageCard({ service }: { service: typeof SERVICES[0] }) {
+  const hoverX = useMotionValue(0)
+  const hoverY = useMotionValue(0)
+  const cardRef = useRef<HTMLDivElement>(null)
+
+  const bgX = useSpring(useTransform(hoverX, [-1, 1], ["-1.5%", "1.5%"]), { stiffness: 180, damping: 24 })
+  const bgY = useSpring(useTransform(hoverY, [-1, 1], ["-1.5%", "1.5%"]), { stiffness: 180, damping: 24 })
+
+  const handleMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = cardRef.current?.getBoundingClientRect()
+    if (!rect) return
+    hoverX.set(((e.clientX - rect.left) / rect.width - 0.5) * 2)
+    hoverY.set(((e.clientY - rect.top) / rect.height - 0.5) * 2)
+  }, [hoverX, hoverY])
+
+  const handleLeave = useCallback(() => {
+    hoverX.set(0)
+    hoverY.set(0)
+  }, [hoverX, hoverY])
+
+  return (
+    <Magnetic className="shrink-0">
+      <MotionCard
+        ref={cardRef}
+        onMouseMove={handleMove}
+        onMouseLeave={handleLeave}
+        className="group relative overflow-hidden rounded-3xl bg-[#0d0d0d] border border-white/8 p-0 ring-0 shadow-none"
+        style={{ height: "min(600px, 58vw)", width: "min(960px, 90vw)" }}
+        whileHover="hover"
+        initial="rest"
+      >
+        <div className="absolute inset-0 overflow-hidden">
+          {service.image && (
+            <motion.div
+              className="absolute inset-[-4%] bg-cover bg-center"
+              style={{ backgroundImage: `url('${service.image}')`, x: bgX, y: bgY, willChange: "transform" }}
+              variants={{ rest: { scale: 1 }, hover: { scale: 1.06 } }}
+              transition={{ duration: 0.7, ease: EASE_EXPO }}
+            />
+          )}
+        </div>
+
+        {/* Dark overlay gradients */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent z-10" />
+        <motion.div
+          className="absolute inset-0 bg-black/20 z-10"
+          variants={{ rest: { opacity: 0.1 }, hover: { opacity: 0 } }}
+          transition={{ duration: 0.35 }}
+        />
+
+        <div className="absolute inset-0 z-20 flex flex-col justify-end p-8 select-none">
+          {/* Bottom content */}
+          <div className="flex flex-col gap-2.5">
+            <h3 className="text-2xl font-light tracking-wide text-white uppercase leading-tight">
+              {service.title.split(" ").map((w, i) => (
+                <span key={i} className={i % 2 === 1 ? "font-bold" : "font-light"}>
+                  {w}{" "}
+                </span>
+              ))}
+            </h3>
+            <p className="text-white/50 text-xs font-light leading-relaxed max-w-lg group-hover:text-white/85 transition-colors duration-300">
+              {service.desc}
+            </p>
+          </div>
+        </div>
+      </MotionCard>
+    </Magnetic>
+  )
+}
+
+// - Magnetic Wrapper -
+
+function Magnetic({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const x = useMotionValue(0)
+  const y = useMotionValue(0)
+  const sx = useSpring(x, { stiffness: 180, damping: 18 })
+  const sy = useSpring(y, { stiffness: 180, damping: 18 })
+
+  return (
+    <motion.div
+      ref={ref}
+      style={{ x: sx, y: sy }}
+      onMouseMove={(e) => {
+        const r = ref.current?.getBoundingClientRect()
+        if (!r) return
+        x.set((e.clientX - r.left - r.width / 2) * 0.07)
+        y.set((e.clientY - r.top - r.height / 2) * 0.07)
+      }}
+      onMouseLeave={() => { x.set(0); y.set(0) }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  )
+}
+
+// - Discipline Card -
+
+function DisciplineCard({ item, i }: { item: { num: string; icon?: string; title: string; desc: string }; i: number }) {
+  return (
+    <Magnetic>
+      <motion.div
+        initial="rest"
+        whileHover="hover"
+        animate="rest"
+        className="group relative overflow-hidden rounded-xl border border-white/[0.07] bg-zinc-950 p-7 flex flex-col gap-0 cursor-default min-h-[240px] w-full"
+      >
+        {/* Ghost numeral */}
+        <span className="absolute -right-3 -bottom-6 text-[110px] font-black leading-none text-white/[0.025] select-none pointer-events-none transition-all duration-700 group-hover:text-white/[0.055]">
+          {item.num}
+        </span>
+
+        {/* Number tag & Icon */}
+        <div className="flex justify-between items-center mb-6 w-full">
+          <span className="text-[9px] font-mono tracking-[0.3em] text-white/20">{item.num}</span>
+          {item.icon && (
+            <span className="text-lg select-none leading-none opacity-70 group-hover:opacity-100 transition-opacity duration-300">
+              {item.icon}
+            </span>
+          )}
+        </div>
+
+        {/* Title */}
+        <h3 className="text-lg font-semibold uppercase tracking-wide leading-tight text-white whitespace-pre-line mb-0">
+          {item.title}
+        </h3>
+
+        {/* Body — hidden by default, slides up on hover */}
+        <div className="overflow-hidden">
+          <motion.p
+            className="text-xs font-light text-white/40 leading-relaxed mt-4"
+            variants={{
+              rest: { y: "100%", opacity: 0 },
+              hover: { y: "0%", opacity: 1 }
+            }}
+            transition={{ duration: 0.45, ease: EASE_EXPO }}
+          >
+            {item.desc}
+          </motion.p>
+        </div>
+
+        {/* Bottom line reveal on hover */}
+        <motion.div
+          className="absolute bottom-0 left-0 h-[1.5px] bg-white origin-left w-full"
+          variants={{
+            rest: { scaleX: 0 },
+            hover: { scaleX: 1 }
+          }}
+          transition={{ duration: 0.5, ease: EASE_EXPO }}
+        />
+      </motion.div>
+    </Magnetic>
+  )
+}
+
+// - Art Card -
 
 function ArtCard({ project, artPaths }: { project: Project; artPaths: string }) {
   const [hovered, setHovered] = useState(false)
@@ -842,7 +1338,7 @@ function ArtCard({ project, artPaths }: { project: Project; artPaths: string }) 
   )
 }
 
-// ─── Art Path ─────────────────────────────────────────────────────────────────
+// - Art Path -
 
 function ArtPath({ d, hovered, delay }: { d: string; hovered: boolean; delay: number }) {
   return (
@@ -865,5 +1361,111 @@ function ArtPath({ d, hovered, delay }: { d: string; hovered: boolean; delay: nu
       }}
       style={{ strokeDashoffset: 1 }}
     />
+  )
+}
+
+// ─── Watermark ─────────────────────────────────────────────────────────────────
+
+function JRSutharWatermark() {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [scaleX, setScaleX] = useState(1)
+
+  useEffect(() => {
+    const measure = () => {
+      if (!containerRef.current) return
+      const container = containerRef.current
+      const available = container.clientWidth * 0.96 // account for 2vw padding each side
+      // Measure natural text width at base font size
+      const span = container.querySelector("span[data-measure]") as HTMLElement
+      if (span) {
+        const natural = span.scrollWidth
+        setScaleX(available / natural)
+      }
+    }
+    measure()
+    window.addEventListener("resize", measure)
+    return () => window.removeEventListener("resize", measure)
+  }, [])
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        background: "#060606",
+        overflow: "hidden",
+        position: "relative",
+        width: "100%",
+        paddingTop: "1vw",
+        paddingBottom: "2.5vw",
+        paddingLeft: "2vw",
+        paddingRight: "2vw",
+      }}
+    >
+      {/* Fade from page bg into watermark from the top */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: "55%",
+          background: "linear-gradient(to bottom, #060606 0%, transparent 100%)",
+          zIndex: 2,
+          pointerEvents: "none",
+        }}
+      />
+
+      {/* Hidden span to measure natural text width */}
+      <span
+        data-measure="true"
+        style={{
+          position: "absolute",
+          visibility: "hidden",
+          pointerEvents: "none",
+          fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
+          fontSize: "13vw",
+          fontWeight: 900,
+          letterSpacing: "-0.06em",
+          textTransform: "uppercase",
+          whiteSpace: "nowrap",
+        }}
+      >
+        JR SUTHAR & DESIGNS
+      </span>
+
+      <motion.div
+        initial={{ y: "90px", opacity: 0 }}
+        whileInView={{ y: 0, opacity: 1 }}
+        exit={{ y: "90px", opacity: 0 }}
+        viewport={{ once: false, amount: 0.05 }}
+        transition={{ duration: 1.05, ease: [0.16, 1, 0.3, 1] }}
+        style={{
+          transformOrigin: "bottom center",
+          zIndex: 1,
+          position: "relative",
+          width: "100%",
+          display: "flex",
+          justifyContent: "flex-start",
+        }}
+      >
+        <span
+          style={{
+            display: "block",
+            fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
+            fontSize: "13vw",
+            fontWeight: 900,
+            letterSpacing: "-0.06em",
+            textTransform: "uppercase",
+            whiteSpace: "nowrap",
+            color: "#1e1e1e",
+            transformOrigin: "left center",
+            transform: `scaleX(${scaleX}) scaleY(1.3)`,
+            lineHeight: 0.95,
+          }}
+        >
+          JR SUTHAR & DESIGNS
+        </span>
+      </motion.div>
+    </div>
   )
 }
