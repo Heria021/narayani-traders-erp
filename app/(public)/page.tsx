@@ -399,6 +399,24 @@ export default function PublicHomePage() {
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [searchQuery, setSearchQuery] = useState("")
 
+  const [localTime, setLocalTime] = useState("")
+
+  useEffect(() => {
+    const updateTime = () => {
+      const options: Intl.DateTimeFormatOptions = {
+        timeZone: "Asia/Kolkata",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      }
+      setLocalTime(new Date().toLocaleTimeString("en-US", options))
+    }
+    updateTime()
+    const timer = setInterval(updateTime, 1000)
+    return () => clearInterval(timer)
+  }, [])
+
   // - Studio scroll parallax hook -
   const aboutStudioRef = useRef<HTMLElement>(null)
   const { scrollYProgress: studioScrollY } = useScroll({
@@ -406,7 +424,7 @@ export default function PublicHomePage() {
     offset: ["start end", "end start"],
   })
   const studioPhotoY = useTransform(studioScrollY, [0, 1], ["8%", "-8%"])
-  
+
   // - Studio mouse interactive hover parallax values -
   const studioHoverX = useMotionValue(0)
   const studioHoverY = useMotionValue(0)
@@ -628,8 +646,8 @@ export default function PublicHomePage() {
         id="what-we-do"
         className="relative w-full bg-black py-24 md:py-32 border-t border-white/10 overflow-hidden"
       >
-        <div className="max-w-7xl mx-auto w-full px-6 md:px-12">
-          
+        <div className="max-w-[1800px] mx-auto w-full px-6 md:px-16 lg:px-24">
+
           {/* Section label */}
           <div className="flex items-center gap-3 mb-14">
             <span className="text-[10px] md:text-xs font-bold tracking-[0.3em] text-white/45 uppercase">02 / What We Do</span>
@@ -719,10 +737,10 @@ export default function PublicHomePage() {
             {/* RIGHT - Dynamic sticky visualization canvas */}
             <div className="lg:col-span-5 lg:sticky lg:top-28 mt-8 lg:mt-0">
               <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden border border-white/10 bg-[#0d0d0d] shadow-2xl group">
-                
+
                 {/* Visualizer blueprint grid background lines */}
-                <div 
-                  className="absolute inset-0 opacity-10 pointer-events-none z-10" 
+                <div
+                  className="absolute inset-0 opacity-10 pointer-events-none z-10"
                   style={{
                     backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px)",
                     backgroundSize: "20px 20px"
@@ -823,7 +841,7 @@ export default function PublicHomePage() {
       >
         <div className="flex flex-col">
 
-          <div className="max-w-7xl mx-auto w-full px-6 md:px-12">
+          <div className="max-w-[1800px] mx-auto w-full px-6 md:px-16 lg:px-24">
             <motion.div
               initial={{ opacity: 0, y: 36 }} whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.7, ease: EASE_EXPO }}
@@ -923,27 +941,76 @@ export default function PublicHomePage() {
         id="about-studio"
         className="relative w-full bg-[#060606] py-24 md:py-32 border-t border-white/10 overflow-hidden"
       >
-        <div className="max-w-7xl mx-auto w-full px-6 md:px-12">
+        <div className="max-w-[1800px] mx-auto w-full px-6 md:px-16 lg:px-24">
 
-          {/* Section label */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: false, amount: 0.05 }}
-            transition={{ duration: 0.5, ease: EASE_EXPO }}
-            className="flex items-center gap-3 mb-14"
-          >
-            <span className="text-[10px] md:text-xs font-bold tracking-[0.3em] text-white/45 uppercase">04 / Who We Are</span>
-            <div className="h-px w-8 bg-white/20" />
-          </motion.div>
+          {/* Two-column layout: content left, photo right. Grid stretches to match heights */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-stretch">
 
-          {/* Two-column layout: photo left (larger col-span), content right */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-center">
+            {/* LEFT — copy + stats (Col-span 5). Styled as flex justify-between to split top/bottom */}
+            <div className="lg:col-span-5 flex flex-col justify-between gap-12 lg:gap-16 py-4 min-h-[650px]">
 
-            {/* LEFT — parallax photo (Col-span 7 for a wider, more massive image) */}
-            <div className="lg:col-span-7">
+              {/* Upper Side: Section label + Description Copy */}
+              <div className="flex flex-col gap-6">
+                {/* Section label */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: false, amount: 0.05 }}
+                  transition={{ duration: 0.5, ease: EASE_EXPO }}
+                  className="flex items-center gap-3"
+                >
+                  <span className="text-[10px] md:text-xs font-bold tracking-[0.3em] text-white/45 uppercase">04 / Who We Are</span>
+                  <div className="h-px w-8 bg-white/20" />
+                </motion.div>
+
+                <p className="text-white/65 font-light text-sm md:text-base leading-relaxed">
+                  Founded from the architectural heritage of Rajasthan, our studio in Bidasar is where computational design, light study, and material honesty converge. We work directly with clients from sketch to final handover, ensuring every space is crafted with precision, honesty, and execution-ready detail.
+                </p>
+              </div>
+
+              {/* Bottom Side: Heading + Stats + Link */}
               <motion.div
-                initial={{ opacity: 0, x: -60, scale: 0.96 }}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: false, amount: 0.05 }}
+                transition={{ type: "spring", stiffness: 50, damping: 15, delay: 0.1 }}
+                className="flex flex-col gap-8"
+              >
+                <h2 className="text-3xl md:text-4xl lg:text-5xl font-extralight tracking-tight uppercase leading-tight text-white">
+                  <AnimatedText text="Rooted in Rajasthan. Designing for the World." />
+                </h2>
+
+                {/* Stats grid — proof, not decoration */}
+                <div className="grid grid-cols-2 gap-px bg-white/10 border border-white/10 rounded-2xl overflow-hidden mt-2">
+                  {STUDIO_STATS.map((stat, idx) => (
+                    <motion.div
+                      key={stat.label}
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: false }}
+                      transition={{ type: "spring", stiffness: 60, damping: 13, delay: 0.2 + idx * 0.08 }}
+                      className="flex flex-col gap-1 p-5 bg-[#0d0d0d]"
+                    >
+                      <span className="text-2xl md:text-3xl font-bold text-white tracking-tight">{stat.value}</span>
+                      <span className="text-[10px] font-light text-white/45 uppercase tracking-[0.15em]">{stat.label}</span>
+                    </motion.div>
+                  ))}
+                </div>
+
+                <Link
+                  href="/about"
+                  className="group self-start inline-flex items-center gap-3 text-xs font-semibold tracking-widest uppercase border border-white/20 text-white hover:border-white/50 bg-white/5 hover:bg-white/10 px-7 py-3.5 rounded-full transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <span>Full Studio Story</span>
+                  <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
+                </Link>
+              </motion.div>
+            </div>
+
+            {/* RIGHT — parallax photo (Col-span 7). Configured as h-full min-h-[650px] to stretch split */}
+            <div className="lg:col-span-7 h-full min-h-[650px] flex">
+              <motion.div
+                initial={{ opacity: 0, x: 60, scale: 0.96 }}
                 whileInView={{ opacity: 1, x: 0, scale: 1 }}
                 viewport={{ once: false, amount: 0.05 }}
                 transition={{ type: "spring", stiffness: 50, damping: 15 }}
@@ -955,8 +1022,7 @@ export default function PublicHomePage() {
                   onMouseLeave={handleStudioLeave}
                   whileHover="hover"
                   initial="rest"
-                  className="relative overflow-hidden rounded-2xl border border-white/10 cursor-pointer group w-full"
-                  style={{ height: "clamp(540px, 64vw, 760px)" }}
+                  className="relative overflow-hidden rounded-2xl border border-white/10 cursor-pointer group w-full h-full min-h-[650px]"
                 >
                   <motion.div
                     className="absolute inset-[-14%] bg-cover bg-center"
@@ -971,7 +1037,7 @@ export default function PublicHomePage() {
                   />
                   {/* Subtle dark vignette at bottom */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent z-10" />
-                  
+
                   {/* Hover Darken overlay */}
                   <motion.div
                     className="absolute inset-0 bg-black/15 z-10"
@@ -994,47 +1060,6 @@ export default function PublicHomePage() {
               </motion.div>
             </div>
 
-            {/* RIGHT — copy + stats (Col-span 5) */}
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: false, amount: 0.05 }}
-              transition={{ type: "spring", stiffness: 50, damping: 15, delay: 0.1 }}
-              className="lg:col-span-5 flex flex-col gap-8"
-            >
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-extralight tracking-tight uppercase leading-tight text-white">
-                <AnimatedText text="Rooted in Rajasthan. Designing for the World." />
-              </h2>
-
-              <p className="text-white/65 font-light text-sm md:text-base leading-relaxed">
-                Founded from the architectural heritage of Rajasthan, our studio in Bidasar is where computational design, light study, and material honesty converge. We work directly with clients from sketch to final handover, ensuring every space is crafted with precision, honesty, and execution-ready detail.
-              </p>
-
-              {/* Stats grid — proof, not decoration */}
-              <div className="grid grid-cols-2 gap-px bg-white/10 border border-white/10 rounded-2xl overflow-hidden mt-2">
-                {STUDIO_STATS.map((stat, idx) => (
-                  <motion.div
-                    key={stat.label}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: false }}
-                    transition={{ type: "spring", stiffness: 60, damping: 13, delay: 0.2 + idx * 0.08 }}
-                    className="flex flex-col gap-1 p-5 bg-[#0d0d0d]"
-                  >
-                    <span className="text-2xl md:text-3xl font-bold text-white tracking-tight">{stat.value}</span>
-                    <span className="text-[10px] font-light text-white/45 uppercase tracking-[0.15em]">{stat.label}</span>
-                  </motion.div>
-                ))}
-              </div>
-
-              <Link
-                href="/about"
-                className="group self-start inline-flex items-center gap-3 text-xs font-semibold tracking-widest uppercase border border-white/20 text-white hover:border-white/50 bg-white/5 hover:bg-white/10 px-7 py-3.5 rounded-full transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-              >
-                <span>Full Studio Story</span>
-                <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
-              </Link>
-            </motion.div>
           </div>
         </div>
       </section>
@@ -1047,7 +1072,7 @@ export default function PublicHomePage() {
         className="relative w-full bg-black py-24 md:py-32 border-t border-white/10 overflow-hidden"
       >
         {/* Centered Heading */}
-        <div className="max-w-7xl mx-auto w-full px-6 md:px-12 text-center mb-16">
+        <div className="max-w-[1800px] mx-auto w-full px-6 md:px-16 lg:px-24 text-center mb-16">
           <h2 className="text-4xl md:text-6xl font-extralight tracking-tight uppercase leading-none text-white">
             <AnimatedText text="Work Showcase" />
           </h2>
@@ -1095,7 +1120,7 @@ export default function PublicHomePage() {
         id="how-we-do"
         className="relative w-full bg-black py-24 md:py-32 border-t border-white/10 overflow-hidden"
       >
-        <div className="max-w-7xl mx-auto w-full px-6 md:px-12 flex flex-col gap-16">
+        <div className="max-w-[1800px] mx-auto w-full px-6 md:px-16 lg:px-24 flex flex-col gap-16">
           <motion.div
             initial={{ opacity: 0, y: 36 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -1150,68 +1175,111 @@ export default function PublicHomePage() {
       {/* ==========================================
           FOOTER
           ========================================== */}
-      <footer className="relative w-full bg-[#060606] pt-24 pb-16 border-t border-white/10 overflow-hidden">
-        <div className="max-w-7xl mx-auto w-full px-6 md:px-12 flex flex-col gap-16">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-start">
-            <div className="md:col-span-6 flex flex-col gap-6">
-              <span className="font-bold text-sm md:text-base tracking-[0.2em] text-white uppercase">
-                JR SUTHAR & DESIGNS
+      <footer className="relative w-full bg-[#060606] pt-28 pb-16 border-t border-white/10 overflow-hidden">
+        {/* Subtle radial gradient background overlay */}
+        <div className="absolute inset-0 opacity-20 pointer-events-none"
+          style={{ backgroundImage: "radial-gradient(circle at 50% 120%, rgba(255,255,255,0.04) 0%, transparent 65%)" }} />
+
+        <div className="max-w-[1800px] mx-auto w-full px-6 md:px-16 lg:px-24 flex flex-col gap-20 relative z-10">
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-12 lg:gap-20 items-start">
+
+            {/* Column 1: Studio Identity & Time/GPS */}
+            <div className="md:col-span-5 flex flex-col gap-6">
+              <span className="font-bold text-base tracking-[0.25em] text-white uppercase">
+                JR SUTHAR / DESIGNS
               </span>
-              <p className="text-white/55 font-light text-xs md:text-sm leading-relaxed max-w-sm">
-                Architectural visualization, planning, and bespoke design studio. We shape materials and light to craft environments that harmonize with their surroundings.
+              <p className="text-white/50 font-light text-xs md:text-sm leading-relaxed max-w-sm">
+                Architectural visualization, township planning, and bespoke interior design studio. We shape materials, spaces, and light to craft realities that harmonize with their surroundings.
               </p>
+
+              {/* Dynamic local clock & Coordinates */}
+              <div className="flex flex-col gap-1.5 mt-4 border-l border-white/10 pl-4 py-1 text-[11px] font-mono text-white/35">
+                <div className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Bidasar, IN Local Time: {localTime || "12:00:00 PM"}</span>
+                </div>
+                <span>27.7951° N, 74.3168° E</span>
+              </div>
             </div>
 
+            {/* Column 2: Studio Philosophy (Geography & Materials) */}
             <div className="md:col-span-3 flex flex-col gap-4">
+              <span className="text-[10px] font-bold tracking-[0.2em] text-white/35 uppercase">Philosophy</span>
+              <div className="flex flex-col gap-3">
+                <span className="text-white text-xs font-semibold uppercase tracking-wider">
+                  Material Honesty
+                </span>
+                <p className="text-white/45 font-light text-xs leading-relaxed">
+                  We design with respect for Bidasar green rainforest marble, local sandstone, and regional clay bricks. Every line is an inquiry into material honesty and structural simplicity.
+                </p>
+              </div>
+            </div>
+
+            {/* Column 3: Navigation Links */}
+            <div className="md:col-span-2 flex flex-col gap-4 lg:pl-4">
               <span className="text-[10px] font-bold tracking-[0.2em] text-white/35 uppercase">Navigation</span>
-              <ul className="flex flex-col gap-2.5 text-xs font-light">
+              <ul className="flex flex-col gap-3 text-xs font-light">
                 <li>
-                  <Link href="/" className="text-white/55 hover:text-white transition-colors duration-200">
+                  <Link href="/" className="text-white/55 hover:text-white transition-colors duration-250 hover:translate-x-0.5 inline-block">
                     Home
                   </Link>
                 </li>
                 <li>
-                  <Link href="/#projects" className="text-white/55 hover:text-white transition-colors duration-200">
+                  <Link href="/#projects" className="text-white/55 hover:text-white transition-colors duration-250 hover:translate-x-0.5 inline-block">
                     Projects
                   </Link>
                 </li>
                 <li>
-                  <Link href="/about" className="text-white/55 hover:text-white transition-colors duration-200">
+                  <Link href="/about" className="text-white/55 hover:text-white transition-colors duration-250 hover:translate-x-0.5 inline-block">
                     About Studio
                   </Link>
                 </li>
                 <li>
-                  <Link href="/contact" className="text-white/55 hover:text-white transition-colors duration-200">
+                  <Link href="/contact" className="text-white/55 hover:text-white transition-colors duration-250 hover:translate-x-0.5 inline-block">
                     Inquire & Contact
                   </Link>
                 </li>
               </ul>
             </div>
 
-            <div className="md:col-span-3 flex flex-col gap-4">
+            {/* Column 4: Contact details */}
+            <div className="md:col-span-2 flex flex-col gap-4">
               <span className="text-[10px] font-bold tracking-[0.2em] text-white/35 uppercase">Studio Office</span>
-              <ul className="flex flex-col gap-2.5 text-xs font-light">
+              <ul className="flex flex-col gap-3 text-xs font-light">
                 <li className="text-white/55">
                   Bidasar, Rajasthan, India
                 </li>
                 <li>
-                  <a href="mailto:info@jrsuthar.com" className="text-white/55 hover:text-white transition-colors duration-200">
+                  <a href="mailto:info@jrsuthar.com" className="text-white/55 hover:text-white transition-colors duration-250 hover:translate-x-0.5 inline-block">
                     info@jrsuthar.com
                   </a>
                 </li>
                 <li>
-                  <a href="tel:+919876543210" className="text-white/55 hover:text-white transition-colors duration-200">
+                  <a href="tel:+919876543210" className="text-white/55 hover:text-white transition-colors duration-250 hover:translate-x-0.5 inline-block">
                     +91 98765 43210
                   </a>
                 </li>
               </ul>
             </div>
+
           </div>
 
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-white/10 pt-8 text-[10px] font-mono text-white/20 uppercase tracking-widest">
-            <span>© {new Date().getFullYear()} JR SUTHAR & DESIGNS.</span>
-            <span>Crafting built realities</span>
+          {/* Bottom Bar */}
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-6 border-t border-white/10 pt-8 text-[10px] font-mono text-white/20 uppercase tracking-widest">
+            <span>© {new Date().getFullYear()} JR SUTHAR & DESIGNS. All rights reserved.</span>
+
+            <button
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              className="group flex items-center gap-2 hover:text-white transition-colors duration-250 cursor-pointer"
+            >
+              <span>Back to top</span>
+              <span className="transform -rotate-90 block transition-transform duration-300 group-hover:-translate-y-0.5">
+                <ArrowRight className="h-3 w-3" />
+              </span>
+            </button>
           </div>
+
         </div>
       </footer>
       <JRSutharWatermark />
@@ -1436,7 +1504,7 @@ function OfficePhotoCard({ image }: { image: string }) {
 
 // - Animated Text Component -
 
-function AnimatedText({ text, className = "" }: { text: string; className?: string }) {
+function AnimatedText({ text, className = "", staggerWeight = true }: { text: string; className?: string; staggerWeight?: boolean }) {
   const words = text.split(" ")
   const container: Variants = {
     hidden: { opacity: 0 },
@@ -1481,6 +1549,7 @@ function AnimatedText({ text, className = "" }: { text: string; className?: stri
         <motion.span
           variants={child}
           style={{ display: "inline-block", marginRight: "0.25em" }}
+          className={staggerWeight ? (index % 2 === 1 ? "font-bold" : "font-extralight") : ""}
           key={index}
         >
           {word}
