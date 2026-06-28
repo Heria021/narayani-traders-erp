@@ -119,12 +119,23 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
           .inv-content {
             display: flex !important;
             flex-direction: column !important;
-            min-height: 277mm !important;
+            height: calc(297mm - 20mm) !important;
             box-sizing: border-box !important;
             padding: 2.5rem 2rem !important;
           }
+          .inv-main {
+            display: flex !important;
+            flex-direction: column !important;
+            flex: 1 1 auto !important;
+            min-height: 0 !important;
+          }
+          .inv-summary-container {
+            margin-top: 0.85rem !important;
+            margin-bottom: auto !important;
+          }
           .inv-footer-section {
-            margin-top: auto !important;
+            flex-shrink: 0 !important;
+            margin-top: 0 !important;
           }
         }
 
@@ -144,6 +155,11 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
         }
         .inv-content {
           padding: 2.25rem 2rem;
+        }
+        .inv-main {
+          display: flex;
+          flex-direction: column;
+          flex: 1;
         }
 
         /* ── Header ── */
@@ -534,115 +550,117 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
                   </div>
                 </div>
 
-                {/* ── Items table ───────────────────────────────────────────── */}
-                <table className="inv-table">
-                  <colgroup>
-                    <col style={{ width: '32px' }} />
-                    <col />
-                    <col style={{ width: '80px' }} />
-                    <col style={{ width: '90px' }} />
-                    <col style={{ width: '100px' }} />
-                    <col style={{ width: '60px' }} />
-                    <col style={{ width: '80px' }} />
-                    <col style={{ width: '100px' }} />
-                  </colgroup>
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Product Description</th>
-                      <th className="r">Qty</th>
-                      <th className="r">Rate (₹)</th>
-                      <th className="r">Taxable (₹)</th>
-                      <th className="r">GST%</th>
-                      <th className="r">GST (₹)</th>
-                      <th className="r">Total (₹)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sale.items.map((item, idx) => {
-                      const isBox = item.sell_mode === 'box'
-                      const lineBase = item.line_total
-                      const gstAmt = lineBase * item.tax_rate / 100
-                      const lineTotalInclTax = lineBase + gstAmt
-
-                      const qtyDisplay = isBox
-                        ? `${item.box_count} ${item.box_name ?? 'box'}${item.box_count !== 1 ? 's' : ''}`
-                        : `${item.quantity % 1 === 0 ? item.quantity : item.quantity.toFixed(3)} ${item.unit_name}`
-
-                      return (
-                        <tr key={item.id}>
-                          <td style={{ color: '#737373', fontSize: '.78rem' }}>{String(idx + 1).padStart(2, '0')}</td>
-                          <td>
-                            <span className="row-product-name">{item.product_name}</span>
-                            {isBox && item.units_per_box && (
-                              <span className="row-box-desc">
-                                Pack: {item.box_count} {item.box_name} × {item.units_per_box} {item.unit_name}
-                                {' '}= {item.quantity} {item.unit_name}
-                              </span>
-                            )}
-                          </td>
-                          <td className="qty">{qtyDisplay}</td>
-                          <td className="rate">{rupee(item.unit_price)}</td>
-                          <td className="r">{rupee(lineBase)}</td>
-                          <td className="r">{item.tax_rate}%</td>
-                          <td className="r">{rupee(gstAmt)}</td>
-                          <td className="r">{rupee(lineTotalInclTax)}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-
-                {/* ── Summary ───────────────────────────────────────────────── */}
-                <div className="inv-summary-container">
-                  <table className="inv-summary-box">
-                    <tbody>
-                      {/* Subtotal */}
+                <div className="inv-main">
+                  {/* ── Items table ───────────────────────────────────────────── */}
+                  <table className="inv-table">
+                    <colgroup>
+                      <col style={{ width: '32px' }} />
+                      <col />
+                      <col style={{ width: '80px' }} />
+                      <col style={{ width: '90px' }} />
+                      <col style={{ width: '100px' }} />
+                      <col style={{ width: '60px' }} />
+                      <col style={{ width: '80px' }} />
+                      <col style={{ width: '100px' }} />
+                    </colgroup>
+                    <thead>
                       <tr>
-                        <td>Subtotal</td>
-                        <td>{rupee(sale.subtotal)}</td>
+                        <th>#</th>
+                        <th>Product Description</th>
+                        <th className="r">Qty</th>
+                        <th className="r">Rate (₹)</th>
+                        <th className="r">Taxable (₹)</th>
+                        <th className="r">GST%</th>
+                        <th className="r">GST (₹)</th>
+                        <th className="r">Total (₹)</th>
                       </tr>
-                      {/* GST */}
-                      {hasTax && (
-                        <tr className="tax-row" style={{ color: '#404040' }}>
-                          <td>GST Output Tax</td>
-                          <td>{rupee(sale.tax_amount)}</td>
-                        </tr>
-                      )}
-                      {/* Discount */}
-                      {hasDiscount && (
-                        <tr className="disc-row">
-                          <td>Discount</td>
-                          <td>− {rupee(sale.discount)}</td>
-                        </tr>
-                      )}
-                      {/* Grand Total */}
-                      <tr className="grand-total-row">
-                        <td>Grand Total</td>
-                        <td>{rupee(sale.grand_total)}</td>
-                      </tr>
-                      {/* Amount Paid */}
-                      {hasPaid && (
-                        <tr className="paid-row">
-                          <td>Amount Paid</td>
-                          <td>− {rupee(sale.amount_paid)}</td>
-                        </tr>
-                      )}
-                      {/* Balance Due */}
-                      {hasBalance ? (
-                        <>
-                          <tr className="balance-row">
-                            <td>Balance Due</td>
-                            <td>{rupee(sale.balance_due)}</td>
+                    </thead>
+                    <tbody>
+                      {sale.items.map((item, idx) => {
+                        const isBox = item.sell_mode === 'box'
+                        const lineBase = item.line_total
+                        const gstAmt = lineBase * item.tax_rate / 100
+                        const lineTotalInclTax = lineBase + gstAmt
+
+                        const qtyDisplay = isBox
+                          ? `${item.box_count} ${item.box_name ?? 'box'}${item.box_count !== 1 ? 's' : ''}`
+                          : `${item.quantity % 1 === 0 ? item.quantity : item.quantity.toFixed(3)} ${item.unit_name}`
+
+                        return (
+                          <tr key={item.id}>
+                            <td style={{ color: '#737373', fontSize: '.78rem' }}>{String(idx + 1).padStart(2, '0')}</td>
+                            <td>
+                              <span className="row-product-name">{item.product_name}</span>
+                              {isBox && item.units_per_box && (
+                                <span className="row-box-desc">
+                                  Pack: {item.box_count} {item.box_name} × {item.units_per_box} {item.unit_name}
+                                  {' '}= {item.quantity} {item.unit_name}
+                                </span>
+                              )}
+                            </td>
+                            <td className="qty">{qtyDisplay}</td>
+                            <td className="rate">{rupee(item.unit_price)}</td>
+                            <td className="r">{rupee(lineBase)}</td>
+                            <td className="r">{item.tax_rate}%</td>
+                            <td className="r">{rupee(gstAmt)}</td>
+                            <td className="r">{rupee(lineTotalInclTax)}</td>
                           </tr>
-                        </>
-                      ) : hasPaid ? (
-                        <tr className="settled-row">
-                          <td colSpan={2}>✓ Fully Settled</td>
-                        </tr>
-                      ) : null}
+                        )
+                      })}
                     </tbody>
                   </table>
+
+                  {/* ── Summary ───────────────────────────────────────────────── */}
+                  <div className="inv-summary-container">
+                    <table className="inv-summary-box">
+                      <tbody>
+                        {/* Subtotal */}
+                        <tr>
+                          <td>Subtotal</td>
+                          <td>{rupee(sale.subtotal)}</td>
+                        </tr>
+                        {/* GST */}
+                        {hasTax && (
+                          <tr className="tax-row" style={{ color: '#404040' }}>
+                            <td>GST Output Tax</td>
+                            <td>{rupee(sale.tax_amount)}</td>
+                          </tr>
+                        )}
+                        {/* Discount */}
+                        {hasDiscount && (
+                          <tr className="disc-row">
+                            <td>Discount</td>
+                            <td>− {rupee(sale.discount)}</td>
+                          </tr>
+                        )}
+                        {/* Grand Total */}
+                        <tr className="grand-total-row">
+                          <td>Grand Total</td>
+                          <td>{rupee(sale.grand_total)}</td>
+                        </tr>
+                        {/* Amount Paid */}
+                        {hasPaid && (
+                          <tr className="paid-row">
+                            <td>Amount Paid</td>
+                            <td>− {rupee(sale.amount_paid)}</td>
+                          </tr>
+                        )}
+                        {/* Balance Due */}
+                        {hasBalance ? (
+                          <>
+                            <tr className="balance-row">
+                              <td>Balance Due</td>
+                              <td>{rupee(sale.balance_due)}</td>
+                            </tr>
+                          </>
+                        ) : hasPaid ? (
+                          <tr className="settled-row">
+                            <td colSpan={2}>✓ Fully Settled</td>
+                          </tr>
+                        ) : null}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
                 {/* ── Footer Section (Pushed to bottom on print) ── */}
