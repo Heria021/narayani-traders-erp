@@ -1,12 +1,19 @@
 'use client'
 
-import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Printer, X, CreditCard } from 'lucide-react'
+import { Printer, CreditCard } from 'lucide-react'
 import type { SaleWithItems } from './types'
 import { PAYMENT_METHOD_LABELS } from './types'
 import { SHOP } from '@/lib/config/shop'
 import { cn } from '@/lib/utils'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from '@/components/ui/sheet'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const FLOAT_DUST = 0.001
@@ -47,19 +54,7 @@ interface Props {
 // ─── InvoiceModal ─────────────────────────────────────────────────────────────
 
 export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
-  useEffect(() => {
-    if (!open) return
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [open, onClose])
-
-  useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : ''
-    return () => { document.body.style.overflow = '' }
-  }, [open])
-
-  if (!open || !sale) return null
+  if (!sale) return null
 
   const customer   = getWalkinDisplayName(sale)
   const dueDate    = getDueDate(sale)
@@ -78,12 +73,57 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
   })
 
   return (
-    <>
+    <Sheet open={open} onOpenChange={v => !v && onClose()}>
       {/* Print CSS */}
       <style>{`
         @media print {
+          @page {
+            size: A4;
+            margin: 10mm;
+          }
           body > * { display: none !important; }
-          #nt-invoice-print-root { display: block !important; }
+          body > [data-slot="sheet-portal"] { display: block !important; }
+          body > [data-slot="sheet-portal"] [data-slot="sheet-content"] {
+            display: block !important;
+            background: white !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: none !important;
+            width: 100% !important;
+            height: auto !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+          }
+          [data-slot="sheet-overlay"],
+          [data-slot="sheet-header"],
+          [data-slot="sheet-footer"],
+          [data-slot="sheet-close"],
+          .no-print {
+            display: none !important;
+          }
+          #nt-invoice-print-root {
+            display: block !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: none !important;
+            width: 100% !important;
+            height: auto !important;
+          }
+          .inv-content {
+            display: flex !important;
+            flex-direction: column !important;
+            min-height: 277mm !important;
+            box-sizing: border-box !important;
+            padding: 2.5rem 2rem !important;
+          }
+          .inv-terms {
+            margin-top: auto !important;
+          }
         }
         #nt-invoice-print-root {
           display: block;
@@ -159,67 +199,38 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
         .inv-footer-block { font-size: .74rem; color: #1a1612; line-height: 1.7; }
         .inv-footer-tagline { margin-top: .8rem; text-align: center; font-size: .8rem; font-style: italic; color: #9a8274; padding-top: .6rem; border-top: 1px dashed #e2d8cf; }
 
-        @media print {
-          .inv-content { padding: 0; }
-        }
       `}</style>
 
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
-        onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-none lg:w-[800px] lg:max-w-[800px] h-full flex flex-col p-0 overflow-hidden border-l bg-white dark:bg-zinc-950"
       >
-        <div className="relative w-full max-w-2xl max-h-[92vh] overflow-hidden bg-white dark:bg-white rounded-2xl shadow-2xl flex flex-col">
-
-          {/* ── Action bar (no-print) ──────────────────────────────────────── */}
-          <div className="no-print flex items-center justify-between border-b border-gray-200 bg-white/95 backdrop-blur px-5 py-3 shrink-0 rounded-t-2xl">
-            <div className="flex items-center gap-2">
-              <span className={`inline-block px-2.5 py-0.5 rounded text-xs font-bold inv-badge ${isUdhaar ? (hasPaid ? 'inv-badge--partial' : 'inv-badge--due') : 'inv-badge--paid'}`}>
-                {isUdhaar ? (hasPaid ? 'Partial' : 'Udhaar') : '✓ Paid'}
-              </span>
-              <span className="font-mono text-sm font-bold text-gray-800">
-                {sale.invoice_number}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              {hasBalance && onRecordPayment && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onRecordPayment}
-                  className="h-8 px-3 text-xs gap-1.5"
-                >
-                  <CreditCard className="size-3.5" />
-                  Record Payment
-                </Button>
-              )}
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => window.print()}
-                className="h-8 px-3 text-xs gap-1.5"
-              >
-                <Printer className="size-3.5" />
-                Print / PDF
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onClose}
-                className="size-8 text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-              >
-                <X className="size-4" />
-              </Button>
+        {/* ── Header ────────────────────────────────────────────────── */}
+        <SheetHeader className="px-8 py-5 border-b shrink-0 bg-white dark:bg-zinc-950 select-none">
+          <div className="flex items-start justify-between gap-4 pr-8">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <SheetTitle className="text-lg font-semibold tracking-tight">
+                  Invoice Details
+                </SheetTitle>
+                <span className={`inline-block px-2.5 py-0.5 rounded text-xs font-bold font-sans ${isUdhaar ? (hasPaid ? 'inv-badge--partial' : 'inv-badge--due') : 'inv-badge--paid'}`}>
+                  {isUdhaar ? (hasPaid ? 'Partial' : 'Udhaar') : '✓ Paid'}
+                </span>
+              </div>
+              <SheetDescription className="text-sm text-muted-foreground">
+                Bill #{sale.invoice_number} &middot; {customer.name}
+              </SheetDescription>
             </div>
           </div>
+        </SheetHeader>
 
-          {/* ── Scrollable invoice ─────────────────────────────────────────── */}
-          <div
-            id="nt-invoice-print-root"
-            className="overflow-y-auto overscroll-contain [scrollbar-width:thin] flex-1"
-          >
-            <div className="inv-body">
-              <div className="inv-content">
+        {/* ── Scrollable Body ────────────────────────────────────────── */}
+        <div
+          id="nt-invoice-print-root"
+          className="flex-1 overflow-y-auto bg-white dark:bg-white text-zinc-900 [scrollbar-width:thin] select-text"
+        >
+          <div className="inv-body">
+            <div className="inv-content">
 
                 {/* ── Shop header ──────────────────────────────────────────── */}
                 <div className="inv-header">
@@ -438,9 +449,39 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
 
               </div>{/* /inv-content */}
             </div>{/* /inv-body */}
-          </div>{/* /scrollable */}
-        </div>
-      </div>
-    </>
+          </div>{/* /nt-invoice-print-root */}
+
+        {/* ── Footer ───────────────────────────────────────────────── */}
+        <SheetFooter className="px-8 py-5 border-t shrink-0 flex flex-row items-center justify-between gap-3 bg-white dark:bg-zinc-950 no-print select-none">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+          >
+            Close
+          </Button>
+          <div className="flex items-center gap-3">
+            {hasBalance && onRecordPayment && (
+              <Button
+                variant="outline"
+                onClick={onRecordPayment}
+                className="gap-1.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900 shrink-0 font-medium"
+              >
+                <CreditCard className="size-4" />
+                Record Payment
+              </Button>
+            )}
+            <Button
+              variant="default"
+              onClick={() => window.print()}
+              className="gap-1.5 shrink-0 font-medium bg-zinc-900 text-zinc-50 hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            >
+              <Printer className="size-4" />
+              Print / PDF
+            </Button>
+          </div>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   )
 }
