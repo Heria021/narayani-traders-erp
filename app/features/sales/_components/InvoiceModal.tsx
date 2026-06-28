@@ -76,6 +76,8 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
     <Sheet open={open} onOpenChange={v => !v && onClose()}>
       {/* Print CSS */}
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
         @media print {
           @page {
             size: A4;
@@ -125,289 +127,338 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
             margin-top: auto !important;
           }
         }
+
         #nt-invoice-print-root {
           display: block;
         }
 
-        /* ── Invoice layout ── */
+        /* ── Base Reset (Black & White Theme) ── */
         .inv-body {
-          font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-          color: #18181b; /* Zinc-900 */
+          font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          color: #000000;
+          background-color: #ffffff;
           font-size: 13px;
           line-height: 1.5;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
         }
         .inv-content {
-          padding: 2.25rem 2rem;
+          padding: 2.5rem 2rem;
         }
 
-        /* Header */
+        /* ── Header ── */
         .inv-header {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 1.25rem;
+          margin-bottom: 2rem;
+        }
+        .inv-brand {
+          display: flex;
+          flex-direction: column;
         }
         .inv-shop-name {
-          font-family: 'Syne', Georgia, serif;
-          font-size: 1.45rem;
+          font-size: 1.75rem;
           font-weight: 800;
-          color: #18181b;
-          letter-spacing: -0.02em;
-        }
-        .inv-shop-name span {
-          color: #d97706;
+          color: #000000;
+          letter-spacing: -0.03em;
+          line-height: 1.2;
         }
         .inv-shop-sub {
-          font-size: 0.65rem;
-          font-weight: 700;
-          color: #71717a; /* Zinc-500 */
+          font-size: 0.72rem;
+          font-weight: 600;
+          color: #000000;
           text-transform: uppercase;
-          letter-spacing: 0.08em;
-          margin-top: 0.15rem;
-        }
-        .inv-shop-meta {
-          font-size: 0.76rem;
-          color: #52525b; /* Zinc-600 */
-          margin-top: 0.5rem;
-          line-height: 1.6;
+          letter-spacing: 0.1em;
+          margin-top: 0.25rem;
         }
         .inv-header-right {
           text-align: right;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
         }
-        .inv-billno-label {
-          font-size: 1.15rem;
+        .inv-title {
+          font-size: 1.75rem;
           font-weight: 800;
-          color: #18181b;
           text-transform: uppercase;
-          letter-spacing: 0.08em;
+          letter-spacing: 0.05em;
+          color: #000000;
+          line-height: 1.2;
+          margin-bottom: 0.5rem;
         }
         .inv-billno-val {
-          font-family: 'JetBrains Mono', monospace;
-          font-weight: 600;
-          font-size: 0.95rem;
-          color: #52525b;
-          margin: 0.25rem 0;
+          font-size: 0.85rem;
+          color: #000000;
         }
-        .inv-gstin {
-          font-size: 0.72rem;
-          font-weight: 600;
-          color: #71717a;
+        .inv-billno-val .mono {
           font-family: 'JetBrains Mono', monospace;
+          font-weight: 600;
         }
 
-        /* Meta strip */
-        .inv-meta {
+        /* ── Metadata Grid ── */
+        .inv-meta-grid {
           display: grid;
-          grid-template-columns: 1.2fr 1fr 1fr;
-          gap: 1rem;
-          padding: 0.85rem 0;
-          border-top: 1px solid #e4e4e7; /* Zinc-200 */
-          border-bottom: 1px solid #e4e4e7;
-          margin-bottom: 1rem;
+          grid-template-columns: 1fr 1fr;
+          gap: 2rem;
+          padding: 1.25rem 0;
+          border-top: 1px solid #000000;
+          border-bottom: 1px solid #000000;
+          margin-bottom: 1.5rem;
         }
-        .inv-meta-item {
-          font-size: 0.82rem;
-          color: #18181b;
-          line-height: 1.5;
+        .inv-meta-col {
+          display: flex;
+          flex-direction: column;
         }
-        .inv-meta-lbl {
-          font-size: 0.62rem;
+        .inv-meta-label {
+          font-size: 0.68rem;
           font-weight: 700;
-          color: #71717a;
+          color: #000000;
           text-transform: uppercase;
-          letter-spacing: 0.06em;
-          margin-bottom: 0.35rem;
+          letter-spacing: 0.08em;
+          margin-bottom: 0.5rem;
+        }
+        .inv-meta-value {
+          font-size: 0.85rem;
+          color: #000000;
+          line-height: 1.6;
+        }
+        .inv-meta-value strong {
+          font-weight: 700;
+        }
+        .inv-meta-value .mono {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 0.8rem;
+          font-weight: 600;
         }
 
-        /* Badge */
-        .inv-badge {
-          display: inline-block;
-          padding: 0.15rem 0.5rem;
+        /* ── Status Badges ── */
+        .inv-status {
+          display: inline-flex;
+          align-items: center;
+          padding: 0.15rem 0.45rem;
           border-radius: 4px;
-          font-size: 0.7rem;
+          font-size: 0.65rem;
           font-weight: 700;
           text-transform: uppercase;
-          letter-spacing: 0.04em;
-        }
-        .inv-badge--paid {
-          background: #ecfdf5; /* Emerald-50 */
-          color: #065f46; /* Emerald-800 */
-          border: 1px solid #a7f3d0;
-        }
-        .inv-badge--partial {
-          background: #fffbeb; /* Amber-50 */
-          color: #92400e; /* Amber-800 */
-          border: 1px solid #fde68a;
-        }
-        .inv-badge--due {
-          background: #fef2f2; /* Red-50 */
-          color: #991b1b; /* Red-800 */
-          border: 1px solid #fecaca;
+          letter-spacing: 0.05em;
+          border: 1px solid #000000;
+          color: #000000;
+          background-color: #ffffff;
         }
 
-        /* Items table */
+        /* ── Table Layout ── */
         .inv-table {
           width: 100%;
           border-collapse: collapse;
-          margin: 1.2rem 0;
-          table-layout: fixed;
+          margin: 1.5rem 0;
         }
         .inv-table th {
-          padding: 0.5rem 0.35rem;
-          font-size: 0.65rem;
+          font-size: 0.68rem;
           font-weight: 700;
-          color: #71717a;
+          color: #000000;
           text-transform: uppercase;
-          letter-spacing: 0.05em;
-          border-bottom: 2px solid #27272a; /* Zinc-800 */
+          letter-spacing: 0.08em;
+          padding: 0.75rem 0.5rem;
+          border-bottom: 2px solid #000000;
           text-align: left;
         }
         .inv-table th.r {
           text-align: right;
         }
         .inv-table td {
-          padding: 0.55rem 0.35rem;
-          border-bottom: 1px solid #f4f4f5; /* Zinc-100 */
-          font-size: 0.82rem;
-          color: #27272a;
-          vertical-align: top;
+          padding: 0.85rem 0.5rem;
+          border-bottom: 1px solid #e5e5e5;
+          font-size: 0.85rem;
+          color: #000000;
+          vertical-align: middle;
         }
         .inv-table td.r {
           text-align: right;
-          font-family: 'JetBrains Mono', 'Courier New', monospace;
-          white-space: nowrap;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 0.8rem;
+          font-weight: 500;
           font-variant-numeric: tabular-nums;
         }
-        .inv-table .row-box-note {
+        .inv-table td.qty {
+          text-align: right;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 0.8rem;
+          font-variant-numeric: tabular-nums;
+        }
+        .inv-table td.rate {
+          text-align: right;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 0.8rem;
+          font-variant-numeric: tabular-nums;
+        }
+        .inv-table .row-product-name {
+          font-weight: 500;
+          color: #000000;
+        }
+        .inv-table .row-box-desc {
           display: block;
-          font-size: 0.68rem;
-          color: #71717a;
-          margin-top: 3px;
+          font-size: 0.72rem;
+          color: #404040;
+          margin-top: 0.25rem;
         }
 
-        /* Summary */
-        .inv-summary {
-          margin: 1rem 0 0;
+        /* ── Totals/Summary ── */
+        .inv-summary-container {
           display: flex;
-          flex-direction: column;
-          align-items: flex-end;
+          justify-content: flex-end;
+          margin-top: 1rem;
+          margin-bottom: 1.5rem;
         }
-        .inv-summary-table {
-          width: 58%;
-          max-width: 320px;
-          min-width: 220px;
+        .inv-summary-box {
+          width: 60%;
+          max-width: 340px;
+          min-width: 240px;
           border-collapse: collapse;
         }
-        .inv-summary-table td {
-          padding: 0.35rem 0.35rem;
-          font-size: 0.82rem;
-          color: #27272a;
+        .inv-summary-box td {
+          padding: 0.45rem 0.5rem;
+          font-size: 0.85rem;
+          color: #000000;
         }
-        .inv-summary-table td:last-child {
+        .inv-summary-box td:last-child {
           text-align: right;
-          font-family: 'JetBrains Mono', 'Courier New', monospace;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 0.85rem;
           font-weight: 600;
-          white-space: nowrap;
+          color: #000000;
           font-variant-numeric: tabular-nums;
         }
-        .inv-summary-table .tax-line td {
-          color: #71717a;
-          font-size: 0.78rem;
+        .inv-summary-box .grand-total-row {
+          border-top: 1px solid #000000;
+          border-bottom: 2px solid #000000;
         }
-        .inv-summary-table .disc-line td {
-          color: #047857; /* Emerald-700 */
-        }
-        .inv-summary-table .total-line {
-          border-top: 1.5px solid #e4e4e7;
-          border-bottom: 1.5px solid #e4e4e7;
-        }
-        .inv-summary-table .total-line td {
+        .inv-summary-box .grand-total-row td {
           font-weight: 800;
-          font-size: 0.98rem;
-          color: #18181b;
-          padding-top: 0.55rem;
-          padding-bottom: 0.55rem;
+          font-size: 1.05rem;
+          color: #000000;
+          padding-top: 0.75rem;
+          padding-bottom: 0.75rem;
         }
-        .inv-summary-table .paid-line td {
-          color: #15803d;
-          font-size: 0.82rem;
+        .inv-summary-box .grand-total-row td:last-child {
+          font-size: 1.05rem;
+          font-weight: 800;
         }
-        .inv-summary-table .balance-line {
-          background: #fffbeb; /* Amber-50 */
-        }
-        .inv-summary-table .balance-line td {
-          color: #b45309; /* Amber-700 */
+        .inv-summary-box .balance-row td {
+          color: #000000;
           font-weight: 700;
-          font-size: 0.88rem;
-          padding: 0.55rem 0.35rem;
-          border-radius: 4px;
-        }
-        .inv-summary-table .settled-line td {
-          color: #15803d;
-          font-size: 0.78rem;
-          font-weight: 600;
-        }
-        .inv-summary-table .due-date-line td {
-          font-size: 0.72rem;
-          color: #71717a;
-          font-style: italic;
+          padding: 0.6rem 0.5rem;
+          border-top: 1px dashed #000000;
+          border-bottom: 1px dashed #000000;
         }
 
-        /* Terms */
-        .inv-terms {
+        /* ── Terms & Notes ── */
+        .inv-notes-terms {
           margin-top: 1.5rem;
-          padding: 0.85rem 1rem;
-          background: #fafafa;
-          border: 1px solid #e4e4e7;
+          display: flex;
+          flex-direction: column;
+          gap: 1.25rem;
+          width: 100%;
+        }
+        .inv-terms-card {
+          border: 1px solid #000000;
           border-radius: 6px;
+          padding: 1rem 1.25rem;
+          width: 100%;
         }
         .inv-terms-title {
-          font-size: 0.65rem;
-          font-weight: 700;
-          text-transform: uppercase;
-          color: #71717a;
-          letter-spacing: 0.05em;
-          margin-bottom: 0.4rem;
-        }
-        .inv-terms ol {
-          margin: 0;
-          padding-left: 1.1rem;
-        }
-        .inv-terms li {
           font-size: 0.72rem;
-          color: #52525b;
-          margin-bottom: 0.25rem;
+          font-weight: 700;
+          color: #000000;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          margin-bottom: 0.5rem;
+        }
+        .inv-terms-list {
+          margin: 0;
+          padding-left: 1.25rem;
+          list-style-type: disc !important;
+        }
+        .inv-terms-list li {
+          font-size: 0.74rem;
+          color: #000000;
+          margin-bottom: 0.35rem;
           line-height: 1.5;
         }
 
-        /* Footer strip */
+        /* ── Footer / Payment block ── */
         .inv-footer-strip {
           display: flex;
           justify-content: space-between;
-          gap: 1.5rem;
-          margin-top: 1.5rem;
-          padding-top: 1rem;
-          border-top: 1px solid #e4e4e7;
+          align-items: flex-end;
+          border-top: 1px solid #000000;
+          padding-top: 1.25rem;
+          margin-top: 2rem;
         }
-        .inv-footer-block {
-          font-size: 0.74rem;
-          color: #27272a;
+        .inv-contact-details {
+          font-size: 0.78rem;
+          color: #000000;
           line-height: 1.7;
         }
-        .inv-footer-tagline {
-          margin-top: 1rem;
+        .inv-contact-details .label {
+          font-weight: 600;
+        }
+        .inv-pay-card {
+          display: flex;
+          align-items: center;
+          gap: 1.5rem;
+          background: transparent;
+          border: none;
+          padding: 0;
+        }
+        .inv-pay-info {
+          display: flex;
+          flex-direction: column;
+          text-align: right;
+        }
+        .inv-pay-title {
+          font-size: 0.68rem;
+          font-weight: 700;
+          color: #000000;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          margin-bottom: 0.2rem;
+        }
+        .inv-pay-value {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 0.9rem;
+          font-weight: 700;
+          color: #000000;
+        }
+        .inv-pay-sub {
+          font-size: 0.72rem;
+          color: #404040;
+          margin-top: 0.15rem;
+        }
+        .inv-qr-img {
+          width: 80px;
+          height: 80px;
+          object-fit: contain;
+          border: 1px solid #000000;
+          border-radius: 4px;
+          padding: 2px;
+          background-color: #ffffff;
+        }
+        .inv-tagline {
+          margin-top: 1.25rem;
           text-align: center;
-          font-size: 0.78rem;
+          font-size: 0.8rem;
           font-style: italic;
-          color: #71717a;
+          color: #404040;
+          letter-spacing: 0.02em;
           padding-top: 0.75rem;
-          border-top: 1px dashed #e4e4e7;
+          border-top: 1px dashed #000000;
         }
       `}</style>
 
       <SheetContent
         side="right"
-        className="w-full sm:max-w-none lg:w-[800px] lg:max-w-[800px] h-full flex flex-col p-0 overflow-hidden border-l bg-white dark:bg-zinc-950"
+        className="w-full sm:max-w-none lg:w-[800px] lg:max-w-[800px] h-full flex flex-col p-0 overflow-hidden border-l bg-stone-50 dark:bg-zinc-950"
       >
         {/* ── Header ────────────────────────────────────────────────── */}
         <SheetHeader className="px-8 py-5 border-b shrink-0 bg-white dark:bg-zinc-950 select-none">
@@ -417,7 +468,7 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
                 <SheetTitle className="text-lg font-semibold tracking-tight">
                   Invoice Details
                 </SheetTitle>
-                <span className={`inline-block px-2.5 py-0.5 rounded text-xs font-bold font-sans ${isUdhaar ? (hasPaid ? 'inv-badge--partial' : 'inv-badge--due') : 'inv-badge--paid'}`}>
+                <span className="inline-block px-2.5 py-0.5 rounded text-xs font-bold font-sans border border-zinc-300 bg-white text-zinc-900">
                   {isUdhaar ? (hasPaid ? 'Partial' : 'Udhaar') : '✓ Paid'}
                 </span>
               </div>
@@ -438,97 +489,80 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
 
                 {/* ── Shop header ──────────────────────────────────────────── */}
                 <div className="inv-header">
-                  <div>
+                  <div className="inv-brand">
                     <div className="inv-shop-name">
-                      {SHOP.name1} <span>{SHOP.name2}</span>
+                      {SHOP.name1}{SHOP.name2}
                     </div>
                     <div className="inv-shop-sub">{SHOP.tagline}</div>
-                    <div className="inv-shop-meta">
-                      {SHOP.address}<br />
-                      {SHOP.phone1} &nbsp;·&nbsp; {SHOP.phone2} &nbsp;·&nbsp; {SHOP.email}
-                    </div>
                   </div>
                   <div className="inv-header-right">
-                    <div className="inv-billno-label">Tax Invoice</div>
-                    <div className="inv-billno-val">{sale.invoice_number}</div>
-                    <div className="inv-gstin">GSTIN: {SHOP.gstin}</div>
-                    {sale.notes && (
-                      <div style={{ fontSize: '.7rem', color: '#6b5e52', marginTop: '.2rem' }}>
-                        Note: {sale.notes}
-                      </div>
-                    )}
+                    <div className="inv-title">TAX INVOICE</div>
+                    <div className="inv-billno-val">
+                      Invoice No: <span className="mono">{sale.invoice_number}</span>
+                    </div>
+                    <div className="inv-billno-val" style={{ marginTop: '0.15rem' }}>
+                      Date: <span className="mono">{fmtDate(sale.sale_date)}</span> &nbsp;·&nbsp; <span className="mono">{saleTime}</span>
+                    </div>
+                    <div className="inv-billno-val flex items-center justify-end gap-2" style={{ marginTop: '0.35rem' }}>
+                      Status: <span className="inv-status" style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>
+                        {isUdhaar ? (hasPaid ? 'Partial' : 'Udhaar') : 'Paid'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                {/* ── Meta strip ───────────────────────────────────────────── */}
-                <div className="inv-meta">
+                {/* ── Meta grid (From & Bill To) ────────────────────────────── */}
+                <div className="inv-meta-grid">
+                  {/* From */}
+                  <div className="inv-meta-col">
+                    <div className="inv-meta-label">From</div>
+                    <div className="inv-meta-value">
+                      <strong>{SHOP.name1} {SHOP.name2}</strong><br />
+                      {SHOP.address}<br />
+                      Phone: {SHOP.phone1} {SHOP.phone2 ? ` / ${SHOP.phone2}` : ''}<br />
+                      Email: {SHOP.email}<br />
+                      <span className="mono" style={{ fontSize: '0.78rem', fontWeight: 700 }}>GSTIN: {SHOP.gstin}</span>
+                    </div>
+                  </div>
                   {/* Bill To */}
-                  <div className="inv-meta-item">
-                    <div className="inv-meta-lbl">Bill To</div>
-                    <strong style={{ fontSize: '.88rem' }}>{customer.name}</strong>
-                    {sale.customer_phone && (
-                      <><br /><span style={{ fontSize: '.74rem', color: '#6b5e52' }}>📞 {sale.customer_phone}</span></>
-                    )}
-                    {(sale.customer_address || sale.customer_city) && (
-                      <>
-                        <br />
-                        <span style={{ fontSize: '.74rem', color: '#6b5e52' }}>
-                          📍 {[sale.customer_address, sale.customer_city].filter(Boolean).join(', ')}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                  {/* Date */}
-                  <div className="inv-meta-item">
-                    <div className="inv-meta-lbl">Date</div>
-                    {fmtDate(sale.sale_date)}<br />
-                    <span style={{ fontSize: '.74rem', color: '#6b5e52' }}>{saleTime}</span>
-                  </div>
-                  {/* Payment */}
-                  <div className="inv-meta-item">
-                    <div className="inv-meta-lbl">Payment</div>
-                    <span className={`inv-badge ${isUdhaar ? (hasPaid ? 'inv-badge--partial' : 'inv-badge--due') : 'inv-badge--paid'}`}>
-                      {isUdhaar
-                        ? (hasPaid ? `Partial · ${rupee(sale.balance_due)} due` : `Udhaar: ${rupee(sale.balance_due)}`)
-                        : '✓ Paid'}
-                    </span>
-                    {isUdhaar && dueDate && (
-                      <><br /><span style={{ fontSize: '.7rem', color: '#b91c1c', marginTop: '3px', display: 'block' }}>Due by {dueDate}</span></>
-                    )}
-                    {sale.payments && sale.payments.length > 0 ? (
-                      sale.payments.map((p) => (
-                        <div key={p.id} style={{ fontSize: '.7rem', color: '#6b5e52', marginTop: '3px', lineHeight: '1.2' }}>
-                          • {PAYMENT_METHOD_LABELS[p.payment_method] || p.payment_method}
-                          {p.reference_number ? ` (Ref: ${p.reference_number})` : ''}
-                        </div>
-                      ))
-                    ) : (
-                      hasPaid && <div style={{ fontSize: '.7rem', color: '#dc2626', marginTop: '3px' }}>• Payment method unlinked</div>
-                    )}
+                  <div className="inv-meta-col">
+                    <div className="inv-meta-label">Bill To</div>
+                    <div className="inv-meta-value">
+                      <strong>{customer.name}</strong>
+                      {sale.customer_phone && (
+                        <><br />Phone: {sale.customer_phone}</>
+                      )}
+                      {(sale.customer_address || sale.customer_city) && (
+                        <>
+                          <br />
+                          Address: {[sale.customer_address, sale.customer_city].filter(Boolean).join(', ')}
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
 
                 {/* ── Items table ───────────────────────────────────────────── */}
                 <table className="inv-table">
                   <colgroup>
-                    <col style={{ width: '28px' }} />
+                    <col style={{ width: '32px' }} />
                     <col />
-                    <col style={{ width: '70px' }} />
-                    <col style={{ width: '85px' }} />
-                    <col style={{ width: '95px' }} />
-                    <col style={{ width: '55px' }} />
-                    <col style={{ width: '75px' }} />
-                    <col style={{ width: '95px' }} />
+                    <col style={{ width: '80px' }} />
+                    <col style={{ width: '90px' }} />
+                    <col style={{ width: '100px' }} />
+                    <col style={{ width: '60px' }} />
+                    <col style={{ width: '80px' }} />
+                    <col style={{ width: '100px' }} />
                   </colgroup>
                   <thead>
                     <tr>
                       <th>#</th>
-                      <th>Product</th>
+                      <th>Product Description</th>
                       <th className="r">Qty</th>
                       <th className="r">Rate (₹)</th>
                       <th className="r">Taxable (₹)</th>
                       <th className="r">GST%</th>
-                      <th className="r">GST</th>
+                      <th className="r">GST (₹)</th>
                       <th className="r">Total (₹)</th>
                     </tr>
                   </thead>
@@ -540,23 +574,23 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
                       const lineTotalInclTax = lineBase + gstAmt
 
                       const qtyDisplay = isBox
-                        ? `${item.box_count} ${item.box_name ?? 'box'}${(item.box_count ?? 0) !== 1 ? 'es' : ''}`
+                        ? `${item.box_count} ${item.box_name ?? 'box'}${item.box_count !== 1 ? 's' : ''}`
                         : `${item.quantity % 1 === 0 ? item.quantity : item.quantity.toFixed(3)} ${item.unit_name}`
 
                       return (
                         <tr key={item.id}>
-                          <td style={{ color: '#9a8274', fontSize: '.78rem' }}>{idx + 1}.</td>
+                          <td style={{ color: '#737373', fontSize: '.78rem' }}>{String(idx + 1).padStart(2, '0')}</td>
                           <td>
-                            {item.product_name}
+                            <span className="row-product-name">{item.product_name}</span>
                             {isBox && item.units_per_box && (
-                              <span className="row-box-note">
-                                {item.box_count} {item.box_name} × {item.units_per_box} {item.unit_name}
+                              <span className="row-box-desc">
+                                Pack: {item.box_count} {item.box_name} × {item.units_per_box} {item.unit_name}
                                 {' '}= {item.quantity} {item.unit_name}
                               </span>
                             )}
                           </td>
-                          <td className="r">{qtyDisplay}</td>
-                          <td className="r">{rupee(item.unit_price)}</td>
+                          <td className="qty">{qtyDisplay}</td>
+                          <td className="rate">{rupee(item.unit_price)}</td>
                           <td className="r">{rupee(lineBase)}</td>
                           <td className="r">{item.tax_rate}%</td>
                           <td className="r">{rupee(gstAmt)}</td>
@@ -568,8 +602,8 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
                 </table>
 
                 {/* ── Summary ───────────────────────────────────────────────── */}
-                <div className="inv-summary">
-                  <table className="inv-summary-table">
+                <div className="inv-summary-container">
+                  <table className="inv-summary-box">
                     <tbody>
                       {/* Subtotal */}
                       <tr>
@@ -578,26 +612,26 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
                       </tr>
                       {/* GST */}
                       {hasTax && (
-                        <tr className="tax-line">
-                          <td>GST / Tax</td>
+                        <tr className="tax-row" style={{ color: '#404040' }}>
+                          <td>GST Output Tax</td>
                           <td>{rupee(sale.tax_amount)}</td>
                         </tr>
                       )}
                       {/* Discount */}
                       {hasDiscount && (
-                        <tr className="disc-line">
+                        <tr className="disc-row">
                           <td>Discount</td>
                           <td>− {rupee(sale.discount)}</td>
                         </tr>
                       )}
                       {/* Grand Total */}
-                      <tr className="total-line">
+                      <tr className="grand-total-row">
                         <td>Grand Total</td>
                         <td>{rupee(sale.grand_total)}</td>
                       </tr>
                       {/* Amount Paid */}
                       {hasPaid && (
-                        <tr className="paid-line">
+                        <tr className="paid-row">
                           <td>Amount Paid</td>
                           <td>− {rupee(sale.amount_paid)}</td>
                         </tr>
@@ -605,18 +639,13 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
                       {/* Balance Due */}
                       {hasBalance ? (
                         <>
-                          <tr className="balance-line">
+                          <tr className="balance-row">
                             <td>Balance Due</td>
                             <td>{rupee(sale.balance_due)}</td>
                           </tr>
-                          {dueDate && (
-                            <tr className="due-date-line">
-                              <td colSpan={2}>Due by {dueDate}</td>
-                            </tr>
-                          )}
                         </>
                       ) : hasPaid ? (
-                        <tr className="settled-line">
+                        <tr className="settled-row">
                           <td colSpan={2}>✓ Fully Settled</td>
                         </tr>
                       ) : null}
@@ -624,37 +653,51 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
                   </table>
                 </div>
 
-                {/* ── Terms & Conditions ────────────────────────────────────── */}
-                <div className="inv-terms">
-                  <div className="inv-terms-title">Terms &amp; Conditions</div>
-                  <ol>
-                    {SHOP.terms.map((t, i) => <li key={i}>{t}</li>)}
-                  </ol>
+                {/* ── Terms & Notes Grid ── */}
+                <div className="inv-notes-terms">
+                  {/* Terms & Conditions */}
+                  <div className="inv-terms-card">
+                    <div className="inv-terms-title">Terms &amp; Conditions</div>
+                    <ul className="inv-terms-list">
+                      {SHOP.terms.map((t, i) => <li key={i}>{t}</li>)}
+                    </ul>
+                  </div>
+                  {/* Notes Card */}
+                  {sale.notes && (
+                    <div className="inv-terms-card">
+                      <div className="inv-terms-title">Special Notes</div>
+                      <p style={{ fontSize: '0.74rem', color: '#000000', margin: 0, lineHeight: 1.5 }}>
+                        {sale.notes}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* ── Footer strip ──────────────────────────────────────────── */}
                 <div className="inv-footer-strip">
-                  <div className="inv-footer-block">
-                    <div className="inv-meta-lbl">Contact Us</div>
-                    📞 {SHOP.phone1} &nbsp;/&nbsp; {SHOP.phone2}<br />
-                    ✉ {SHOP.email}
+                  <div className="inv-contact-details">
+                    <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Bank Details</div>
+                    <span className="label">Bank Name:</span> {SHOP.bankName}<br />
+                    <span className="label">A/C Name:</span> {SHOP.name1} {SHOP.name2}<br />
+                    <span className="label">Account No:</span> <span className="mono" style={{ fontWeight: 600 }}>{SHOP.bankAccNo}</span><br />
+                    <span className="label">IFSC Code:</span> <span className="mono" style={{ fontWeight: 600 }}>{SHOP.bankIfsc}</span>
                   </div>
-                  <div className="inv-footer-block flex items-center justify-end gap-3" style={{ textAlign: 'right' }}>
-                    <div>
-                      <div className="inv-meta-lbl">UPI / Quick Pay</div>
-                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#1a1612', fontFamily: 'monospace' }}>{SHOP.upi}</div>
-                      <div style={{ fontSize: '10px', color: '#6b5e52', marginTop: '2px' }}>Scan QR to pay instantly</div>
+                  <div className="inv-pay-card">
+                    <div className="inv-pay-info">
+                      <div className="inv-pay-title">UPI Quick Pay</div>
+                      <div className="inv-pay-value">{SHOP.upi}</div>
+                      <div className="inv-pay-sub">Scan QR to pay instantly</div>
                     </div>
                     <img 
                       src="/narayani-upi-qr.jpg" 
                       alt="UPI QR" 
-                      className="size-[64px] object-contain border border-gray-200 rounded p-0.5 bg-white shrink-0 shadow-sm"
+                      className="inv-qr-img"
                     />
                   </div>
                 </div>
 
                 {/* ── Tagline ───────────────────────────────────────────────── */}
-                <div className="inv-footer-tagline">Thank you for your business!</div>
+                <div className="inv-tagline">Thank you for your business!</div>
 
               </div>{/* /inv-content */}
             </div>{/* /inv-body */}
@@ -674,7 +717,7 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
               <Button
                 variant="outline"
                 onClick={onRecordPayment}
-                className="gap-1.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900 shrink-0 font-medium"
+                className="gap-1.5 border-zinc-200 text-zinc-900 hover:bg-zinc-50 shrink-0 font-medium"
               >
                 <CreditCard className="size-4" />
                 Record Payment

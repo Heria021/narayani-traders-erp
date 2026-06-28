@@ -8,6 +8,10 @@ export const SHOP = {
   email:    'narayanitraders011@gmail.com',
   gstin:    '08AAAPL8767A1ZH',
   upi:      '9022991101-3@ybl',
+  bankName:   'State Bank of India',
+  bankAccNo:  '39820011002233',
+  bankIfsc:   'SBIN0001234',
+  bankBranch: 'Bidasar',
   terms: [
     'Goods once sold will not be taken back or exchanged without prior approval.',
     'Payment for Udhaar (credit) bills is due within 30 days of invoice date.',
