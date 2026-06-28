@@ -50,11 +50,11 @@ interface Props {
 export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
   if (!sale) return null
 
-  const customer    = getWalkinDisplayName(sale)
-  const hasTax      = sale.tax_amount > 0
+  const customer = getWalkinDisplayName(sale)
+  const hasTax = sale.tax_amount > 0
   const hasDiscount = sale.discount > 0
-  const hasPaid     = sale.amount_paid > 0
-  const hasBalance  = sale.balance_due > FLOAT_DUST
+  const hasPaid = sale.amount_paid > 0
+  const hasBalance = sale.balance_due > FLOAT_DUST
 
   // sale.created_at is UTC; toLocaleTimeString('en-IN') resolves to IST on
   // client browsers — correct for this single-shop Rajasthan deployment.
@@ -78,8 +78,18 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
         @media print {
-          /* 1. Page size & margins */
-          @page { size: A4; margin: 4mm; }
+          /*
+            1. Page size & margins
+            ─────────────────────
+            We use margin: 15mm (not 8mm) because Windows Chrome/Edge adds
+            its own header + footer lines (URL, date, page number) that consume
+            ~12–17mm of vertical space ON TOP of @page margins.
+            15mm gives enough breathing room so nothing is clipped on any system.
+            On Mac/Safari the result is slightly more padding — still looks good.
+            Users who want tighter output should disable "Headers and footers"
+            in the browser's print dialog (the print button tooltip says so).
+          */
+          @page { size: A4; margin: 15mm; }
 
           /* 2. Portal visibility — Tailwind can't reach body > [data-slot] */
           body > * { display: none !important; }
@@ -99,18 +109,27 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
           .no-print { display: none !important; }
           #nt-invoice-print-root { display: block !important; padding: 0 !important; margin: 0 !important; width: 100% !important; }
 
-          /* 3. A4 flex-column layout contract */
-          .inv-page {
+          /*
+            3. A4 flex-column layout contract
+            ──────────────────────────────────
+            KEY CHANGE: No fixed height. We use min-height: 100vh so the page
+            fills the printed area without hard-coding mm values that differ
+            across browsers/OSes. overflow: visible (not hidden) means content
+            is NEVER clipped — it simply flows to a second page if needed,
+            which is far better than being cut off silently.
+          */
+
+         .inv-page {
+            padding: 1.5rem !important;
             display: flex !important; flex-direction: column !important;
-            height: calc(297mm) !important; /* A4 − 2×8mm @page margin */
+            min-height: 100vh !important;
             box-sizing: border-box !important;
-            padding: 1.25rem 1.5rem !important;
-            overflow: hidden !important;
+            overflow: visible !important;
           }
           .inv-table-zone {
             flex: 1 1 auto !important; min-height: 0 !important;
             display: flex !important; flex-direction: column !important;
-            overflow: hidden !important;
+            overflow: visible !important;
           }
           .inv-bottom { flex-shrink: 0 !important; margin-top: 0 !important; }
         }
@@ -145,7 +164,7 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
             .inv-table-zone → flex:1 on print, so spare space lives here
             .inv-bottom → flex-shrink:0 on print, always at page bottom
           */}
-          <div className="inv-page flex flex-col p-6">
+          <div className="inv-page flex flex-col p-3">
 
             {/* ── Shop Header ─────────────────────────────────────────────── */}
             <div className="flex justify-between items-start mb-4">
@@ -226,10 +245,9 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
             <div className="inv-table-zone flex flex-col">
               <table className="w-full border-collapse mt-2.5" style={{ fontSize: '0.78rem' }}>
                 <colgroup>
-                  <col style={{ width: 28 }} /><col />
-                  <col style={{ width: 76 }} /><col style={{ width: 86 }} />
-                  <col style={{ width: 96 }} /><col style={{ width: 52 }} />
-                  <col style={{ width: 76 }} /><col style={{ width: 96 }} />
+                  <col style={{ width: 36 }} /><col />
+                  <col style={{ width: 80 }} /><col style={{ width: 90 }} />
+                  <col style={{ width: 60 }} /><col style={{ width: 110 }} />
                 </colgroup>
                 <thead>
                   <tr>
@@ -242,7 +260,7 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
                         {h}
                       </th>
                     ))}
-                    {(['Qty', 'Rate (₹)', 'Taxable (₹)', 'GST%', 'GST (₹)', 'Total (₹)'] as const).map(h => (
+                    {(['Qty', 'Rate (₹)', 'GST%', 'Total (₹)'] as const).map(h => (
                       <th
                         key={h}
                         className="text-right text-black border-b-2 border-black pb-2 pt-2 px-1.5"
@@ -255,11 +273,11 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
                 </thead>
                 <tbody>
                   {sale.items.map((item, idx) => {
-                    const isBox           = item.sell_mode === 'box'
-                    const lineBase        = item.line_total
-                    const gstAmt          = lineBase * item.tax_rate / 100
+                    const isBox = item.sell_mode === 'box'
+                    const lineBase = item.line_total
+                    const gstAmt = lineBase * item.tax_rate / 100
                     const lineTotalInclTax = lineBase + gstAmt
-                    const qtyDisplay      = isBox
+                    const qtyDisplay = isBox
                       ? `${item.box_count} ${item.box_name ?? 'box'}${item.box_count !== 1 ? 's' : ''}`
                       : `${item.quantity % 1 === 0 ? item.quantity : item.quantity.toFixed(3)} ${item.unit_name}`
 
@@ -287,17 +305,9 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
                         <td className="py-2 px-1.5 border-b border-[#e5e5e5] align-middle text-right" style={{ ...MONO, fontSize: '0.74rem' }}>
                           {rupee(item.unit_price)}
                         </td>
-                        {/* Taxable */}
-                        <td className="py-2 px-1.5 border-b border-[#e5e5e5] align-middle text-right" style={{ ...MONO, fontSize: '0.74rem', fontWeight: 500 }}>
-                          {rupee(lineBase)}
-                        </td>
                         {/* GST% */}
                         <td className="py-2 px-1.5 border-b border-[#e5e5e5] align-middle text-right" style={{ ...MONO, fontSize: '0.74rem', fontWeight: 500 }}>
                           {item.tax_rate}%
-                        </td>
-                        {/* GST ₹ */}
-                        <td className="py-2 px-1.5 border-b border-[#e5e5e5] align-middle text-right" style={{ ...MONO, fontSize: '0.74rem', fontWeight: 500 }}>
-                          {rupee(gstAmt)}
                         </td>
                         {/* Total */}
                         <td className="py-2 px-1.5 border-b border-[#e5e5e5] align-middle text-right" style={{ ...MONO, fontSize: '0.74rem', fontWeight: 500 }}>
@@ -308,8 +318,15 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
                   })}
                 </tbody>
               </table>
+            </div>{/* /inv-table-zone */}
 
-                           {/* Totals summary */}
+            {/* ── Bottom block: summary + terms + bank ──────────────────────────
+                On screen: flows naturally after the table.
+                On print:  flex-shrink:0 via <style>, always anchored to page bottom.
+                The spare empty space (few items) lives in .inv-table-zone above. */}
+            <div className="inv-bottom mt-2">
+
+              {/* Totals summary */}
               <div className="flex justify-end mt-2 mb-2">
                 <table className="border-collapse" style={{ width: '58%', maxWidth: 320, minWidth: 220 }}>
                   <tbody>
@@ -353,15 +370,9 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
                   </tbody>
                 </table>
               </div>
-            </div>{/* /inv-table-zone */}
 
-            {/* ── Bottom block: summary + terms + bank ──────────────────────────
-                On screen: flows naturally after the table.
-                On print:  flex-shrink:0 via <style>, always anchored to page bottom.
-                The spare empty space (few items) lives in .inv-table-zone above. */}
-            <div className="inv-bottom mt-2">
               {/* Terms & Conditions */}
-              <div className="border border-black rounded-[5px] px-2.5 py-1.5">
+              <div className="border border-black rounded-[5px] px-2.5 py-1.5 mt-2">
                 <div
                   className="font-bold uppercase text-black mb-1"
                   style={{ fontSize: '0.63rem', letterSpacing: '0.08em' }}
@@ -440,6 +451,7 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
             <Button
               variant="default"
               onClick={() => window.print()}
+              title="Tip: In the print dialog, set Margins to 'None' or disable Headers & Footers for best results on all devices."
               className="gap-1.5 shrink-0 font-medium bg-zinc-900 text-zinc-50 hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
             >
               <Printer className="size-4" />

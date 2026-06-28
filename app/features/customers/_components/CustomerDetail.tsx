@@ -21,7 +21,7 @@ import {
 } from 'lucide-react'
 import type { CustomerWithStats, Sale, Payment, LedgerEntry } from './types'
 import type { SaleWithItems } from '../../sales/_components/types'
-import { InvoiceDetailSheet } from './InvoiceDetailSheet'
+import { InvoiceModal } from '../../sales/_components/InvoiceModal'
 import { customerDisplayName, isWalkinCustomer } from './ledger'
 
 const rupee = (n: number) =>
@@ -253,7 +253,7 @@ export function CustomerDetail({
       </div>
 
       {/* Dynamic Invoice Sheet View */}
-      <InvoiceDetailSheet
+      <InvoiceModal
         open={!!selectedInvoice}
         sale={selectedInvoice}
         onClose={onCloseInvoice}

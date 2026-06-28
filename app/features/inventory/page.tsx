@@ -28,7 +28,7 @@ import {
 import { useInventory } from './_components/useInventory'
 import { StockDetailDrawer } from './_components/StockDetailDrawer'
 import { PurchaseDetail } from '../purchases/_components/PurchaseDetail'
-import { InvoiceDetailSheet } from '../customers/_components/InvoiceDetailSheet'
+import { InvoiceModal } from '../sales/_components/InvoiceModal'
 import type { InventoryItem } from './_components/types'
 import { inventoryStatusLabel, inventoryStatusBadgeClass } from './_components/types'
 import type { PurchaseWithItems } from '../purchases/_components/types'
@@ -855,9 +855,9 @@ export default function InventoryPage() {
         }}
       />
 
-      {/* ── Drawer 3: Invoice Detail Sheet (Reused) ── */}
+      {/* ── Drawer 3: Invoice Detail Modal (Reused) ── */}
       {invoiceOpen && invoiceDetail && (
-        <InvoiceDetailSheet
+        <InvoiceModal
           open={invoiceOpen}
           sale={invoiceDetail}
           onClose={() => {
