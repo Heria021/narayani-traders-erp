@@ -32,113 +32,16 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card"
+import { createClient } from "@/lib/supabase/client"
+import {
+  fetchPublicPortfolioProjects,
+  type PublicPortfolioProject,
+} from "@/lib/services/publicPortfolio"
 
 
 // - Types -
 
-interface Project {
-  id: number
-  slug: string
-  image: string
-  title: string
-  subtitle: string
-  description: string
-  category: string
-  location: string
-  year: string
-  area: string
-}
-
-// - Data -
-
-const PROJECTS: Project[] = [
-  {
-    id: 1,
-    slug: "glass-pavilion",
-    image: "/website_stock_images/pexels-aksinfo7-31387268.jpg",
-    title: "The Glass Pavilion",
-    subtitle: "Minimalist woodland retreat merging nature and modern structure.",
-    description: "Minimalist woodland retreat designed to merge with surrounding nature using floor-to-ceiling glass and exposed structures.",
-    category: "Residential",
-    location: "Portland, Oregon",
-    year: "2025",
-    area: "3,200 sqft",
-  },
-  {
-    id: 2,
-    slug: "vapor-residence",
-    image: "/website_stock_images/pexels-ahmetcotur-27626177.jpg",
-    title: "Vapor Residence",
-    subtitle: "Brutalist concrete architecture softened by lighting and water elements.",
-    description: "Brutalist concrete dwelling softened by ambient recessed light wells, cascading gardens, and indoor-outdoor water pathways.",
-    category: "Residential",
-    location: "Kyoto, Japan",
-    year: "2026",
-    area: "5,400 sqft",
-  },
-  {
-    id: 3,
-    slug: "luminous-penthouse",
-    image: "/website_stock_images/pexels-ahmetcotur-31817155.jpg",
-    title: "Luminous Penthouse",
-    subtitle: "High-end interior visualization showcasing light-flooded spaces.",
-    description: "High-end urban interior design concept that centers around open spaces, white oak timbers, and double-height ceiling voids.",
-    category: "Interior",
-    location: "New York, USA",
-    year: "2024",
-    area: "2,800 sqft",
-  },
-  {
-    id: 4,
-    slug: "desert-oasis-villa",
-    image: "/website_stock_images/pexels-abid-ali-150086727-10647324.jpg",
-    title: "Desert Oasis Villa",
-    subtitle: "Stunning desert retreat using organic materials and expansive glass facades.",
-    description: "Bespoke desert residence constructed of local clay bricks and custom steel accents, minimizing solar thermal intake.",
-    category: "Sustainable",
-    location: "Sonoran Desert, AZ",
-    year: "2025",
-    area: "4,600 sqft",
-  },
-  {
-    id: 5,
-    slug: "monolithic-museum",
-    image: "/website_stock_images/pexels-ahmetcotur-27626174.jpg",
-    title: "Monolithic Museum",
-    subtitle: "Sleek sculptural architecture designed to redefine public spaces.",
-    description: "Sculptural public art space that uses off-form concrete panels and hidden sky domes to wash art galleries in soft daylight.",
-    category: "Commercial",
-    location: "Berlin, Germany",
-    year: "2026",
-    area: "24,000 sqft",
-  },
-  {
-    id: 6,
-    slug: "coastal-sanctuary",
-    image: "/website_stock_images/pexels-ahmetcotur-28054849.jpg",
-    title: "Coastal Sanctuary",
-    subtitle: "Bespoke oceanfront luxury living crafted with natural materials.",
-    description: "Multi-level oceanfront residence with expansive cantilevers, sea-facing pools, and local teak woodwork integrations.",
-    category: "Residential",
-    location: "Malibu, California",
-    year: "2025",
-    area: "6,100 sqft",
-  },
-  {
-    id: 7,
-    slug: "urban-high-rise",
-    image: "/website_stock_images/pexels-keeganjchecks-12715585.jpg",
-    title: "Urban High-Rise",
-    subtitle: "Cutting-edge commercial tower facade blending aesthetics and sustainability.",
-    description: "Innovative commercial office design focusing on vertical gardens, smart ventilation, and modular light shelves.",
-    category: "Commercial",
-    location: "London, UK",
-    year: "2026",
-    area: "85,000 sqft",
-  },
-]
-
-const CATEGORIES = ["All", "Residential", "Commercial", "Interior", "Sustainable"]
+type Project = PublicPortfolioProject
 const SLIDE_DURATION = 6000
 const EASE_EXPO = [0.16, 1, 0.3, 1] as const
 
@@ -394,12 +297,44 @@ const STUDIO_STATS: { value: string; label: string }[] = [
 // - Main component -
 
 export default function PublicHomePage() {
+  const [projects, setProjects] = useState<Project[]>([])
+  const [projectsLoading, setProjectsLoading] = useState(true)
   const [activeIndex, setActiveIndex] = useState(0)
   const [activeService, setActiveService] = useState(0)
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [searchQuery, setSearchQuery] = useState("")
 
   const [localTime, setLocalTime] = useState("")
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadProjects() {
+      setProjectsLoading(true)
+      try {
+        const rows = await fetchPublicPortfolioProjects(createClient())
+        if (!cancelled) {
+          setProjects(rows)
+          setActiveIndex(0)
+        }
+      } catch (error) {
+        console.error('Failed to load public portfolio projects:', error)
+        if (!cancelled) {
+          setProjects([])
+        }
+      } finally {
+        if (!cancelled) {
+          setProjectsLoading(false)
+        }
+      }
+    }
+
+    loadProjects()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     const updateTime = () => {
@@ -481,19 +416,20 @@ export default function PublicHomePage() {
   }, [])
 
   const startLoop = useCallback(() => {
+    if (projects.length === 0) return
     stopLoop()
     startTimeRef.current = Date.now()
     const tick = () => {
       const pct = Math.min(((Date.now() - startTimeRef.current) / SLIDE_DURATION) * 100, 100)
       if (progressBarRef.current) progressBarRef.current.style.width = `${pct}%`
       if (pct < 100) { rafRef.current = requestAnimationFrame(tick) }
-      else { setActiveIndex(p => (p + 1) % PROJECTS.length) }
+      else { setActiveIndex(p => (p + 1) % projects.length) }
     }
     rafRef.current = requestAnimationFrame(tick)
-  }, [stopLoop])
+  }, [projects.length, stopLoop])
 
   const prevIndexRef = useRef(-1)
-  if (prevIndexRef.current !== activeIndex) {
+  if (projects.length > 0 && prevIndexRef.current !== activeIndex) {
     prevIndexRef.current = activeIndex
     stopLoop()
     if (typeof requestAnimationFrame !== "undefined") {
@@ -503,19 +439,22 @@ export default function PublicHomePage() {
 
   const goTo = useCallback((idx: number) => setActiveIndex(idx), [])
 
+  const categories = useMemo(
+    () => ["All", ...Array.from(new Set(projects.map(p => p.category))).filter(Boolean)],
+    [projects]
+  )
 
-  const currentProject = PROJECTS[activeIndex]
   const isEvenProject = activeIndex % 2 === 1
   const currentHeroCopy = isEvenProject ? HERO_COPY_B : HERO_COPY_A
 
   const filteredProjects = useMemo(
-    () => PROJECTS.filter(p => {
+    () => projects.filter(p => {
       const matchCat = selectedCategory === "All" || p.category === selectedCategory
       const q = searchQuery.toLowerCase()
       const matchSearch = !q || p.title.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || p.location.toLowerCase().includes(q)
       return matchCat && matchSearch
     }),
-    [selectedCategory, searchQuery]
+    [projects, selectedCategory, searchQuery]
   )
 
   const spinePath = useMemo(() => buildSpinePath(filteredProjects.length), [filteredProjects.length])
@@ -533,19 +472,26 @@ export default function PublicHomePage() {
 
         {/* - Background slideshow (unchanged mechanics) - */}
         <div className="absolute inset-0">
-          {PROJECTS.map((p, i) => (
+          {projects.length > 0 ? (
+            projects.map((p, i) => (
+              <div
+                key={p.id}
+                className="absolute inset-0 bg-cover bg-center"
+                style={{
+                  backgroundImage: `url('${p.image}')`,
+                  opacity: i === activeIndex ? 1 : 0,
+                  transform: i === activeIndex ? "scale(1.04)" : "scale(1.0)",
+                  transition: "opacity 1.2s ease-in-out, transform 7s ease-out",
+                  willChange: "opacity, transform",
+                }}
+              />
+            ))
+          ) : (
             <div
-              key={p.id}
               className="absolute inset-0 bg-cover bg-center"
-              style={{
-                backgroundImage: `url('${p.image}')`,
-                opacity: i === activeIndex ? 1 : 0,
-                transform: i === activeIndex ? "scale(1.04)" : "scale(1.0)",
-                transition: "opacity 1.2s ease-in-out, transform 7s ease-out",
-                willChange: "opacity, transform",
-              }}
+              style={{ backgroundImage: "url('/website_stock_images/office.jpg')" }}
             />
-          ))}
+          )}
           {/* Heavier left vignette so the firm statement always reads cleanly */}
           <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-black/20" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-black/35" />
@@ -639,7 +585,7 @@ export default function PublicHomePage() {
 
           {/* Dot / progress nav — unchanged */}
           <div className="flex items-center gap-2 md:gap-3">
-            {PROJECTS.map((p, idx) => (
+            {projects.map((p, idx) => (
               <button key={p.id} onClick={() => goTo(idx)} aria-label={`Slide ${idx + 1}`}
                 className="group flex flex-col gap-1.5 py-3 cursor-pointer">
                 <div className="relative h-[2px] w-8 sm:w-12 bg-white/18 overflow-hidden rounded-full">
@@ -802,7 +748,7 @@ export default function PublicHomePage() {
               viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6, ease: EASE_EXPO, delay: 0.1 }}
               className="flex flex-col md:flex-row gap-5 justify-between items-start md:items-center mb-16 border-b border-white/10 pb-8">
               <div className="flex items-center gap-1.5 flex-wrap">
-                {CATEGORIES.map(cat => (
+                {categories.map(cat => (
                   <button key={cat} onClick={() => setSelectedCategory(cat)}
                     className={`relative px-4 py-2 text-xs md:text-sm rounded-full cursor-pointer transition-colors duration-200 ${selectedCategory === cat ? "text-black font-medium z-10" : "text-white/55 font-light hover:text-white hover:bg-white/6"}`}>
                     {selectedCategory === cat && (
@@ -846,7 +792,7 @@ export default function PublicHomePage() {
                 <div className="flex flex-col gap-0 relative z-10 max-w-[1800px] mx-auto px-4 md:px-16">
                   {filteredProjects.map((project, idx) => {
                     const isLeft = idx % 2 === 0
-                    const artIndex = (project.id - 1) % PROJECT_ART.length
+                    const artIndex = (project.displayIndex - 1) % PROJECT_ART.length
                     return (
                       <ProjectRow
                         key={project.id}
@@ -863,7 +809,9 @@ export default function PublicHomePage() {
                   transition={{ duration: 0.3 }}
                   className="flex flex-col items-center gap-4 py-24 text-center max-w-7xl mx-auto">
                   <Layers className="h-9 w-9 text-white/25" />
-                  <p className="text-white/40 font-light text-sm">No projects match those filters.</p>
+                  <p className="text-white/40 font-light text-sm">
+                    {projectsLoading ? 'Loading public projects…' : 'No projects match those filters.'}
+                  </p>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -1714,7 +1662,7 @@ function ArtCard({ project, artPaths }: { project: Project; artPaths: string }) 
           </svg>
 
           <span className="absolute bottom-5 right-6 text-[80px] font-bold text-white/[0.04] leading-none select-none pointer-events-none">
-            {String(project.id).padStart(2, "0")}
+            {String(project.displayIndex).padStart(2, "0")}
           </span>
 
           <svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg"
