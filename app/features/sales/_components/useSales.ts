@@ -216,7 +216,7 @@ export function useSales() {
     ] = await Promise.all([
       supabase
         .from('sales')
-        .select('*, customers!inner(name)')
+        .select('*, customers!inner(name, phone, address, city)')
         .eq('id', saleId)
         .single(),
       supabase
@@ -272,6 +272,9 @@ export function useSales() {
       id: s.id,
       customer_id: s.customer_id,
       customer_name: rawName === WALKIN_CUSTOMER_NAME ? 'Walk-in' : rawName,
+      customer_phone: s.customers?.phone ?? null,
+      customer_address: s.customers?.address ?? null,
+      customer_city: s.customers?.city ?? null,
       walkin_name: s.walkin_name,
       invoice_number: s.invoice_number,
       sale_date: s.sale_date,

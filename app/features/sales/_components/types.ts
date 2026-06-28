@@ -37,6 +37,9 @@ export interface Sale {
   id: string
   customer_id: string
   customer_name: string          // joined from customers (or "Walk-in")
+  customer_phone?: string | null
+  customer_address?: string | null
+  customer_city?: string | null
   walkin_name: string | null     // optional display name for walk-in customer
   invoice_number: string
   sale_date: string

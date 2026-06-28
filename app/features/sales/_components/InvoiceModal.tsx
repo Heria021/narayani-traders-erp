@@ -121,7 +121,7 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
             box-sizing: border-box !important;
             padding: 2.5rem 2rem !important;
           }
-          .inv-terms {
+          .inv-footer-strip {
             margin-top: auto !important;
           }
         }
@@ -130,75 +130,279 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
         }
 
         /* ── Invoice layout ── */
-        .inv-body { font-family: Arial, sans-serif; color: #1a1612; font-size: 13px; line-height: 1.45; }
-        .inv-content { padding: 1.5rem 1.75rem; }
+        .inv-body {
+          font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          color: #18181b; /* Zinc-900 */
+          font-size: 13px;
+          line-height: 1.5;
+        }
+        .inv-content {
+          padding: 2.25rem 2rem;
+        }
 
         /* Header */
-        .inv-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: .75rem; }
-        .inv-shop-name { font-family: 'Syne', Georgia, serif; font-size: 1.3rem; font-weight: 800; color: #1a1612; }
-        .inv-shop-name span { color: #d97706; }
-        .inv-shop-sub { font-size: .65rem; font-weight: 600; color: #6b5e52; text-transform: uppercase; letter-spacing: .04em; }
-        .inv-shop-meta { font-size: .74rem; color: #6b5e52; margin-top: .35rem; line-height: 1.6; }
-        .inv-header-right { text-align: right; }
-        .inv-billno-label { font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: .62rem; font-weight: 600; color: #6b5e52; text-transform: uppercase; letter-spacing: .06em; }
-        .inv-billno-val { font-family: 'JetBrains Mono', 'Courier New', monospace; font-weight: 700; font-size: .9rem; color: #1a1612; margin: .15rem 0; }
-        .inv-gstin { font-size: .7rem; color: #6b5e52; }
+        .inv-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 1.25rem;
+        }
+        .inv-shop-name {
+          font-family: 'Syne', Georgia, serif;
+          font-size: 1.45rem;
+          font-weight: 800;
+          color: #18181b;
+          letter-spacing: -0.02em;
+        }
+        .inv-shop-name span {
+          color: #d97706;
+        }
+        .inv-shop-sub {
+          font-size: 0.65rem;
+          font-weight: 700;
+          color: #71717a; /* Zinc-500 */
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          margin-top: 0.15rem;
+        }
+        .inv-shop-meta {
+          font-size: 0.76rem;
+          color: #52525b; /* Zinc-600 */
+          margin-top: 0.5rem;
+          line-height: 1.6;
+        }
+        .inv-header-right {
+          text-align: right;
+        }
+        .inv-billno-label {
+          font-size: 1.15rem;
+          font-weight: 800;
+          color: #18181b;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+        }
+        .inv-billno-val {
+          font-family: 'JetBrains Mono', monospace;
+          font-weight: 600;
+          font-size: 0.95rem;
+          color: #52525b;
+          margin: 0.25rem 0;
+        }
+        .inv-gstin {
+          font-size: 0.72rem;
+          font-weight: 600;
+          color: #71717a;
+          font-family: 'JetBrains Mono', monospace;
+        }
 
         /* Meta strip */
-        .inv-meta { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .4rem; padding: .6rem 0; border-top: 1.5px solid #e2d8cf; border-bottom: 1.5px solid #e2d8cf; margin-bottom: .5rem; }
-        .inv-meta-item { font-size: .82rem; color: #1a1612; }
-        .inv-meta-lbl { font-size: .6rem; font-weight: 700; color: #6b5e52; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .2rem; }
+        .inv-meta {
+          display: grid;
+          grid-template-columns: 1.2fr 1fr 1fr;
+          gap: 1rem;
+          padding: 0.85rem 0;
+          border-top: 1px solid #e4e4e7; /* Zinc-200 */
+          border-bottom: 1px solid #e4e4e7;
+          margin-bottom: 1rem;
+        }
+        .inv-meta-item {
+          font-size: 0.82rem;
+          color: #18181b;
+          line-height: 1.5;
+        }
+        .inv-meta-lbl {
+          font-size: 0.62rem;
+          font-weight: 700;
+          color: #71717a;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          margin-bottom: 0.35rem;
+        }
 
         /* Badge */
-        .inv-badge { display: inline-block; padding: .2rem .55rem; border-radius: 4px; font-size: .72rem; font-weight: 700; }
-        .inv-badge--paid { background: #dcfce7; color: #15803d; }
-        .inv-badge--partial { background: #fef9c3; color: #854d0e; }
-        .inv-badge--due { background: #fee2e2; color: #b91c1c; }
+        .inv-badge {
+          display: inline-block;
+          padding: 0.15rem 0.5rem;
+          border-radius: 4px;
+          font-size: 0.7rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+        .inv-badge--paid {
+          background: #ecfdf5; /* Emerald-50 */
+          color: #065f46; /* Emerald-800 */
+          border: 1px solid #a7f3d0;
+        }
+        .inv-badge--partial {
+          background: #fffbeb; /* Amber-50 */
+          color: #92400e; /* Amber-800 */
+          border: 1px solid #fde68a;
+        }
+        .inv-badge--due {
+          background: #fef2f2; /* Red-50 */
+          color: #991b1b; /* Red-800 */
+          border: 1px solid #fecaca;
+        }
 
         /* Items table */
-        .inv-table { width: 100%; border-collapse: collapse; margin: .6rem 0; table-layout: fixed; }
-        .inv-table colgroup .col-no  { width: 28px; }
-        .inv-table colgroup .col-qty { width: 70px; }
-        .inv-table colgroup .col-rate{ width: 80px; }
-        .inv-table colgroup .col-amt { width: 88px; }
-        .inv-table colgroup .col-profit { width: 72px; }
-        .inv-col-profit { }
-        @media print {
-          .inv-col-profit { display: none; }
+        .inv-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 1.2rem 0;
+          table-layout: fixed;
         }
-        .inv-table th { padding: .4rem .35rem; font-size: .6rem; font-weight: 700; color: #6b5e52; text-transform: uppercase; letter-spacing: .04em; border-bottom: 2px solid #e2d8cf; text-align: left; }
-        .inv-table th.r { text-align: right; }
-        .inv-table td { padding: .45rem .35rem; border-bottom: 1px solid #f0ebe6; font-size: .82rem; color: #1a1612; vertical-align: top; }
-        .inv-table td.r { text-align: right; font-family: 'JetBrains Mono', 'Courier New', monospace; white-space: nowrap; }
-        .inv-table .row-gst-note { display: block; font-size: .68rem; color: #9a8274; margin-top: 2px; }
-        .inv-table .row-box-note { display: block; font-size: .68rem; color: #9a8274; margin-top: 2px; }
+        .inv-table th {
+          padding: 0.5rem 0.35rem;
+          font-size: 0.65rem;
+          font-weight: 700;
+          color: #71717a;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          border-bottom: 2px solid #27272a; /* Zinc-800 */
+          text-align: left;
+        }
+        .inv-table th.r {
+          text-align: right;
+        }
+        .inv-table td {
+          padding: 0.55rem 0.35rem;
+          border-bottom: 1px solid #f4f4f5; /* Zinc-100 */
+          font-size: 0.82rem;
+          color: #27272a;
+          vertical-align: top;
+        }
+        .inv-table td.r {
+          text-align: right;
+          font-family: 'JetBrains Mono', 'Courier New', monospace;
+          white-space: nowrap;
+          font-variant-numeric: tabular-nums;
+        }
+        .inv-table .row-box-note {
+          display: block;
+          font-size: 0.68rem;
+          color: #71717a;
+          margin-top: 3px;
+        }
 
         /* Summary */
-        .inv-summary { margin: .6rem 0 0; display: flex; flex-direction: column; align-items: flex-end; }
-        .inv-summary-table { width: 58%; max-width: 320px; min-width: 200px; border-collapse: collapse; }
-        .inv-summary-table td { padding: .3rem .35rem; font-size: .82rem; color: #1a1612; }
-        .inv-summary-table td:last-child { text-align: right; font-family: 'JetBrains Mono', 'Courier New', monospace; font-weight: 600; white-space: nowrap; }
-        .inv-summary-table .tax-line td { color: #6b7280; font-size: .78rem; }
-        .inv-summary-table .disc-line td { color: #059669; }
-        .inv-summary-table .total-line { border-top: 2px solid #1a1612; border-bottom: 1.5px solid #1a1612; }
-        .inv-summary-table .total-line td { font-weight: 800; font-size: .95rem; padding-top: .45rem; padding-bottom: .45rem; }
-        .inv-summary-table .paid-line td { color: #15803d; font-size: .82rem; }
-        .inv-summary-table .balance-line { background: #fff7ed; }
-        .inv-summary-table .balance-line td { color: #c2410c; font-weight: 700; font-size: .88rem; padding: .5rem .35rem; border-radius: 3px; }
-        .inv-summary-table .settled-line td { color: #15803d; font-size: .78rem; }
-        .inv-summary-table .due-date-line td { font-size: .72rem; color: #9a8274; font-style: italic; }
+        .inv-summary {
+          margin: 1rem 0 0;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+        }
+        .inv-summary-table {
+          width: 58%;
+          max-width: 320px;
+          min-width: 220px;
+          border-collapse: collapse;
+        }
+        .inv-summary-table td {
+          padding: 0.35rem 0.35rem;
+          font-size: 0.82rem;
+          color: #27272a;
+        }
+        .inv-summary-table td:last-child {
+          text-align: right;
+          font-family: 'JetBrains Mono', 'Courier New', monospace;
+          font-weight: 600;
+          white-space: nowrap;
+          font-variant-numeric: tabular-nums;
+        }
+        .inv-summary-table .tax-line td {
+          color: #71717a;
+          font-size: 0.78rem;
+        }
+        .inv-summary-table .disc-line td {
+          color: #047857; /* Emerald-700 */
+        }
+        .inv-summary-table .total-line {
+          border-top: 1.5px solid #e4e4e7;
+          border-bottom: 1.5px solid #e4e4e7;
+        }
+        .inv-summary-table .total-line td {
+          font-weight: 800;
+          font-size: 0.98rem;
+          color: #18181b;
+          padding-top: 0.55rem;
+          padding-bottom: 0.55rem;
+        }
+        .inv-summary-table .paid-line td {
+          color: #15803d;
+          font-size: 0.82rem;
+        }
+        .inv-summary-table .balance-line {
+          background: #fffbeb; /* Amber-50 */
+        }
+        .inv-summary-table .balance-line td {
+          color: #b45309; /* Amber-700 */
+          font-weight: 700;
+          font-size: 0.88rem;
+          padding: 0.55rem 0.35rem;
+          border-radius: 4px;
+        }
+        .inv-summary-table .settled-line td {
+          color: #15803d;
+          font-size: 0.78rem;
+          font-weight: 600;
+        }
+        .inv-summary-table .due-date-line td {
+          font-size: 0.72rem;
+          color: #71717a;
+          font-style: italic;
+        }
 
         /* Terms */
-        .inv-terms { margin-top: 1.2rem; padding: .65rem .9rem; background: #faf6f2; border: 1px solid #e2d8cf; border-radius: 5px; }
-        .inv-terms-title { font-size: .65rem; font-weight: 700; text-transform: uppercase; color: #6b5e52; letter-spacing: .05em; margin-bottom: .4rem; }
-        .inv-terms ol { margin: 0; padding-left: 1.1rem; }
-        .inv-terms li { font-size: .72rem; color: #6b5e52; margin-bottom: .2rem; line-height: 1.5; }
+        .inv-terms {
+          margin-top: 1.5rem;
+          padding: 0.85rem 1rem;
+          background: #fafafa;
+          border: 1px solid #e4e4e7;
+          border-radius: 6px;
+        }
+        .inv-terms-title {
+          font-size: 0.65rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          color: #71717a;
+          letter-spacing: 0.05em;
+          margin-bottom: 0.4rem;
+        }
+        .inv-terms ol {
+          margin: 0;
+          padding-left: 1.1rem;
+        }
+        .inv-terms li {
+          font-size: 0.72rem;
+          color: #52525b;
+          margin-bottom: 0.25rem;
+          line-height: 1.5;
+        }
 
         /* Footer strip */
-        .inv-footer-strip { display: flex; justify-content: space-between; gap: 1.5rem; margin-top: .9rem; padding-top: .75rem; border-top: 1.5px solid #e2d8cf; }
-        .inv-footer-block { font-size: .74rem; color: #1a1612; line-height: 1.7; }
-        .inv-footer-tagline { margin-top: .8rem; text-align: center; font-size: .8rem; font-style: italic; color: #9a8274; padding-top: .6rem; border-top: 1px dashed #e2d8cf; }
-
+        .inv-footer-strip {
+          display: flex;
+          justify-content: space-between;
+          gap: 1.5rem;
+          margin-top: 1.5rem;
+          padding-top: 1rem;
+          border-top: 1px solid #e4e4e7;
+        }
+        .inv-footer-block {
+          font-size: 0.74rem;
+          color: #27272a;
+          line-height: 1.7;
+        }
+        .inv-footer-tagline {
+          margin-top: 1rem;
+          text-align: center;
+          font-size: 0.78rem;
+          font-style: italic;
+          color: #71717a;
+          padding-top: 0.75rem;
+          border-top: 1px dashed #e4e4e7;
+        }
       `}</style>
 
       <SheetContent
@@ -262,8 +466,16 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
                   <div className="inv-meta-item">
                     <div className="inv-meta-lbl">Bill To</div>
                     <strong style={{ fontSize: '.88rem' }}>{customer.name}</strong>
-                    {customer.phone && (
-                      <><br /><span style={{ fontSize: '.74rem', color: '#6b5e52' }}>{customer.phone}</span></>
+                    {sale.customer_phone && (
+                      <><br /><span style={{ fontSize: '.74rem', color: '#6b5e52' }}>📞 {sale.customer_phone}</span></>
+                    )}
+                    {(sale.customer_address || sale.customer_city) && (
+                      <>
+                        <br />
+                        <span style={{ fontSize: '.74rem', color: '#6b5e52' }}>
+                          📍 {[sale.customer_address, sale.customer_city].filter(Boolean).join(', ')}
+                        </span>
+                      </>
                     )}
                   </div>
                   {/* Date */}
@@ -299,21 +511,25 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
                 {/* ── Items table ───────────────────────────────────────────── */}
                 <table className="inv-table">
                   <colgroup>
-                    <col className="col-no" />
+                    <col style={{ width: '28px' }} />
                     <col />
-                    <col className="col-qty" />
-                    <col className="col-rate" />
-                    <col className="col-amt" />
-                    <col className="col-profit" />
+                    <col style={{ width: '70px' }} />
+                    <col style={{ width: '85px' }} />
+                    <col style={{ width: '95px' }} />
+                    <col style={{ width: '55px' }} />
+                    <col style={{ width: '75px' }} />
+                    <col style={{ width: '95px' }} />
                   </colgroup>
                   <thead>
                     <tr>
                       <th>#</th>
                       <th>Product</th>
                       <th className="r">Qty</th>
-                      <th className="r">Rate</th>
-                      <th className="r">Amount</th>
-                      <th className="r inv-col-profit">Profit</th>
+                      <th className="r">Rate (₹)</th>
+                      <th className="r">Taxable (₹)</th>
+                      <th className="r">GST%</th>
+                      <th className="r">GST</th>
+                      <th className="r">Total (₹)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -321,7 +537,7 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
                       const isBox = item.sell_mode === 'box'
                       const lineBase = item.line_total
                       const gstAmt = lineBase * item.tax_rate / 100
-                      const hasGst = item.tax_rate > 0
+                      const lineTotalInclTax = lineBase + gstAmt
 
                       const qtyDisplay = isBox
                         ? `${item.box_count} ${item.box_name ?? 'box'}${(item.box_count ?? 0) !== 1 ? 'es' : ''}`
@@ -338,18 +554,13 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
                                 {' '}= {item.quantity} {item.unit_name}
                               </span>
                             )}
-                            {hasGst && (
-                              <span className="row-gst-note">
-                                GST {item.tax_rate}%: {rupee(gstAmt)}
-                              </span>
-                            )}
                           </td>
                           <td className="r">{qtyDisplay}</td>
                           <td className="r">{rupee(item.unit_price)}</td>
                           <td className="r">{rupee(lineBase)}</td>
-                          <td className={cn('r inv-col-profit', item.line_profit < 0 && 'text-red-600')}>
-                            {rupee(item.line_profit)}
-                          </td>
+                          <td className="r">{item.tax_rate}%</td>
+                          <td className="r">{rupee(gstAmt)}</td>
+                          <td className="r">{rupee(lineTotalInclTax)}</td>
                         </tr>
                       )
                     })}
@@ -385,20 +596,11 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
                         <td>{rupee(sale.grand_total)}</td>
                       </tr>
                       {/* Amount Paid */}
-                      {sale.payments && sale.payments.length > 0 ? (
-                        sale.payments.map((p) => (
-                          <tr key={p.id} className="paid-line">
-                            <td>Paid ({PAYMENT_METHOD_LABELS[p.payment_method] || p.payment_method})</td>
-                            <td>− {rupee(p.amount)}</td>
-                          </tr>
-                        ))
-                      ) : (
-                        hasPaid ? (
-                          <tr className="paid-line">
-                            <td style={{ color: '#ef4444' }}>Paid (—)</td>
-                            <td style={{ color: '#ef4444' }}>− {rupee(sale.amount_paid)}</td>
-                          </tr>
-                        ) : null
+                      {hasPaid && (
+                        <tr className="paid-line">
+                          <td>Amount Paid</td>
+                          <td>− {rupee(sale.amount_paid)}</td>
+                        </tr>
                       )}
                       {/* Balance Due */}
                       {hasBalance ? (
@@ -437,10 +639,17 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
                     📞 {SHOP.phone1} &nbsp;/&nbsp; {SHOP.phone2}<br />
                     ✉ {SHOP.email}
                   </div>
-                  <div className="inv-footer-block" style={{ textAlign: 'right' }}>
-                    <div className="inv-meta-lbl">UPI / Quick Pay</div>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#1a1612' }}>{SHOP.upi}</div>
-                    <div style={{ fontSize: '10px', color: '#6b5e52', marginTop: '2px' }}>Scan QR to pay instantly</div>
+                  <div className="inv-footer-block flex items-center justify-end gap-3" style={{ textAlign: 'right' }}>
+                    <div>
+                      <div className="inv-meta-lbl">UPI / Quick Pay</div>
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#1a1612', fontFamily: 'monospace' }}>{SHOP.upi}</div>
+                      <div style={{ fontSize: '10px', color: '#6b5e52', marginTop: '2px' }}>Scan QR to pay instantly</div>
+                    </div>
+                    <img 
+                      src="/narayani-upi-qr.jpg" 
+                      alt="UPI QR" 
+                      className="size-[64px] object-contain border border-gray-200 rounded p-0.5 bg-white shrink-0 shadow-sm"
+                    />
                   </div>
                 </div>
 
