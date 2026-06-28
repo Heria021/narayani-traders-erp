@@ -120,7 +120,6 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
           */
 
          .inv-page {
-            padding: 1.5rem !important;
             display: flex !important; flex-direction: column !important;
             min-height: 100vh !important;
             box-sizing: border-box !important;
