@@ -78,7 +78,7 @@ export function useCustomerDetail(id: string) {
       cost_price_at_sale: i.cost_price_at_sale,
       tax_rate:           i.tax_rate,
       line_total:         i.line_total,
-      line_profit:        i.quantity * (i.unit_price - i.cost_price_at_sale),
+      line_profit:        (i.sell_mode === 'box' ? (i.box_count ?? 0) * i.unit_price : i.quantity * i.unit_price) - (i.quantity * i.cost_price_at_sale),
     }))
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

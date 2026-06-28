@@ -736,7 +736,7 @@ export default function NewSalePage() {
         cost_price_at_sale: costPerUnit,
         tax_rate: num(r.tax_rate),
         line_total: computeLineTotal(r),
-        line_profit: qty * (num(r.unit_price) - costPerUnit),
+        line_profit: (r.sell_mode === 'box' ? num(r.qty_input) * num(r.unit_price) : qty * num(r.unit_price)) - (qty * costPerUnit),
       }
     })
 

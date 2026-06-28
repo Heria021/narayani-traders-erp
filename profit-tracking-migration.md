@@ -121,12 +121,20 @@ select
   si.id              as sale_item_id,
   si.sale_id,
   si.product_id,
+  si.sell_mode,
   si.quantity,
-  si.unit_price       as sold_price_per_unit,
+  si.box_count,
+  si.unit_price,
   si.cost_price_at_sale,
-  si.quantity * si.unit_price            as revenue,
-  si.quantity * si.cost_price_at_sale    as cost,
-  si.quantity * (si.unit_price - si.cost_price_at_sale) as profit
+  (case
+    when si.sell_mode = 'box' then si.box_count * si.unit_price
+    else si.quantity * si.unit_price
+  end) as revenue,
+  si.quantity * si.cost_price_at_sale as cost,
+  (case
+    when si.sell_mode = 'box' then si.box_count * si.unit_price
+    else si.quantity * si.unit_price
+  end) - (si.quantity * si.cost_price_at_sale) as profit
 from sale_items si;
 ```
 
@@ -134,35 +142,83 @@ from sale_items si;
 
 ```sql
 select
-  count(distinct si.sale_id)                                  as total_sales,
-  sum(si.quantity * si.unit_price)                            as total_revenue,
-  sum(si.quantity * si.cost_price_at_sale)                    as total_cost,
-  sum(si.quantity * (si.unit_price - si.cost_price_at_sale))  as total_profit,
+  count(distinct si.sale_id) as total_sales,
+  sum(case
+    when si.sell_mode = 'box' then si.box_count * si.unit_price
+    else si.quantity * si.unit_price
+  end) as total_revenue,
+  sum(si.quantity * si.cost_price_at_sale) as total_cost,
+  sum(
+    (case
+      when si.sell_mode = 'box' then si.box_count * si.unit_price
+      else si.quantity * si.unit_price
+    end) - (si.quantity * si.cost_price_at_sale)
+  ) as total_profit,
   round(
-    sum(si.quantity * (si.unit_price - si.cost_price_at_sale))
-    / nullif(sum(si.quantity * si.unit_price), 0) * 100, 2
+    sum(
+      (case
+        when si.sell_mode = 'box' then si.box_count * si.unit_price
+        else si.quantity * si.unit_price
+      end) - (si.quantity * si.cost_price_at_sale)
+    )
+    / nullif(sum(case
+        when si.sell_mode = 'box' then si.box_count * si.unit_price
+        else si.quantity * si.unit_price
+      end), 0) * 100, 2
   ) as profit_margin_pct
 from sale_items si;
 ```
 
-> Note: this is *gross item-level profit* — before factoring in tax,
-> discounts at the invoice level, or operating expenses. See section D
-> if you want invoice-adjusted profit.
-
-### C. Profit per product
+### C. Profit per invoice (drives the Sales list "Profit" column)
 
 ```sql
 select
-  p.id                as product_id,
+  si.sale_id,
+  sum(case
+    when si.sell_mode = 'box' then si.box_count * si.unit_price
+    else si.quantity * si.unit_price
+  end) as revenue,
+  sum(si.quantity * si.cost_price_at_sale) as cost,
+  sum(
+    (case
+      when si.sell_mode = 'box' then si.box_count * si.unit_price
+      else si.quantity * si.unit_price
+    end) - (si.quantity * si.cost_price_at_sale)
+  ) as profit
+from sale_items si
+group by si.sale_id;
+```
+
+### D. Profit per product
+
+```sql
+select
+  p.id as product_id,
   p.name,
   p.sku,
-  sum(si.quantity)                                            as units_sold,
-  sum(si.quantity * si.unit_price)                            as revenue,
-  sum(si.quantity * si.cost_price_at_sale)                    as cost,
-  sum(si.quantity * (si.unit_price - si.cost_price_at_sale))  as profit,
+  sum(si.quantity) as units_sold,
+  sum(case
+    when si.sell_mode = 'box' then si.box_count * si.unit_price
+    else si.quantity * si.unit_price
+  end) as revenue,
+  sum(si.quantity * si.cost_price_at_sale) as cost,
+  sum(
+    (case
+      when si.sell_mode = 'box' then si.box_count * si.unit_price
+      else si.quantity * si.unit_price
+    end) - (si.quantity * si.cost_price_at_sale)
+  ) as profit,
   round(
-    sum(si.quantity * (si.unit_price - si.cost_price_at_sale))
-    / nullif(sum(si.quantity * si.unit_price), 0) * 100, 2
+    sum(
+      (case
+        when si.sell_mode = 'box' then si.box_count * si.unit_price
+        else si.quantity * si.unit_price
+      end) - (si.quantity * si.cost_price_at_sale)
+    )
+    / nullif(sum(case
+        when si.sell_mode = 'box' then si.box_count * si.unit_price
+        else si.quantity * si.unit_price
+      end), 0) * 100, 2
   ) as profit_margin_pct
 from sale_items si
 join products p on p.id = si.product_id
@@ -170,15 +226,22 @@ group by p.id, p.name, p.sku
 order by profit desc;
 ```
 
-### D. Profit per date range (e.g. dashboard date picker)
+### E. Profit per date range
 
 ```sql
--- Replace :start_date / :end_date with bound params from the app
 select
   s.sale_date,
-  sum(si.quantity * si.unit_price)                            as revenue,
-  sum(si.quantity * si.cost_price_at_sale)                    as cost,
-  sum(si.quantity * (si.unit_price - si.cost_price_at_sale))  as profit
+  sum(case
+    when si.sell_mode = 'box' then si.box_count * si.unit_price
+    else si.quantity * si.unit_price
+  end) as revenue,
+  sum(si.quantity * si.cost_price_at_sale) as cost,
+  sum(
+    (case
+      when si.sell_mode = 'box' then si.box_count * si.unit_price
+      else si.quantity * si.unit_price
+    end) - (si.quantity * si.cost_price_at_sale)
+  ) as profit
 from sale_items si
 join sales s on s.id = si.sale_id
 where s.sale_date between :start_date and :end_date
@@ -186,71 +249,83 @@ group by s.sale_date
 order by s.sale_date;
 ```
 
-**Monthly rollup variant** (good for a dashboard chart):
+**Monthly rollup variant:**
 
 ```sql
 select
-  date_trunc('month', s.sale_date)::date                      as month,
-  sum(si.quantity * si.unit_price)                            as revenue,
-  sum(si.quantity * si.cost_price_at_sale)                    as cost,
-  sum(si.quantity * (si.unit_price - si.cost_price_at_sale))  as profit
+  date_trunc('month', s.sale_date)::date as month,
+  sum(case
+    when si.sell_mode = 'box' then si.box_count * si.unit_price
+    else si.quantity * si.unit_price
+  end) as revenue,
+  sum(si.quantity * si.cost_price_at_sale) as cost,
+  sum(
+    (case
+      when si.sell_mode = 'box' then si.box_count * si.unit_price
+      else si.quantity * si.unit_price
+    end) - (si.quantity * si.cost_price_at_sale)
+  ) as profit
 from sale_items si
 join sales s on s.id = si.sale_id
 group by 1
 order by 1;
 ```
 
-### E. Invoice-adjusted profit (accounts for invoice-level discount/tax)
-
-Item-level profit ignores the flat `discount` and `tax_amount` columns on
-the `sales` header. To prorate discount down to the line level:
+### F. Invoice-adjusted profit (accounts for invoice-level discount/tax)
 
 ```sql
 with sale_line_share as (
   select
     si.sale_id,
     si.id as sale_item_id,
-    si.quantity * si.unit_price as line_revenue,
+    (case
+      when si.sell_mode = 'box' then si.box_count * si.unit_price
+      else si.quantity * si.unit_price
+    end) as line_revenue,
     si.quantity * si.cost_price_at_sale as line_cost,
-    -- this line's share of the invoice's total discount, prorated by revenue
-    (si.quantity * si.unit_price)
-      / nullif(sum(si.quantity * si.unit_price) over (partition by si.sale_id), 0)
+    (case
+      when si.sell_mode = 'box' then si.box_count * si.unit_price
+      else si.quantity * si.unit_price
+    end)
+      / nullif(sum(case
+          when si.sell_mode = 'box' then si.box_count * si.unit_price
+          else si.quantity * si.unit_price
+        end) over (partition by si.sale_id), 0)
       * s.discount as line_discount_share
   from sale_items si
   join sales s on s.id = si.sale_id
 )
 select
   sale_id,
-  sum(line_revenue)                                   as gross_revenue,
-  sum(line_discount_share)                            as allocated_discount,
-  sum(line_revenue - line_discount_share)             as net_revenue,
-  sum(line_cost)                                       as total_cost,
-  sum(line_revenue - line_discount_share - line_cost)  as net_profit
+  sum(line_revenue) as gross_revenue,
+  sum(line_discount_share) as allocated_discount,
+  sum(line_revenue - line_discount_share) as net_revenue,
+  sum(line_cost) as total_cost,
+  sum(line_revenue - line_discount_share - line_cost) as net_profit
 from sale_line_share
 group by sale_id
 order by sale_id;
 ```
 
-### F. Total capital invested vs. total recovered (cashflow-level, supplier side)
+### G. Total invested vs. recovered (unaffected by this bug — no change)
 
-For the "what I invested vs what I've sold/collected" view at the
-business level (not per-item):
+This one already used `purchases.grand_total` / `sales.grand_total` /
+`sales.amount_paid` directly, not `sale_items` math, so it was never
+affected. Included here only for completeness/reference:
 
 ```sql
 select
-  (select coalesce(sum(grand_total), 0) from purchases)      as total_invested,
-  (select coalesce(sum(grand_total), 0) from sales)          as total_billed,
-  (select coalesce(sum(amount_paid), 0) from sales)          as total_collected,
-  (select coalesce(sum(quantity * (unit_price - cost_price_at_sale)), 0)
-     from sale_items)                                        as total_gross_profit;
+  (select coalesce(sum(grand_total), 0) from purchases) as total_invested,
+  (select coalesce(sum(grand_total), 0) from sales) as total_billed,
+  (select coalesce(sum(amount_paid), 0) from sales) as total_collected,
+  (select coalesce(sum(
+      (case
+        when sell_mode = 'box' then box_count * unit_price
+        else quantity * unit_price
+      end) - (quantity * cost_price_at_sale)
+    ), 0)
+   from sale_items) as total_gross_profit;
 ```
-
-This gives you, side by side:
-- **total_invested** — money out to suppliers (`purchases.grand_total`)
-- **total_billed** — money owed to you by customers (`sales.grand_total`)
-- **total_collected** — money actually in hand (`sales.amount_paid`)
-- **total_gross_profit** — true item-level profit, immune to purchase
-  price drift over time
 
 ---
 

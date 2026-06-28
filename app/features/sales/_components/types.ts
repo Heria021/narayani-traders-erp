@@ -73,7 +73,7 @@ export interface SaleItem {
   tax_rate: number
   line_total: number
   // derived
-  line_profit: number            // quantity × (unit_price - cost_price_at_sale)
+  line_profit: number            // revenue - cost (branches on sell_mode)
 }
 
 export interface PaymentRecord {
@@ -100,7 +100,7 @@ export interface SaleKpi {
   this_month: number
   total_outstanding: number
   total_collected: number
-  gross_profit: number           // sum of quantity × (unit_price - cost_price_at_sale) all-time
+  gross_profit: number           // sum of line profits all-time
   profit_margin_pct: number      // gross_profit / total_revenue × 100
 }
 

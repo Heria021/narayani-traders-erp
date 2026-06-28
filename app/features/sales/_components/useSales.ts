@@ -90,11 +90,15 @@ export function useSales() {
       supabase.from('sales').select('grand_total, amount_paid, balance_due, payment_status'),
       supabase.from('sales').select('grand_total').eq('sale_date', t),
       supabase.from('sales').select('grand_total').gte('sale_date', som),
-      supabase.from('sale_items').select('quantity, unit_price, cost_price_at_sale'),
+      supabase.from('sale_items').select('quantity, unit_price, cost_price_at_sale, sell_mode, box_count'),
     ])
 
-    const totalRevenue   = (profitItems ?? []).reduce((s, r) => s + r.quantity * r.unit_price, 0)
-    const grossProfit    = (profitItems ?? []).reduce((s, r) => s + r.quantity * (r.unit_price - r.cost_price_at_sale), 0)
+    const totalRevenue   = (profitItems ?? []).reduce((s, r) => s + (r.sell_mode === 'box' ? (r.box_count ?? 0) * r.unit_price : r.quantity * r.unit_price), 0)
+    const grossProfit    = (profitItems ?? []).reduce((s, r) => {
+      const rev  = r.sell_mode === 'box' ? (r.box_count ?? 0) * r.unit_price : r.quantity * r.unit_price;
+      const cost = r.quantity * r.cost_price_at_sale;
+      return s + (rev - cost);
+    }, 0)
     const profitMargin   = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0
 
     setKpi({
@@ -154,11 +158,12 @@ export function useSales() {
     if (saleIds.length > 0) {
       const { data: itemRows } = await supabase
         .from('sale_items')
-        .select('sale_id, quantity, unit_price, cost_price_at_sale')
+        .select('sale_id, quantity, unit_price, cost_price_at_sale, sell_mode, box_count')
         .in('sale_id', saleIds)
       for (const item of itemRows ?? []) {
         itemCountMap.set(item.sale_id, (itemCountMap.get(item.sale_id) ?? 0) + 1)
-        const lineProfit = item.quantity * (item.unit_price - item.cost_price_at_sale)
+        const rev = item.sell_mode === 'box' ? (item.box_count ?? 0) * item.unit_price : item.quantity * item.unit_price;
+        const lineProfit = rev - (item.quantity * item.cost_price_at_sale);
         profitMap.set(item.sale_id, (profitMap.get(item.sale_id) ?? 0) + lineProfit)
       }
     }
@@ -249,7 +254,7 @@ export function useSales() {
       cost_price_at_sale: i.cost_price_at_sale,
       tax_rate:           i.tax_rate,
       line_total:         i.line_total,
-      line_profit:        i.quantity * (i.unit_price - i.cost_price_at_sale),
+      line_profit:        (i.sell_mode === 'box' ? (i.box_count ?? 0) * i.unit_price : i.quantity * i.unit_price) - (i.quantity * i.cost_price_at_sale),
     }))
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
