@@ -30,6 +30,7 @@ import { StockDetailDrawer } from './_components/StockDetailDrawer'
 import { PurchaseDetail } from '../purchases/_components/PurchaseDetail'
 import { InvoiceDetailSheet } from '../customers/_components/InvoiceDetailSheet'
 import type { InventoryItem } from './_components/types'
+import { inventoryStatusLabel, inventoryStatusBadgeClass } from './_components/types'
 import type { PurchaseWithItems } from '../purchases/_components/types'
 import { mapPurchaseRow } from '../suppliers/_components/balances'
 import type { SaleWithItems } from '../sales/_components/types'
@@ -607,6 +608,7 @@ export default function InventoryPage() {
                     if (p.track_inventory) {
                       if (p.status === 'out_of_stock') rowAlertBorder = "border-l-4 border-l-red-500 dark:border-l-red-600"
                       else if (p.status === 'low_stock') rowAlertBorder = "border-l-4 border-l-amber-500 dark:border-l-amber-600"
+                      else if (p.status === 'never_stocked') rowAlertBorder = "border-l-4 border-l-slate-300 dark:border-l-slate-600"
                     }
 
                     // Box equivalents breakdown text
@@ -769,17 +771,21 @@ export default function InventoryPage() {
                                 <Badge variant="outline" className="text-[10px] font-semibold tracking-wider uppercase bg-slate-50 text-slate-700 dark:bg-slate-900/40 dark:text-slate-400 border-0 leading-none py-1.5 px-2">
                                   Untracked
                                 </Badge>
+                              ) : p.status === 'never_stocked' ? (
+                                <Badge variant="outline" className={cn('text-[10px] font-semibold tracking-wider uppercase border-0 leading-none py-1.5 px-2', inventoryStatusBadgeClass(p.status))}>
+                                  {inventoryStatusLabel(p.status)}
+                                </Badge>
                               ) : p.status === 'out_of_stock' ? (
-                                <Badge variant="outline" className="text-[10px] font-semibold tracking-wider uppercase bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400 border-0 leading-none py-1.5 px-2">
-                                  Out of Stock
+                                <Badge variant="outline" className={cn('text-[10px] font-semibold tracking-wider uppercase border-0 leading-none py-1.5 px-2', inventoryStatusBadgeClass(p.status))}>
+                                  {inventoryStatusLabel(p.status)}
                                 </Badge>
                               ) : p.status === 'low_stock' ? (
-                                <Badge variant="outline" className="text-[10px] font-semibold tracking-wider uppercase bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border-0 leading-none py-1.5 px-2">
-                                  Low Stock
+                                <Badge variant="outline" className={cn('text-[10px] font-semibold tracking-wider uppercase border-0 leading-none py-1.5 px-2', inventoryStatusBadgeClass(p.status))}>
+                                  {inventoryStatusLabel(p.status)}
                                 </Badge>
                               ) : (
-                                <Badge variant="outline" className="text-[10px] font-semibold tracking-wider uppercase bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-0 leading-none py-1.5 px-2">
-                                  In Stock
+                                <Badge variant="outline" className={cn('text-[10px] font-semibold tracking-wider uppercase border-0 leading-none py-1.5 px-2', inventoryStatusBadgeClass('in_stock'))}>
+                                  {inventoryStatusLabel('in_stock')}
                                 </Badge>
                               )}
                             </TableCell>

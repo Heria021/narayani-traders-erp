@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { cn } from '@/lib/utils'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -14,6 +15,8 @@ import {
 } from '@/components/ui/table'
 import { Calendar, Package, ArrowUpRight, ArrowDownLeft, Sliders, AlertTriangle } from 'lucide-react'
 import type { InventoryItem, StockMovement, StockMovementType } from './types'
+import { inventoryStatusLabel, inventoryStatusBadgeClass } from './types'
+import { getProductMarginPct, getMarginColorClass } from '@/app/features/products/_components/types'
 import { Button } from '@/components/ui/button'
 
 const rupee = (n: number) =>
@@ -74,34 +77,16 @@ export function StockDetailDrawer({
     }
   }, [item])
 
-  const statusBadge = (status: InventoryItem['status']) => {
-    switch (status) {
-      case 'in_stock':
-        return (
-          <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-0 uppercase text-[10px] font-bold tracking-wider">
-            In Stock
-          </Badge>
-        )
-      case 'low_stock':
-        return (
-          <Badge className="bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border-0 uppercase text-[10px] font-bold tracking-wider">
-            Low Stock
-          </Badge>
-        )
-      case 'out_of_stock':
-        return (
-          <Badge className="bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400 border-0 uppercase text-[10px] font-bold tracking-wider">
-            Out Of Stock
-          </Badge>
-        )
-      default:
-        return (
-          <Badge className="bg-slate-50 text-slate-700 dark:bg-slate-900/40 dark:text-slate-400 border-0 uppercase text-[10px] font-bold tracking-wider">
-            Untracked
-          </Badge>
-        )
-    }
-  }
+  const statusBadge = (status: InventoryItem['status']) => (
+    <Badge className={cn(
+      'border-0 uppercase text-[10px] font-bold tracking-wider',
+      inventoryStatusBadgeClass(status),
+    )}>
+      {inventoryStatusLabel(status)}
+    </Badge>
+  )
+
+  const margin = item ? getProductMarginPct(item) : null
 
   const movementBadge = (type: StockMovementType) => {
     switch (type) {
@@ -167,8 +152,8 @@ export function StockDetailDrawer({
         <div className="flex-1 flex flex-col overflow-hidden bg-background">
           {loading || !item ? (
             <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6 [scrollbar-width:thin]">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {[1, 2, 3, 4].map(i => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                {[1, 2, 3, 4, 5].map(i => (
                   <Skeleton key={i} className="h-20 w-full rounded-lg" />
                 ))}
               </div>
@@ -182,7 +167,7 @@ export function StockDetailDrawer({
           ) : (
             <div className="flex-1 flex flex-col overflow-hidden px-8 py-6 space-y-6">
               {/* Product Stock Summary Cards (shrink-0) */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 shrink-0">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 shrink-0">
                 <div className="rounded-lg border bg-muted/20 p-4 space-y-1">
                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Current Stock</span>
                   <div className="flex flex-col">
@@ -234,6 +219,18 @@ export function StockDetailDrawer({
                         Box sell: {rupee(item.box_selling_price)}
                       </span>
                     )}
+                  </div>
+                </div>
+
+                <div className="rounded-lg border bg-muted/20 p-4 space-y-1">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Margin</span>
+                  <div className="flex flex-col">
+                    <span className={cn('text-lg font-bold tabular-nums', getMarginColorClass(margin))}>
+                      {margin === null ? '—' : `${margin.toFixed(1)}%`}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground leading-tight">
+                      (MR − PR) / MR
+                    </span>
                   </div>
                 </div>
               </div>

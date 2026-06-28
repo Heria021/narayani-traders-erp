@@ -5,8 +5,9 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type {
   InventoryItem, InventoryKpi, InventoryFilters,
-  StockMovement, SortField, SortDir, InventoryStatus
+  StockMovement, SortField, SortDir, InventoryStatus,
 } from './types'
+import { inventoryStatusSortValue } from './types'
 
 export function useInventory() {
   const supabase = createClient()
@@ -59,7 +60,9 @@ export function useInventory() {
       .order('created_at', { ascending: true })
 
     const lastMovementMap = new Map<string, string>()
+    const hasMovementSet = new Set<string>()
     for (const m of movementsData ?? []) {
+      hasMovementSet.add(m.product_id)
       const existing = lastMovementMap.get(m.product_id)
       if (!existing || m.created_at > existing) {
         lastMovementMap.set(m.product_id, m.created_at)
@@ -117,11 +120,14 @@ export function useInventory() {
       const stock_value = p.current_stock * unit_cost
 
       let status: InventoryStatus = 'untracked'
+      const hasMovementHistory = hasMovementSet.has(p.id)
       if (p.track_inventory) {
-        if (p.current_stock > p.minimum_stock) {
-          status = 'in_stock'
-        } else if (p.current_stock > 0) {
+        if (p.minimum_stock > 0 && p.current_stock > 0 && p.current_stock <= p.minimum_stock) {
           status = 'low_stock'
+        } else if (p.current_stock > 0) {
+          status = 'in_stock'
+        } else if (!hasMovementHistory) {
+          status = 'never_stocked'
         } else {
           status = 'out_of_stock'
         }
@@ -136,6 +142,7 @@ export function useInventory() {
         unit_cost,
         stock_value,
         status,
+        has_movement_history: hasMovementHistory,
         last_movement_date: lastMov,
 
         // Low stock helpers
@@ -273,9 +280,8 @@ export function useInventory() {
         valA = a.name.toLowerCase()
         valB = b.name.toLowerCase()
       } else if (sortField === 'status') {
-        const order = { in_stock: 1, low_stock: 2, out_of_stock: 3, untracked: 4 }
-        valA = order[a.status]
-        valB = order[b.status]
+        valA = inventoryStatusSortValue(a.status)
+        valB = inventoryStatusSortValue(b.status)
       }
 
       if (valA === null || valA === undefined) return sortDir === 'asc' ? -1 : 1
