@@ -15,7 +15,5 @@ export const SHOP = {
   terms: [
     'Goods once sold will not be taken back or exchanged without prior approval.',
     'Payment for Udhaar (credit) bills is due within 30 days of invoice date.',
-    'Interest of 2% per month will be charged on overdue balances.',
-    'All disputes are subject to Bidasar (Churu) jurisdiction only.',
   ],
 }

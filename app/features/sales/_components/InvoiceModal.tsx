@@ -123,7 +123,7 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
             box-sizing: border-box !important;
             padding: 2.5rem 2rem !important;
           }
-          .inv-footer-strip {
+          .inv-footer-section {
             margin-top: auto !important;
           }
         }
@@ -137,13 +137,13 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
           font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
           color: #000000;
           background-color: #ffffff;
-          font-size: 13px;
+          font-size: 12px;
           line-height: 1.5;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
         .inv-content {
-          padding: 2.5rem 2rem;
+          padding: 2.25rem 2rem;
         }
 
         /* ── Header ── */
@@ -151,21 +151,21 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 2rem;
+          margin-bottom: 1.75rem;
         }
         .inv-brand {
           display: flex;
           flex-direction: column;
         }
         .inv-shop-name {
-          font-size: 1.75rem;
+          font-size: 1.45rem;
           font-weight: 800;
           color: #000000;
           letter-spacing: -0.03em;
           line-height: 1.2;
         }
         .inv-shop-sub {
-          font-size: 0.72rem;
+          font-size: 0.65rem;
           font-weight: 600;
           color: #000000;
           text-transform: uppercase;
@@ -179,7 +179,7 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
           align-items: flex-end;
         }
         .inv-title {
-          font-size: 1.75rem;
+          font-size: 1.45rem;
           font-weight: 800;
           text-transform: uppercase;
           letter-spacing: 0.05em;
@@ -188,7 +188,7 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
           margin-bottom: 0.5rem;
         }
         .inv-billno-val {
-          font-size: 0.85rem;
+          font-size: 0.82rem;
           color: #000000;
         }
         .inv-billno-val .mono {
@@ -201,34 +201,34 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 2rem;
-          padding: 1.25rem 0;
+          padding: 0.6rem 0;
           border-top: 1px solid #000000;
           border-bottom: 1px solid #000000;
-          margin-bottom: 1.5rem;
+          margin-bottom: 0.75rem;
         }
         .inv-meta-col {
           display: flex;
           flex-direction: column;
         }
         .inv-meta-label {
-          font-size: 0.68rem;
+          font-size: 0.65rem;
           font-weight: 700;
           color: #000000;
           text-transform: uppercase;
           letter-spacing: 0.08em;
-          margin-bottom: 0.5rem;
+          margin-bottom: 0.4rem;
         }
         .inv-meta-value {
-          font-size: 0.85rem;
+          font-size: 0.8rem;
           color: #000000;
-          line-height: 1.6;
+          line-height: 1.5;
         }
         .inv-meta-value strong {
           font-weight: 700;
         }
         .inv-meta-value .mono {
           font-family: 'JetBrains Mono', monospace;
-          font-size: 0.8rem;
+          font-size: 0.76rem;
           font-weight: 600;
         }
 
@@ -236,9 +236,9 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
         .inv-status {
           display: inline-flex;
           align-items: center;
-          padding: 0.15rem 0.45rem;
+          padding: 0.12rem 0.4rem;
           border-radius: 4px;
-          font-size: 0.65rem;
+          font-size: 0.62rem;
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.05em;
@@ -251,15 +251,15 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
         .inv-table {
           width: 100%;
           border-collapse: collapse;
-          margin: 1.5rem 0;
+          margin: 1.25rem 0;
         }
         .inv-table th {
-          font-size: 0.68rem;
+          font-size: 0.62rem;
           font-weight: 700;
           color: #000000;
           text-transform: uppercase;
           letter-spacing: 0.08em;
-          padding: 0.75rem 0.5rem;
+          padding: 0.65rem 0.45rem;
           border-bottom: 2px solid #000000;
           text-align: left;
         }
@@ -267,29 +267,29 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
           text-align: right;
         }
         .inv-table td {
-          padding: 0.85rem 0.5rem;
+          padding: 0.75rem 0.45rem;
           border-bottom: 1px solid #e5e5e5;
-          font-size: 0.85rem;
+          font-size: 0.8rem;
           color: #000000;
           vertical-align: middle;
         }
         .inv-table td.r {
           text-align: right;
           font-family: 'JetBrains Mono', monospace;
-          font-size: 0.8rem;
+          font-size: 0.76rem;
           font-weight: 500;
           font-variant-numeric: tabular-nums;
         }
         .inv-table td.qty {
           text-align: right;
           font-family: 'JetBrains Mono', monospace;
-          font-size: 0.8rem;
+          font-size: 0.76rem;
           font-variant-numeric: tabular-nums;
         }
         .inv-table td.rate {
           text-align: right;
           font-family: 'JetBrains Mono', monospace;
-          font-size: 0.8rem;
+          font-size: 0.76rem;
           font-variant-numeric: tabular-nums;
         }
         .inv-table .row-product-name {
@@ -298,17 +298,17 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
         }
         .inv-table .row-box-desc {
           display: block;
-          font-size: 0.72rem;
+          font-size: 0.68rem;
           color: #404040;
-          margin-top: 0.25rem;
+          margin-top: 0.2rem;
         }
 
         /* ── Totals/Summary ── */
         .inv-summary-container {
           display: flex;
           justify-content: flex-end;
-          margin-top: 1rem;
-          margin-bottom: 1.5rem;
+          margin-top: 0.85rem;
+          margin-bottom: 1.25rem;
         }
         .inv-summary-box {
           width: 60%;
@@ -317,14 +317,14 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
           border-collapse: collapse;
         }
         .inv-summary-box td {
-          padding: 0.45rem 0.5rem;
-          font-size: 0.85rem;
+          padding: 0.4rem 0.45rem;
+          font-size: 0.8rem;
           color: #000000;
         }
         .inv-summary-box td:last-child {
           text-align: right;
           font-family: 'JetBrains Mono', monospace;
-          font-size: 0.85rem;
+          font-size: 0.8rem;
           font-weight: 600;
           color: #000000;
           font-variant-numeric: tabular-nums;
@@ -335,44 +335,44 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
         }
         .inv-summary-box .grand-total-row td {
           font-weight: 800;
-          font-size: 1.05rem;
+          font-size: 0.95rem;
           color: #000000;
-          padding-top: 0.75rem;
-          padding-bottom: 0.75rem;
+          padding-top: 0.65rem;
+          padding-bottom: 0.65rem;
         }
         .inv-summary-box .grand-total-row td:last-child {
-          font-size: 1.05rem;
+          font-size: 0.95rem;
           font-weight: 800;
         }
         .inv-summary-box .balance-row td {
           color: #000000;
           font-weight: 700;
-          padding: 0.6rem 0.5rem;
+          padding: 0.55rem 0.45rem;
           border-top: 1px dashed #000000;
           border-bottom: 1px dashed #000000;
         }
 
         /* ── Terms & Notes ── */
         .inv-notes-terms {
-          margin-top: 1.5rem;
+          margin-top: 0.75rem;
           display: flex;
           flex-direction: column;
-          gap: 1.25rem;
+          gap: 0.75rem;
           width: 100%;
         }
         .inv-terms-card {
           border: 1px solid #000000;
           border-radius: 6px;
-          padding: 1rem 1.25rem;
+          padding: 0.5rem 0.75rem;
           width: 100%;
         }
         .inv-terms-title {
-          font-size: 0.72rem;
+          font-size: 0.65rem;
           font-weight: 700;
           color: #000000;
           text-transform: uppercase;
           letter-spacing: 0.08em;
-          margin-bottom: 0.5rem;
+          margin-bottom: 0.3rem;
         }
         .inv-terms-list {
           margin: 0;
@@ -380,10 +380,10 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
           list-style-type: disc !important;
         }
         .inv-terms-list li {
-          font-size: 0.74rem;
+          font-size: 0.7rem;
           color: #000000;
-          margin-bottom: 0.35rem;
-          line-height: 1.5;
+          margin-bottom: 0.25rem;
+          line-height: 1.4;
         }
 
         /* ── Footer / Payment block ── */
@@ -392,13 +392,13 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
           justify-content: space-between;
           align-items: flex-end;
           border-top: 1px solid #000000;
-          padding-top: 1.25rem;
-          margin-top: 2rem;
+          padding-top: 0.75rem;
+          margin-top: 0.75rem;
         }
         .inv-contact-details {
-          font-size: 0.78rem;
+          font-size: 0.72rem;
           color: #000000;
-          line-height: 1.7;
+          line-height: 1.6;
         }
         .inv-contact-details .label {
           font-weight: 600;
@@ -417,7 +417,7 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
           text-align: right;
         }
         .inv-pay-title {
-          font-size: 0.68rem;
+          font-size: 0.65rem;
           font-weight: 700;
           color: #000000;
           text-transform: uppercase;
@@ -426,32 +426,28 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
         }
         .inv-pay-value {
           font-family: 'JetBrains Mono', monospace;
-          font-size: 0.9rem;
+          font-size: 0.82rem;
           font-weight: 700;
           color: #000000;
         }
         .inv-pay-sub {
-          font-size: 0.72rem;
+          font-size: 0.68rem;
           color: #404040;
           margin-top: 0.15rem;
         }
         .inv-qr-img {
-          width: 80px;
-          height: 80px;
+          width: 96px;
+          height: 96px;
           object-fit: contain;
-          border: 1px solid #000000;
-          border-radius: 4px;
-          padding: 2px;
-          background-color: #ffffff;
         }
         .inv-tagline {
-          margin-top: 1.25rem;
+          margin-top: 0.75rem;
           text-align: center;
-          font-size: 0.8rem;
+          font-size: 0.74rem;
           font-style: italic;
           color: #404040;
           letter-spacing: 0.02em;
-          padding-top: 0.75rem;
+          padding-top: 0.5rem;
           border-top: 1px dashed #000000;
         }
       `}</style>
@@ -468,9 +464,6 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
                 <SheetTitle className="text-lg font-semibold tracking-tight">
                   Invoice Details
                 </SheetTitle>
-                <span className="inline-block px-2.5 py-0.5 rounded text-xs font-bold font-sans border border-zinc-300 bg-white text-zinc-900">
-                  {isUdhaar ? (hasPaid ? 'Partial' : 'Udhaar') : '✓ Paid'}
-                </span>
               </div>
               <SheetDescription className="text-sm text-muted-foreground">
                 Bill #{sale.invoice_number} &middot; {customer.name}
@@ -494,6 +487,10 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
                       {SHOP.name1}{SHOP.name2}
                     </div>
                     <div className="inv-shop-sub">{SHOP.tagline}</div>
+                    <div style={{ fontSize: '0.74rem', color: '#404040', marginTop: '0.2rem', lineHeight: 1.45 }}>
+                      Phone: {SHOP.phone1}<br />
+                      Email: {SHOP.email}
+                    </div>
                   </div>
                   <div className="inv-header-right">
                     <div className="inv-title">TAX INVOICE</div>
@@ -503,11 +500,7 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
                     <div className="inv-billno-val" style={{ marginTop: '0.15rem' }}>
                       Date: <span className="mono">{fmtDate(sale.sale_date)}</span> &nbsp;·&nbsp; <span className="mono">{saleTime}</span>
                     </div>
-                    <div className="inv-billno-val flex items-center justify-end gap-2" style={{ marginTop: '0.35rem' }}>
-                      Status: <span className="inv-status" style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>
-                        {isUdhaar ? (hasPaid ? 'Partial' : 'Udhaar') : 'Paid'}
-                      </span>
-                    </div>
+                    {/* Status removed */}
                   </div>
                 </div>
 
@@ -518,10 +511,9 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
                     <div className="inv-meta-label">From</div>
                     <div className="inv-meta-value">
                       <strong>{SHOP.name1} {SHOP.name2}</strong><br />
-                      {SHOP.address}<br />
-                      Phone: {SHOP.phone1} {SHOP.phone2 ? ` / ${SHOP.phone2}` : ''}<br />
+                      Phone: {SHOP.phone1}<br />
                       Email: {SHOP.email}<br />
-                      <span className="mono" style={{ fontSize: '0.78rem', fontWeight: 700 }}>GSTIN: {SHOP.gstin}</span>
+                      <span className="mono" style={{ fontSize: '0.76rem', fontWeight: 700 }}>GSTIN: {SHOP.gstin}</span>
                     </div>
                   </div>
                   {/* Bill To */}
@@ -653,51 +645,54 @@ export function InvoiceModal({ open, sale, onClose, onRecordPayment }: Props) {
                   </table>
                 </div>
 
-                {/* ── Terms & Notes Grid ── */}
-                <div className="inv-notes-terms">
-                  {/* Terms & Conditions */}
-                  <div className="inv-terms-card">
-                    <div className="inv-terms-title">Terms &amp; Conditions</div>
-                    <ul className="inv-terms-list">
-                      {SHOP.terms.map((t, i) => <li key={i}>{t}</li>)}
-                    </ul>
-                  </div>
-                  {/* Notes Card */}
-                  {sale.notes && (
+                {/* ── Footer Section (Pushed to bottom on print) ── */}
+                <div className="inv-footer-section">
+                  {/* Terms & Notes Grid */}
+                  <div className="inv-notes-terms">
+                    {/* Terms & Conditions */}
                     <div className="inv-terms-card">
-                      <div className="inv-terms-title">Special Notes</div>
-                      <p style={{ fontSize: '0.74rem', color: '#000000', margin: 0, lineHeight: 1.5 }}>
-                        {sale.notes}
-                      </p>
+                      <div className="inv-terms-title">Terms &amp; Conditions</div>
+                      <ul className="inv-terms-list">
+                        {SHOP.terms.map((t, i) => <li key={i}>{t}</li>)}
+                      </ul>
                     </div>
-                  )}
-                </div>
-
-                {/* ── Footer strip ──────────────────────────────────────────── */}
-                <div className="inv-footer-strip">
-                  <div className="inv-contact-details">
-                    <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Bank Details</div>
-                    <span className="label">Bank Name:</span> {SHOP.bankName}<br />
-                    <span className="label">A/C Name:</span> {SHOP.name1} {SHOP.name2}<br />
-                    <span className="label">Account No:</span> <span className="mono" style={{ fontWeight: 600 }}>{SHOP.bankAccNo}</span><br />
-                    <span className="label">IFSC Code:</span> <span className="mono" style={{ fontWeight: 600 }}>{SHOP.bankIfsc}</span>
+                    {/* Notes Card */}
+                    {sale.notes && (
+                      <div className="inv-terms-card">
+                        <div className="inv-terms-title">Special Notes</div>
+                        <p style={{ fontSize: '0.74rem', color: '#000000', margin: 0, lineHeight: 1.5 }}>
+                          {sale.notes}
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  <div className="inv-pay-card">
-                    <div className="inv-pay-info">
-                      <div className="inv-pay-title">UPI Quick Pay</div>
-                      <div className="inv-pay-value">{SHOP.upi}</div>
-                      <div className="inv-pay-sub">Scan QR to pay instantly</div>
+
+                  {/* Footer strip */}
+                  <div className="inv-footer-strip">
+                    <div className="inv-contact-details">
+                      <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Bank Details</div>
+                      <span className="label">Bank Name:</span> {SHOP.bankName}<br />
+                      <span className="label">A/C Name:</span> {SHOP.name1} {SHOP.name2}<br />
+                      <span className="label">Account No:</span> <span className="mono" style={{ fontWeight: 600 }}>{SHOP.bankAccNo}</span><br />
+                      <span className="label">IFSC Code:</span> <span className="mono" style={{ fontWeight: 600 }}>{SHOP.bankIfsc}</span>
                     </div>
-                    <img 
-                      src="/narayani-upi-qr.jpg" 
-                      alt="UPI QR" 
-                      className="inv-qr-img"
-                    />
+                    <div className="inv-pay-card">
+                      <div className="inv-pay-info">
+                        <div className="inv-pay-title">UPI Quick Pay</div>
+                        <div className="inv-pay-value">{SHOP.upi}</div>
+                        <div className="inv-pay-sub">Scan QR to pay instantly</div>
+                      </div>
+                      <img 
+                        src="/narayani-upi-qr.jpg" 
+                        alt="UPI QR" 
+                        className="inv-qr-img"
+                      />
+                    </div>
                   </div>
-                </div>
 
-                {/* ── Tagline ───────────────────────────────────────────────── */}
-                <div className="inv-tagline">Thank you for your business!</div>
+                  {/* Tagline */}
+                  <div className="inv-tagline">Thank you for your business!</div>
+                </div>
 
               </div>{/* /inv-content */}
             </div>{/* /inv-body */}
