@@ -69,7 +69,7 @@ export default function ProjectDetailView({ project }: { project: ProjectDetails
         {/* Back Button */}
         <div className="absolute top-28 left-6 md:left-12 z-20">
           <Link
-            href="/projects"
+            href="/#projects"
             className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/60 hover:text-white bg-black/30 hover:bg-black/50 border border-white/10 px-4 py-2 rounded-full backdrop-blur-md transition-all duration-200"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
@@ -355,14 +355,16 @@ function CurvedGalleryOverlay({
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [isOpen])
 
-  // Prevent parent page scrolling while modal is open
-  if (typeof window !== "undefined") {
-    if (isOpen) {
-      document.body.style.overflow = "hidden"
-    } else {
-      document.body.style.overflow = ""
+  useEffect(() => {
+    if (!isOpen) return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+
+    return () => {
+      document.body.style.overflow = previousOverflow
     }
-  }
+  }, [isOpen])
 
   return (
     <AnimatePresence>

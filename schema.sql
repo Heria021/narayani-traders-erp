@@ -5,15 +5,16 @@
 --
 -- Tables (in creation order):
 --   1.  profiles
---   2.  products
---   3.  customers
---   4.  suppliers
---   5.  sales
---   6.  sale_items
---   7.  purchases
---   8.  purchase_items
---   9.  payments
---   10. stock_movements
+--   2.  contacts
+--   3.  products
+--   4.  customers
+--   5.  suppliers
+--   6.  sales
+--   7.  sale_items
+--   8.  purchases
+--   9.  purchase_items
+--   10. payments
+--   11. stock_movements
 -- =============================================================================
 
 
@@ -57,9 +58,27 @@ create table profiles (
 );
 comment on table profiles is 'Single-owner profile mirroring auth.users.';
 
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2. CONTACTS
+-- Public landing page contact submissions.
+-- Anonymous visitors may insert only; the owner manages rows after submission.
+-- ─────────────────────────────────────────────────────────────────────────────
+create table contacts (
+  id          uuid        primary key default gen_random_uuid(),
+  name        text        not null,
+  email       text        not null,
+  phone       text,
+  subject     text,
+  message     text        not null,
+  source      text        default 'landing_page',
+  status      text        not null default 'new',
+  created_at  timestamptz not null default now()
+);
+comment on table contacts is 'Contact form submissions from the landing page.';
+
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- 2. PRODUCTS
+-- 3. PRODUCTS
 -- Supports unit and box packaging.
 -- current_stock always stored in base units — never in boxes.
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -374,6 +393,10 @@ create index idx_stock_movements_movement_type on stock_movements (movement_type
 create index idx_stock_movements_created_at    on stock_movements (created_at desc);
 create index idx_stock_movements_reference_id  on stock_movements (reference_id);
 
+-- contacts
+create index idx_contacts_created_at on contacts (created_at desc);
+create index idx_contacts_status     on contacts (status);
+
 
 -- =============================================================================
 -- SECTION 4 — ROW LEVEL SECURITY
@@ -382,6 +405,7 @@ create index idx_stock_movements_reference_id  on stock_movements (reference_id)
 -- =============================================================================
 
 alter table profiles        enable row level security;
+alter table contacts        enable row level security;
 alter table products        enable row level security;
 alter table customers       enable row level security;
 alter table suppliers       enable row level security;
@@ -410,6 +434,9 @@ comment on function is_owner() is
 -- Pattern: one "all operations" policy per table, scoped to the owner.
 
 create policy "owner_all" on profiles        for all to authenticated using (is_owner()) with check (is_owner());
+create policy "anon_insert_contacts" on contacts for insert to anon with check (true);
+create policy "owner_read_contacts"  on contacts for select to authenticated using (is_owner());
+create policy "owner_update_contacts" on contacts for update to authenticated using (is_owner()) with check (is_owner());
 create policy "owner_all" on products        for all to authenticated using (is_owner()) with check (is_owner());
 create policy "owner_all" on customers       for all to authenticated using (is_owner()) with check (is_owner());
 create policy "owner_all" on suppliers       for all to authenticated using (is_owner()) with check (is_owner());
@@ -427,13 +454,17 @@ create policy "owner_all" on stock_movements for all to authenticated using (is_
 -- Grant SELECT/INSERT/UPDATE/DELETE to the authenticated role explicitly.
 -- =============================================================================
 
-grant usage on schema public to authenticated;
+grant usage on schema public to anon, authenticated;
+
+grant insert on contacts to anon;
 
 grant select, insert, update, delete on
   profiles, products, customers, suppliers,
   sales, sale_items, purchases, purchase_items,
   payments, stock_movements
 to authenticated;
+
+grant select, update on contacts to authenticated;
 
 
 -- =============================================================================

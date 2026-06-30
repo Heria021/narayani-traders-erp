@@ -3,6 +3,8 @@
 import { useState, useRef } from "react"
 import { motion, AnimatePresence, useMotionValue, useSpring } from "motion/react"
 import { ArrowRight, ArrowUpRight } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
+import { SHOP } from "@/lib/config/shop"
 
 /* ─── EASING (same as AboutPage) ─────────────────────── */
 const EXPO = [0.76, 0, 0.24, 1] as const
@@ -21,17 +23,17 @@ const INQUIRY_TYPES = [
 const CONTACT_LINES = [
   {
     label: "Email",
-    value: "rameshsuthar32@gmail.com",
-    href: "mailto:rameshsuthar32@gmail.com",
+    value: SHOP.email,
+    href: `mailto:${SHOP.email}`,
   },
   {
     label: "Phone",
-    value: "+91 97823 53866",
-    href: "tel:+919782353866",
+    value: SHOP.phone1,
+    href: `tel:${SHOP.phone1.replace(/\s/g, "")}`,
   },
   {
     label: "Studio",
-    value: "Narayani Traders, PWD Road, Bidasar, Rajasthan",
+    value: SHOP.address,
     href: null,
   },
 ]
@@ -269,18 +271,45 @@ function UnderlineTextarea({
 
 /* ─── PAGE ────────────────────────────────────────────── */
 export default function ContactPage() {
-  const [formState, setFormState] = useState<"idle" | "submitting" | "success">("idle")
+  const [formState, setFormState] = useState<"idle" | "submitting" | "success" | "error">("idle")
+  const [errorMessage, setErrorMessage] = useState("")
   const [activeType, setActiveType] = useState(INQUIRY_TYPES[0])
   const [formData, setFormData] = useState({ name: "", email: "", budget: "", message: "" })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
+    if (formState === "error") {
+      setFormState("idle")
+      setErrorMessage("")
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormState("submitting")
-    await new Promise((r) => setTimeout(r, 1600))
+    setErrorMessage("")
+
+    const supabase = createClient()
+    const message = [
+      formData.budget.trim() ? `Approx. scale / budget: ${formData.budget.trim()}` : null,
+      formData.message.trim(),
+    ].filter(Boolean).join("\n\n")
+
+    const { error } = await supabase.from("contacts").insert({
+      name: formData.name.trim(),
+      email: formData.email.trim(),
+      subject: activeType,
+      message,
+      source: "landing_page",
+      status: "new",
+    })
+
+    if (error) {
+      setErrorMessage("We could not save your inquiry. Please try again or contact us directly.")
+      setFormState("error")
+      return
+    }
+
     setFormState("success")
   }
 
@@ -355,7 +384,7 @@ export default function ContactPage() {
               <p className="text-[11px] font-light text-white/25 leading-relaxed">
                 Jr Suthar & Designs · Bidasar Studio
                 <br />
-                Available Mon–Sat, 9am–7pm IST
+                {SHOP.name1} {SHOP.name2} · GSTIN {SHOP.gstin}
               </p>
             </FadeUp>
           </div>
@@ -434,7 +463,7 @@ export default function ContactPage() {
                       label="Email Address"
                       id="email" name="email" type="email"
                       value={formData.email} onChange={handleChange}
-                      placeholder="rajan@example.com"
+                      placeholder={SHOP.email}
                       required delay={0.12}
                     />
                   </div>
@@ -458,6 +487,12 @@ export default function ContactPage() {
                   />
 
                   <LineReveal delay={0.1} />
+
+                  {formState === "error" && (
+                    <p className="text-xs text-red-300/80" role="alert">
+                      {errorMessage}
+                    </p>
+                  )}
 
                   {/* Submit */}
                   <div className="flex items-center justify-between gap-6 flex-wrap">

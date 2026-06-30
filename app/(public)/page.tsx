@@ -33,6 +33,7 @@ import {
   CardFooter,
 } from "@/components/ui/card"
 import { createClient } from "@/lib/supabase/client"
+import { SHOP } from "@/lib/config/shop"
 import {
   fetchPublicPortfolioProjects,
   type PublicPortfolioProject,
@@ -44,6 +45,8 @@ import {
 type Project = PublicPortfolioProject
 const SLIDE_DURATION = 6000
 const EASE_EXPO = [0.16, 1, 0.3, 1] as const
+const PORTFOLIO_URL = process.env.NEXT_PUBLIC_PORTFOLIO_URL || "/portfolio/projects"
+const ERP_URL = process.env.NEXT_PUBLIC_ERP_URL || "/features"
 
 // Art shapes per project — each is a set of SVG path commands that get
 // stroke-dashoffset animated on hover (draw-on effect)
@@ -111,7 +114,7 @@ function buildSpinePath(rowCount: number, rowUnitHeight = 100) {
 //  Option 2 · Capability  → eyebrow: "Full-Service Architectural Studio"
 //                            headline: ["Precision-Crafted", "Architecture."]
 //                            body: "From brutalist concrete structures to sustainable glass retreats, we deliver full-scale architectural visualization, planning, and design integration."
-//                            cta1: { label: "Our Methodology", href: "/methodology" }
+//                            cta1: { label: "Our Methodology", href: "#how-we-do" }
 //                            cta2: { label: "Let's Collaborate", href: "/contact" }
 //  Option 3 · Impact      → eyebrow: "Architecture for Future Living"
 //                            headline: ["Designing for the", "Future of Living."]
@@ -125,7 +128,7 @@ const HERO_COPY_A = {
   // Odd-indexed words within a line render in bold (matching the site's existing typographic voice).
   headline: ["We Architecture", "Exceptional Spaces."],
   body: "Bridging the gap between raw materiality and refined comfort. We specialise in bespoke residential and commercial designs that harmonise with their environment.",
-  cta1: { label: "Our Methodology", href: "/methodology" },
+  cta1: { label: "Our Methodology", href: "#how-we-do" },
   cta2: { label: "Start a Project", href: "/contact" },
   // Slide ticker label shown at the far right of the bottom bar
   tickerLabel: "Selected Works",
@@ -135,7 +138,7 @@ const HERO_COPY_B = {
   eyebrow: "Philosophy · Structure · Light",
   headline: ["Light Composes", "Refined Textures."],
   body: "We believe that a built space should not fight its environment. Light should not illuminate — it should compose texture, defining human experience through structural integrity.",
-  cta1: { label: "Our Methodology", href: "/methodology" },
+  cta1: { label: "Our Methodology", href: "#how-we-do" },
   cta2: { label: "Start a Project", href: "/contact" },
   tickerLabel: "Selected Works",
 }
@@ -1135,16 +1138,39 @@ export default function PublicHomePage() {
               <span className="text-[10px] font-bold tracking-[0.2em] text-white/35 uppercase">Studio Office</span>
               <ul className="flex flex-col gap-3 text-xs font-light">
                 <li className="text-white/55">
-                  Bidasar, Rajasthan, India
+                  {SHOP.address}
                 </li>
                 <li>
-                  <a href="mailto:info@jrsuthar.com" className="text-white/55 hover:text-white transition-colors duration-250 hover:translate-x-0.5 inline-block">
-                    info@jrsuthar.com
+                  <a href={`mailto:${SHOP.email}`} className="text-white/55 hover:text-white transition-colors duration-250 hover:translate-x-0.5 inline-block">
+                    {SHOP.email}
                   </a>
                 </li>
                 <li>
-                  <a href="tel:+919876543210" className="text-white/55 hover:text-white transition-colors duration-250 hover:translate-x-0.5 inline-block">
-                    +91 98765 43210
+                  <a href={`tel:${SHOP.phone1.replace(/\s/g, "")}`} className="text-white/55 hover:text-white transition-colors duration-250 hover:translate-x-0.5 inline-block">
+                    {SHOP.phone1}
+                  </a>
+                </li>
+                <li className="text-white/40 font-mono">
+                  GSTIN {SHOP.gstin}
+                </li>
+                <li className="pt-2">
+                  <a
+                    href={PORTFOLIO_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-white/55 hover:text-white transition-colors duration-250 hover:translate-x-0.5 inline-block"
+                  >
+                    Portfolio
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href={ERP_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-white/55 hover:text-white transition-colors duration-250 hover:translate-x-0.5 inline-block"
+                  >
+                    Narayani Traders ERP
                   </a>
                 </li>
               </ul>
