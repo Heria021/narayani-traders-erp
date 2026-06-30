@@ -18,6 +18,8 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
+import { InstantFormsProvider } from "@/components/instant/instant-forms-context"
+import { InstantFormsDialog } from "@/components/instant/InstantFormsDialog"
 
 const routeTitles: Record<string, string> = {
   "/features": "Dashboard",
@@ -81,49 +83,53 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isPortfolio = pathname.startsWith('/portfolio')
 
   return (
-    <BreadcrumbContext.Provider value={{ customTitle, setCustomTitle }}>
-      <SidebarProvider className="h-svh overflow-hidden">
-        <AppSidebar />
-        <SidebarInset className="min-w-0 overflow-hidden">
-          <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border/70 bg-background px-4">
-            <SidebarTrigger className="-ml-1" />
-            <Separator
-              orientation="vertical"
-              className="mr-2 data-vertical:h-4 data-vertical:self-auto"
-            />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href={isPortfolio ? "/portfolio/projects" : "/features"}>
-                    {isPortfolio ? "Studio Workspace" : "Narayani Traders"}
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
-
-                {customTitle && parentTitle && parentPath ? (
-                  <>
-                    <BreadcrumbItem className="hidden md:block">
-                      <BreadcrumbLink href={parentPath}>{parentTitle}</BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator className="hidden md:block" />
-                    <BreadcrumbItem>
-                      <BreadcrumbPage>{customTitle}</BreadcrumbPage>
-                    </BreadcrumbItem>
-                  </>
-                ) : (
-                  <BreadcrumbItem>
-                    <BreadcrumbPage>{baseTitle}</BreadcrumbPage>
+    <InstantFormsProvider>
+      <BreadcrumbContext.Provider value={{ customTitle, setCustomTitle }}>
+        <SidebarProvider className="h-svh overflow-hidden">
+          <AppSidebar />
+          <SidebarInset className="min-w-0 overflow-hidden">
+            <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border/70 bg-background px-4">
+              <SidebarTrigger className="-ml-1" />
+              <Separator
+                orientation="vertical"
+                className="mr-2 data-vertical:h-4 data-vertical:self-auto"
+              />
+              <Breadcrumb>
+                <BreadcrumbList>
+                  <BreadcrumbItem className="hidden md:block">
+                    <BreadcrumbLink href={isPortfolio ? "/portfolio/projects" : "/features"}>
+                      {isPortfolio ? "Studio Workspace" : "Narayani Traders"}
+                    </BreadcrumbLink>
                   </BreadcrumbItem>
-                )}
-              </BreadcrumbList>
-            </Breadcrumb>
-          </header>
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            {children}
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
-    </BreadcrumbContext.Provider>
+                  <BreadcrumbSeparator className="hidden md:block" />
+
+                  {customTitle && parentTitle && parentPath ? (
+                    <>
+                      <BreadcrumbItem className="hidden md:block">
+                        <BreadcrumbLink href={parentPath}>{parentTitle}</BreadcrumbLink>
+                      </BreadcrumbItem>
+                      <BreadcrumbSeparator className="hidden md:block" />
+                      <BreadcrumbItem>
+                        <BreadcrumbPage>{customTitle}</BreadcrumbPage>
+                      </BreadcrumbItem>
+                    </>
+                  ) : (
+                    <BreadcrumbItem>
+                      <BreadcrumbPage>{baseTitle}</BreadcrumbPage>
+                    </BreadcrumbItem>
+                  )}
+                </BreadcrumbList>
+              </Breadcrumb>
+            </header>
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              {children}
+            </div>
+          </SidebarInset>
+          {/* Global Instant Actions dialog — mounted once, accessible from every page */}
+          <InstantFormsDialog />
+        </SidebarProvider>
+      </BreadcrumbContext.Provider>
+    </InstantFormsProvider>
   )
 }
 

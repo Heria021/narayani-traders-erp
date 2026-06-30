@@ -39,6 +39,7 @@ import {
   GlobeIcon,
   ChevronsUpDown,
 } from "lucide-react"
+import { InstantTriggerButton } from "@/components/instant/InstantTriggerButton"
 
 const isRouteActive = (pathname: string, url: string) =>
   pathname === url || (url !== "/features" && pathname.startsWith(url))
@@ -208,6 +209,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain label={isPortfolio ? "Studio Portfolio" : "Features"} items={navMain} />
       </SidebarContent>
       <SidebarFooter>
+        {/* Instant Actions trigger — ERP workspace only */}
+        {!isPortfolio && (
+          <div className="px-1 pb-1">
+            <InstantTriggerButton />
+          </div>
+        )}
         <NavUser user={user} />
       </SidebarFooter>
     </Sidebar>
